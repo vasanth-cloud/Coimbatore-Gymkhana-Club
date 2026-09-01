@@ -54,3 +54,26 @@ class BrandRepository:
         self.db.refresh(brand)
 
         return brand
+
+    def update(
+        self,
+        brand: Brand,
+        name: str | None = None,
+        category: str | None = None,
+        is_active: bool | None = None,
+    ):
+        if name is not None:
+            brand.name = name
+        if category is not None:
+            brand.category = category
+        if is_active is not None:
+            brand.is_active = is_active
+
+        self.db.commit()
+        self.db.refresh(brand)
+        return brand
+
+    def delete(self, brand: Brand):
+        brand.is_deleted = True
+        self.db.commit()
+        return True

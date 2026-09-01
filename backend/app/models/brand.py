@@ -11,7 +11,6 @@ class Brand(BaseModel):
         String(150),
         nullable=False,
         unique=True,
-        index=True,
     )
 
     category = Column(

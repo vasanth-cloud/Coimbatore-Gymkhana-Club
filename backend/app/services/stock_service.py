@@ -8,12 +8,14 @@ class StockService:
 
     def __init__(self, db):
 
+        self.db = db
+
         self.repository = StockRepository(db)
         self.product_repository = ProductRepository(db)
 
-    # ---------------------------------------------------------
+    # =========================================================
     # RECEIVE STOCK
-    # ---------------------------------------------------------
+    # =========================================================
 
     def receive_stock(
         self,
@@ -28,7 +30,7 @@ class StockService:
                 "Stock quantity must be greater than 0"
             )
 
-        # Check product exists
+        # Check product
         product = self.product_repository.get_by_id(
             product_id
         )
@@ -38,7 +40,7 @@ class StockService:
                 "Product not found"
             )
 
-        # Check product is active
+        # Check active
         if not product.is_active:
             raise ValueError(
                 "Cannot receive stock for an inactive product"
@@ -52,19 +54,26 @@ class StockService:
             transaction_date=transaction_date,
         )
 
+        # IMPORTANT:
+        # Save transaction permanently
+        self.db.commit()
+
+        # Refresh object after commit
+        self.db.refresh(transaction)
+
         return transaction
 
-    # ---------------------------------------------------------
+    # =========================================================
     # GET STOCK TRANSACTIONS
-    # ---------------------------------------------------------
+    # =========================================================
 
     def get_transactions(self):
 
         return self.repository.get_transactions()
 
-    # ---------------------------------------------------------
+    # =========================================================
     # GET CURRENT STOCK
-    # ---------------------------------------------------------
+    # =========================================================
 
     def get_current_stock(
         self,
@@ -92,9 +101,9 @@ class StockService:
             "current_stock": current_stock,
         }
 
-    # ---------------------------------------------------------
+    # =========================================================
     # GET ALL CURRENT STOCK
-    # ---------------------------------------------------------
+    # =========================================================
 
     def get_all_current_stock(self):
 

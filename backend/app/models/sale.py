@@ -29,4 +29,5 @@ class Sale(BaseModel):
 
     product = relationship(
         "Product",
+        back_populates="sales",
     )

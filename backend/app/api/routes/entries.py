@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import require_staff_or_admin
 from app.models.user import User
+from app.repositories.entry_repository import EntryRepository
 from app.schemas.entry import (
     EntryCreateRequest,
     EntryResponse,
+    DetailedEntryResponse,
 )
 from app.services.entry_service import EntryService
 
@@ -30,9 +32,7 @@ router = APIRouter(
 def scan_customer_qr(
     request: EntryCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_staff_or_admin
-    ),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = EntryService(db)
 
@@ -42,7 +42,6 @@ def scan_customer_qr(
             additional_guests=request.additional_guests,
             scanned_by=current_user.id,
         )
-
         return entry
 
     except ValueError as e:
@@ -50,3 +49,16 @@ def scan_customer_qr(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.get(
+    "/recent",
+    response_model=list[DetailedEntryResponse],
+)
+def get_recent_entries(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    repository = EntryRepository(db)
+    return repository.get_recent_entries_detailed(limit=limit)

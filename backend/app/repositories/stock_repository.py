@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -30,21 +30,20 @@ class StockRepository:
             transaction_type=transaction_type,
             transaction_date=(
                 transaction_date
-                or datetime.utcnow()
+                or datetime.now(timezone.utc)
             ),
         )
 
         self.db.add(transaction)
 
-        # DO NOT COMMIT HERE
-        # SaleService / StockService controls the transaction.
-
+        # Do not commit here.
+        # The service controls the transaction.
         self.db.flush()
 
         return transaction
 
     # =========================================================
-    # GET TRANSACTIONS
+    # GET STOCK TRANSACTIONS
     # =========================================================
 
     def get_transactions(self):
@@ -61,7 +60,7 @@ class StockRepository:
         )
 
     # =========================================================
-    # GET CURRENT STOCK
+    # GET CURRENT STOCK FOR ONE PRODUCT
     # =========================================================
 
     def get_current_stock(
@@ -119,9 +118,7 @@ class StockRepository:
                 Product.is_deleted == False,
                 Product.is_active == True,
             )
-            .order_by(
-                Product.name.asc()
-            )
+            .order_by(Product.name.asc())
             .all()
         )
 
@@ -129,10 +126,8 @@ class StockRepository:
 
         for product in products:
 
-            current_stock = (
-                self.get_current_stock(
-                    product.id
-                )
+            current_stock = self.get_current_stock(
+                product.id
             )
 
             result.append(

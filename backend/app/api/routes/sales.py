@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_admin
+from app.core.dependencies import require_staff_or_admin
 from app.models.user import User
 
 from app.schemas.sale import (
@@ -32,7 +32,7 @@ router = APIRouter(
 )
 def get_sales(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
 
     service = SaleService(db)
@@ -52,7 +52,7 @@ def get_sales(
 def create_sale(
     request: SaleCreateRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
 
     service = SaleService(db)
@@ -84,7 +84,7 @@ def create_sale(
 def get_daily_sales(
     report_date: date,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
 
     service = SaleService(db)

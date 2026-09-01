@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0d1117] text-slate-100 selection:bg-amber-500 selection:text-slate-950 font-sans antialiased transition-colors duration-200;
+  }
+
+  /* High contrast typography defaults */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-extrabold tracking-tight;
+  }
+
+  label {
+    @apply text-xs font-extrabold uppercase tracking-wider text-slate-300;
+  }
+
+  input, select, textarea {
+    @apply font-semibold text-sm;
+  }
+
+  /* Dark mode crisp adjustments */
+  html.dark .text-slate-400 {
+    color: #cbd5e1 !important; /* Slate-300 for clear readability */
+  }
+
+  html.dark .text-slate-500 {
+    color: #94a3b8 !important; /* Slate-400 for secondary text */
+  }
+
+  html.dark .placeholder-slate-600::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* =========================================================
+     LIGHT MODE COMPLETE HIGH-CONTRAST OVERRIDES
+     ========================================================= */
+
+  html.light body {
+    background-color: #f1f5f9 !important; /* Slate-100 */
+    color: #0f172a !important; /* Slate-900 */
+  }
+
+  /* Cards & Sidebar & Header */
+  html.light header,
+  html.light aside,
+  html.light .bg-\[\#161b22\] {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Secondary Containers & Input Fields */
+  html.light .bg-\[\#0d1117\] {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  /* Dark Button / Badge Overrides in Light Mode */
+  html.light .bg-\[\#21262d\] {
+    background-color: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  html.light .bg-\[\#30363d\] {
+    background-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  /* Borders */
+  html.light .border-\[\#21262d\],
+  html.light .border-\[\#30363d\] {
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Labels & Text Overrides */
+  html.light label {
+    color: #0f172a !important; /* Bold Slate-900 */
+  }
+
+  html.light .text-slate-100,
+  html.light .text-slate-200 {
+    color: #0f172a !important; /* Deep Slate-900 */
+  }
+
+  html.light .text-slate-300,
+  html.light .text-slate-400 {
+    color: #334155 !important; /* Crisp Slate-700 */
+  }
+
+  html.light .text-slate-500,
+  html.light .text-slate-600 {
+    color: #475569 !important; /* Crisp Slate-600 */
+  }
+
+  /* Red / Rose Alert Banner Overrides for Light Mode */
+  html.light .bg-rose-500\/10,
+  html.light .bg-rose-500\/15,
+  html.light .bg-rose-500\/20 {
+    background-color: #ffe4e6 !important; /* Soft Rose Background */
+    border-color: #f43f5e !important;
+  }
+
+  html.light .text-rose-200,
+  html.light .text-rose-300,
+  html.light .text-rose-400 {
+    color: #9f1239 !important; /* Deep Rose-800 for High Contrast */
+  }
+
+  /* =========================================================
+     FIX YELLOW / AMBER TEXT VISIBILITY IN LIGHT MODE
+     ========================================================= */
+
+  html.light .text-amber-300,
+  html.light .text-amber-400,
+  html.light .text-amber-500,
+  html.light .text-yellow-400,
+  html.light .text-yellow-500 {
+    color: #78350f !important; /* Deep Rich Bronze-Amber for Maximum Contrast */
+    font-weight: 900 !important;
+  }
+
+  html.light .bg-amber-500\/10,
+  html.light .bg-amber-500\/15,
+  html.light .bg-amber-500\/20 {
+    background-color: #fef3c7 !important; /* Soft Amber Background */
+    border-color: #d97706 !important;
+    color: #78350f !important;
+  }
+
+  /* Purple Text Overrides for Light Mode */
+  html.light .text-purple-300,
+  html.light .text-purple-400 {
+    color: #6b21a8 !important; /* Deep Purple-800 */
+  }
+
+  html.light .bg-purple-500\/10,
+  html.light .bg-purple-500\/15 {
+    background-color: #f3e8ff !important;
+    border-color: #a855f7 !important;
+  }
+
+  /* Form Controls */
+  html.light input,
+  html.light select {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+  }
+
+  html.light input::placeholder {
+    color: #64748b !important; /* Visible Slate-500 */
+  }
+
+  /* Tables */
+  html.light th {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-weight: 900 !important;
+  }
+
+  html.light td {
+    color: #0f172a !important;
+    font-weight: 600 !important;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #161b22;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}

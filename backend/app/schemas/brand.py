@@ -6,6 +6,12 @@ class BrandCreateRequest(BaseModel):
     category: str
 
 
+class BrandUpdateRequest(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    is_active: bool | None = None
+
+
 class BrandResponse(BaseModel):
     id: int
     name: str

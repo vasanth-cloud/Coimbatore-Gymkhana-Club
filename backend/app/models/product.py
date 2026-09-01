@@ -1,10 +1,17 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    ForeignKey,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
 
 class Product(BaseModel):
+
     __tablename__ = "products"
 
     brand_id = Column(
@@ -15,13 +22,14 @@ class Product(BaseModel):
     )
 
     name = Column(
-        String(150),
+        String(255),
         nullable=False,
     )
 
     category = Column(
         String(100),
         nullable=False,
+        index=True,
     )
 
     volume_ml = Column(
@@ -32,16 +40,32 @@ class Product(BaseModel):
     unit = Column(
         String(50),
         nullable=False,
-        default="bottle",
+    )
+
+    selling_price = Column(
+        Integer,
+        nullable=False,
     )
 
     is_active = Column(
         Boolean,
-        nullable=False,
         default=True,
+        nullable=False,
     )
+
+    # Relationships
 
     brand = relationship(
         "Brand",
         back_populates="products",
+    )
+
+    sales = relationship(
+        "Sale",
+        back_populates="product",
+    )
+
+    stock_transactions = relationship(
+        "StockTransaction",
+        back_populates="product",
     )

@@ -34,4 +34,5 @@ class StockTransaction(BaseModel):
 
     product = relationship(
         "Product",
+        back_populates="stock_transactions",
     )

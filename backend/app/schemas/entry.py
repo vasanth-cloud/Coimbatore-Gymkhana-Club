@@ -27,3 +27,18 @@ class EntryResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class DetailedEntryResponse(BaseModel):
+    id: int
+    customer_code: str
+    customer_name: str
+    phone: str
+    qr_token: str
+    additional_guests: int
+    total_people: int
+    entry_time: datetime
+
+    model_config = {
+        "from_attributes": True
+    }

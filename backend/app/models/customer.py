@@ -23,9 +23,13 @@ class Customer(BaseModel):
 
     phone: Mapped[str] = mapped_column(
         String(20),
-        unique=True,
         index=True,
         nullable=False,
+    )
+
+    address: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
     qr_token: Mapped[str] = mapped_column(
