@@ -78,17 +78,12 @@ class Product(BaseModel):
         back_populates="products",
     )
 
-    stock_receipt_items = relationship(
-        "StockReceiptItem",
-        back_populates="product",
-    )
-
     stock_transactions = relationship(
         "StockTransaction",
         back_populates="product",
     )
 
-    inventory_adjustments = relationship(
-        "InventoryAdjustment",
+    sales = relationship(
+        "Sale",
         back_populates="product",
     )

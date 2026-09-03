@@ -5,6 +5,7 @@ from app.models.brand import Brand
 from app.models.product import Product
 from app.models.stock_transaction import StockTransaction
 from app.models.sale import Sale
+from app.models.daily_tally import DailyTally
 
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "Product",
     "StockTransaction",
     "Sale",
+    "DailyTally",
 ]
