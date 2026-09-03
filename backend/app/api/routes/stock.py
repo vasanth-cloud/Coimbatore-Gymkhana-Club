@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_admin
+from app.core.dependencies import require_admin, require_staff_or_admin
 from app.models.user import User
+from app.repositories.stock_repository import StockRepository
 
 from app.schemas.stock import (
     StockReceiveRequest,
@@ -20,10 +22,6 @@ router = APIRouter(
 )
 
 
-# =========================================================
-# RECEIVE STOCK
-# =========================================================
-
 @router.post(
     "/receive",
     response_model=StockTransactionResponse,
@@ -34,11 +32,9 @@ def receive_stock(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
-
     service = StockService(db)
 
     try:
-
         return service.receive_stock(
             product_id=request.product_id,
             quantity=request.quantity,
@@ -46,16 +42,26 @@ def receive_stock(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
 
-# =========================================================
-# GET STOCK TRANSACTIONS
-# =========================================================
+@router.get(
+    "/ledger",
+)
+def get_daily_stock_ledger(
+    report_date: date | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    if report_date is None:
+        report_date = date.today()
+
+    repo = StockRepository(db)
+    return repo.get_daily_stock_ledger(report_date)
+
 
 @router.get(
     "/transactions",
@@ -63,17 +69,11 @@ def receive_stock(
 )
 def get_stock_transactions(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
-
     service = StockService(db)
-
     return service.get_transactions()
 
-
-# =========================================================
-# GET CURRENT STOCK FOR ONE PRODUCT
-# =========================================================
 
 @router.get(
     "/current/{product_id}",
@@ -82,28 +82,19 @@ def get_stock_transactions(
 def get_current_stock(
     product_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
-
     service = StockService(db)
 
     try:
-
-        return service.get_current_stock(
-            product_id
-        )
+        return service.get_current_stock(product_id)
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
-
-# =========================================================
-# GET CURRENT STOCK FOR ALL PRODUCTS
-# =========================================================
 
 @router.get(
     "/current",
@@ -111,9 +102,7 @@ def get_current_stock(
 )
 def get_all_current_stock(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
-
     service = StockService(db)
-
     return service.get_all_current_stock()

@@ -174,6 +174,10 @@ export const stockApi = {
     const response = await api.get<CurrentStock[]>('/stock/current');
     return response.data;
   },
+  getStockLedger: async (dateStr: string): Promise<any[]> => {
+    const response = await api.get<any[]>(`/stock/ledger?report_date=${dateStr}`);
+    return response.data;
+  },
 };
 
 export const saleApi = {
