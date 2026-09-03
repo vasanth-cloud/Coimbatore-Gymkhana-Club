@@ -545,12 +545,12 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-3">Product Name</th>
                       <th className="py-3 px-3">Category</th>
                       <th className="py-3 px-3">Volume</th>
-                      <th className="py-3 px-3">Pack Size</th>
-                      <th className="py-3 px-3 text-right text-emerald-400">MRP Rate</th>
+                      <th className="py-3 px-3 text-center">Pack</th>
+                      <th className="py-3 px-3 text-right text-emerald-400">MRP</th>
                       <th className="py-3 px-3 text-right text-sky-400">Basic Rate</th>
                       <th className="py-3 px-3 text-right text-amber-400">Sales Rate</th>
-                      <th className="py-3 px-3 text-center bg-[#0d1117] text-slate-200 border-l border-[#30363d]">
-                        OPENING STOCK (C+B)
+                      <th className="py-3 px-3 text-center bg-[#0d1117] text-slate-200 border-l border-[#21262d]">
+                        OPENING (C+B)
                       </th>
                       <th className="py-3 px-3 text-center bg-emerald-500/10 text-emerald-400">
                         PURCHASES (+)
@@ -558,8 +558,8 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-3 text-center bg-rose-500/10 text-rose-400">
                         SALES (-)
                       </th>
-                      <th className="py-3 px-3 text-center bg-amber-500/10 text-amber-400 border-r border-[#30363d]">
-                        CLOSING STOCK (C+B)
+                      <th className="py-3 px-3 text-center bg-amber-500/10 text-amber-400 border-r border-[#21262d]">
+                        CLOSING (C+B)
                       </th>
                       <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
                     </tr>
@@ -567,30 +567,26 @@ export const Stock: React.FC = () => {
                   <tbody className="divide-y divide-[#21262d] text-slate-200">
                     {filteredLedgerItems.map((item) => (
                       <tr key={item.product_id} className="hover:bg-[#0d1117]/60 transition-colors">
-                        <td className="py-3 px-3 font-bold text-slate-100">{item.product_name}</td>
-                        <td className="py-3 px-3 text-slate-400">{item.category}</td>
-                        <td className="py-3 px-3 font-mono text-slate-400">{item.volume_ml}ml</td>
-                        <td className="py-3 px-3 font-mono text-slate-500">{item.pack_size} / Case</td>
-                        <td className="py-3 px-3 text-right font-mono text-emerald-400 font-bold">₹{item.mrp}</td>
-                        <td className="py-3 px-3 text-right font-mono text-sky-400 font-bold">₹{item.basic_rate}</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-400 font-extrabold">₹{item.selling_price}</td>
-                        <td className="py-3 px-3 text-center font-mono bg-[#0d1117]/40 border-l border-[#30363d]">
-                          <span className="font-bold text-slate-100 block">{item.opening_str}</span>
-                          <span className="text-[10px] text-slate-400 block">({item.opening_stock} Btts)</span>
+                        <td className="py-2.5 px-3 font-bold text-slate-100">{item.product_name}</td>
+                        <td className="py-2.5 px-3 text-slate-400">{item.category}</td>
+                        <td className="py-2.5 px-3 font-mono text-slate-400">{item.volume_ml}ml</td>
+                        <td className="py-2.5 px-3 text-center font-mono text-slate-400">{item.pack_size}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-bold">₹{item.mrp}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-sky-400 font-bold">₹{item.basic_rate}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-amber-400 font-extrabold">₹{item.selling_price}</td>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-200 border-l border-[#21262d]">
+                          {item.opening_str}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono bg-emerald-500/5">
-                          <span className="font-bold text-emerald-400 block">{item.purchase_str}</span>
-                          <span className="text-[10px] text-emerald-400/80 block">({item.purchase_qty} Btts)</span>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">
+                          {item.purchase_qty > 0 ? `+${item.purchase_str}` : '0'}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono bg-rose-500/5">
-                          <span className="font-bold text-rose-400 block">{item.sale_str}</span>
-                          <span className="text-[10px] text-rose-400/80 block">({item.sale_qty} Btts)</span>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-rose-400 bg-rose-500/5">
+                          {item.sale_qty > 0 ? `-${item.sale_str}` : '0'}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono bg-amber-500/5 border-r border-[#30363d]">
-                          <span className="font-black text-amber-400 block">{item.closing_str}</span>
-                          <span className="text-[10px] text-amber-400/80 font-bold block">({item.closing_stock} Total Btts)</span>
+                        <td className="py-2.5 px-3 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-r border-[#21262d]">
+                          {item.closing_str}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-black text-amber-400">
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
                           ₹{item.closing_sales_value.toLocaleString()}
                         </td>
                       </tr>
