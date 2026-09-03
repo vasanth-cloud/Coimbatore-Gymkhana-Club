@@ -54,6 +54,7 @@ export const Reports: React.FC = () => {
   const [cash50, setCash50] = useState<number>(0);
   const [cash20, setCash20] = useState<number>(0);
   const [cash10, setCash10] = useState<number>(0);
+  const [upiPaytmTotal, setUpiPaytmTotal] = useState<number>(0);
   const [tallySavedMsg, setTallySavedMsg] = useState<string>('');
 
   const totalCalculatedCash =
@@ -63,6 +64,8 @@ export const Reports: React.FC = () => {
     cash50 * 50 +
     cash20 * 20 +
     cash10 * 10;
+
+  const grandTotalDayCollection = totalCalculatedCash + upiPaytmTotal;
 
   const fetchReport = async () => {
     if (reportType === 'denominations') return;
@@ -354,6 +357,7 @@ export const Reports: React.FC = () => {
             </div>
 
             {/* 10 Note */}
+            {/* 10 Note */}
             <div className="bg-[#0d1117] border border-[#30363d] p-4 rounded-xl text-center space-y-2">
               <span className="text-xs font-mono font-black text-slate-300 block">₹10 Note</span>
               <input
@@ -366,25 +370,53 @@ export const Reports: React.FC = () => {
               />
               <span className="text-[10px] text-slate-400 font-mono block">Subtotal: ₹{cash10 * 10}</span>
             </div>
+
+            {/* Online Paytm / UPI Total Card */}
+            <div className="bg-[#0d1117] border border-sky-500/50 p-4 rounded-xl text-center space-y-2 sm:col-span-2 xl:col-span-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-black text-sky-400 uppercase tracking-wider">
+                  ⚡ Online Paytm / PhonePe / UPI Day Collection (INR)
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">QR UPI ID: paytm.s22ambe@pty</span>
+              </div>
+              <input
+                type="number"
+                min="0"
+                value={upiPaytmTotal || ''}
+                onChange={(e) => setUpiPaytmTotal(parseInt(e.target.value) || 0)}
+                placeholder="Enter Paytm / UPI Machine Total Amount (e.g. 15000)"
+                className="w-full bg-[#161b22] border border-sky-500/40 rounded-xl py-2.5 px-4 text-center text-base font-mono font-black text-sky-300 placeholder-slate-600 focus:outline-none focus:border-sky-400"
+              />
+            </div>
           </div>
 
           {/* Grand Calculated Total Banner */}
-          <div className="bg-[#0d1117] border border-sky-500/40 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Cash Counted in Drawer:</span>
-              <h3 className="text-3xl font-black text-sky-400 font-mono mt-0.5">₹{totalCalculatedCash.toLocaleString()}</h3>
+          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full xl:w-auto">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Cash Notes Counted:</span>
+                <h4 className="text-xl font-black text-slate-100 font-mono mt-0.5">₹{totalCalculatedCash.toLocaleString()}</h4>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Online Paytm / UPI Total:</span>
+                <h4 className="text-xl font-black text-sky-400 font-mono mt-0.5">₹{upiPaytmTotal.toLocaleString()}</h4>
+              </div>
+              <div className="border-l border-[#30363d] pl-4 sm:pl-6">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Grand Total Day Revenue:</span>
+                <h3 className="text-2xl font-black text-amber-400 font-mono mt-0.5">₹{grandTotalDayCollection.toLocaleString()}</h3>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
               <button
                 onClick={() => {
-                  setTallySavedMsg(`Cash Tally for ${selectedDate} saved! Total: ₹${totalCalculatedCash.toLocaleString()}`);
-                  setTimeout(() => setTallySavedMsg(''), 4000);
+                  setTallySavedMsg(`End-of-Day Tally for ${selectedDate} saved! Cash: ₹${totalCalculatedCash.toLocaleString()} | UPI: ₹${upiPaytmTotal.toLocaleString()} | Grand Total: ₹${grandTotalDayCollection.toLocaleString()}`);
+                  setTimeout(() => setTallySavedMsg(''), 5000);
                 }}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
               >
                 <Save className="w-4 h-4" />
-                <span>SAVE DAILY CASH CLOSING</span>
+                <span>SAVE END-OF-DAY CLOSING REPORT</span>
               </button>
             </div>
           </div>

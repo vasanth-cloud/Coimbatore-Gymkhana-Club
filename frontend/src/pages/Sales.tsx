@@ -933,41 +933,53 @@ export const Sales: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Paytm QR Box */}
-              <div className="bg-[#0d1117] border border-sky-500/30 p-4 rounded-xl text-center space-y-2">
-                <span className="text-xs font-black text-sky-400 uppercase tracking-wider block">1. Paytm QR</span>
-                <div className="w-36 h-36 mx-auto bg-white p-2 rounded-xl flex items-center justify-center shadow-inner">
-                  <div className="text-center">
-                    <QrCode className="w-24 h-24 text-slate-900 mx-auto" />
-                    <span className="text-[10px] text-slate-600 font-bold font-mono">PAYTM MERCHANT</span>
-                  </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Paytm BHIM UPI Official Standee QR Box */}
+              <div className="bg-[#0d1117] border border-sky-500/50 p-4 rounded-xl text-center space-y-2">
+                <span className="text-xs font-black text-sky-400 uppercase tracking-wider block">
+                  Official Paytm BHIM UPI QR Standee
+                </span>
+                <div className="bg-white p-2 rounded-xl flex items-center justify-center shadow-lg border border-sky-500/30">
+                  <img
+                    src="/paytm_qr.png"
+                    alt="Paytm Preferred BHIM UPI QR Code"
+                    className="w-full max-h-64 object-contain rounded-lg"
+                  />
                 </div>
-                <p className="text-[10px] text-slate-400 font-mono">MID: ZlxyfM20106557428761</p>
+                <div className="text-[11px] font-mono text-slate-300 bg-[#161b22] py-1 px-2 rounded-lg border border-[#30363d] flex items-center justify-between">
+                  <span className="text-slate-400 font-bold">UPI ID:</span>
+                  <span className="font-bold text-amber-400">paytm.s22ambe@pty</span>
+                </div>
               </div>
 
-              {/* PhonePe QR Box */}
-              <div className="bg-[#0d1117] border border-purple-500/30 p-4 rounded-xl text-center space-y-2">
-                <span className="text-xs font-black text-purple-400 uppercase tracking-wider block">2. PhonePe QR</span>
-                <div className="w-36 h-36 mx-auto bg-white p-2 rounded-xl flex items-center justify-center shadow-inner">
-                  <div className="text-center">
-                    <QrCode className="w-24 h-24 text-slate-900 mx-auto" />
-                    <span className="text-[10px] text-slate-600 font-bold font-mono">PHONEPE MERCHANT</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono">Coimbatore Gymkhana</p>
-              </div>
+              {/* UPI Merchant Details & Transaction Auto-Fetch Guide */}
+              <div className="bg-[#0d1117] border border-[#30363d] p-4 rounded-xl space-y-3 flex flex-col justify-between">
+                <div>
+                  <h4 className="text-xs font-black text-slate-200 uppercase tracking-wider mb-2">
+                    Merchant Details & Transaction History
+                  </h4>
+                  <ul className="text-xs text-slate-300 space-y-2 font-mono">
+                    <li className="flex items-center justify-between border-b border-[#21262d] pb-1">
+                      <span className="text-slate-400">Merchant Name:</span>
+                      <span className="font-bold text-slate-100">Coimbatore Gymkhana Club</span>
+                    </li>
+                    <li className="flex items-center justify-between border-b border-[#21262d] pb-1">
+                      <span className="text-slate-400">Paytm MID:</span>
+                      <span className="font-bold text-slate-100">ZlxyfM20106557428761</span>
+                    </li>
+                    <li className="flex items-center justify-between border-b border-[#21262d] pb-1">
+                      <span className="text-slate-400">Accepted Apps:</span>
+                      <span className="font-bold text-sky-400">Paytm / PhonePe / GPay / Any UPI</span>
+                    </li>
+                  </ul>
 
-              {/* Google Pay QR Box */}
-              <div className="bg-[#0d1117] border border-emerald-500/30 p-4 rounded-xl text-center space-y-2">
-                <span className="text-xs font-black text-emerald-400 uppercase tracking-wider block">3. Google Pay QR</span>
-                <div className="w-36 h-36 mx-auto bg-white p-2 rounded-xl flex items-center justify-center shadow-inner">
-                  <div className="text-center">
-                    <QrCode className="w-24 h-24 text-slate-900 mx-auto" />
-                    <span className="text-[10px] text-slate-600 font-bold font-mono">G-PAY MERCHANT</span>
+                  <div className="mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-xl space-y-1">
+                    <span className="text-[11px] font-bold text-sky-300 block">⚡ Automatic Transaction Logging</span>
+                    <p className="text-[10px] text-slate-400">
+                      When customers scan this Paytm QR and pay, Paytm sends the 12-digit UTR Transaction ID to automatically record payment in reports!
+                    </p>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-400 font-mono">UPI ID: gymkhanaclub@upi</p>
               </div>
             </div>
 
