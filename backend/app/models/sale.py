@@ -15,9 +15,21 @@ class Sale(BaseModel):
         index=True,
     )
 
+    customer_id = Column(
+        Integer,
+        ForeignKey("customers.id"),
+        nullable=True,
+        index=True,
+    )
+
     quantity = Column(
         Integer,
         nullable=False,
+    )
+
+    total_price = Column(
+        Integer,
+        nullable=True,
     )
 
     sale_date = Column(
@@ -30,4 +42,9 @@ class Sale(BaseModel):
     product = relationship(
         "Product",
         back_populates="sales",
+    )
+
+    customer = relationship(
+        "Customer",
+        backref="sales",
     )

@@ -133,14 +133,34 @@ export interface CurrentStock {
 export interface Sale {
   id: number;
   product_id: number;
+  customer_id?: number;
   quantity: number;
+  total_price?: number;
   sale_date: string;
 }
 
 export interface SaleCreatePayload {
   product_id: number;
   quantity: number;
+  customer_id?: number | null;
   sale_date?: string | null;
+}
+
+export interface DetailedSale {
+  id: number;
+  sale_date: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  customer_id?: number | null;
+  customer_code?: string | null;
+  customer_name?: string | null;
+  phone?: string | null;
+  product_id: number;
+  product_name: string;
+  brand_name?: string | null;
+  category: string;
+  volume_ml: number;
 }
 
 export interface DailyProductSale {

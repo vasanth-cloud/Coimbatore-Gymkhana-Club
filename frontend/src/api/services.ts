@@ -11,6 +11,7 @@ import {
   DailyProductSale,
   DailySummaryReport,
   DetailedEntry,
+  DetailedSale,
   Entry,
   EntryScanPayload,
   Product,
@@ -178,6 +179,14 @@ export const saleApi = {
   },
   getSales: async (): Promise<Sale[]> => {
     const response = await api.get<Sale[]>('/sales');
+    return response.data;
+  },
+  getDetailedSales: async (limit: number = 500): Promise<DetailedSale[]> => {
+    const response = await api.get<DetailedSale[]>(`/sales/detailed?limit=${limit}`);
+    return response.data;
+  },
+  getCustomerSales: async (customerId: number): Promise<DetailedSale[]> => {
+    const response = await api.get<DetailedSale[]>(`/sales/customer/${customerId}`);
     return response.data;
   },
   getDailySales: async (dateStr: string): Promise<DailyProductSale[]> => {

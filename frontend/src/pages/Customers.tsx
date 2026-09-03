@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { customerApi } from '../api/services';
-import { Customer } from '../types';
+import { customerApi, saleApi } from '../api/services';
+import { Customer, DetailedSale } from '../types';
 import { MembershipCard } from '../components/MembershipCard';
 import {
   UserPlus,
@@ -18,6 +18,8 @@ import {
   MapPin,
   X,
   Edit2,
+  Wine,
+  ShoppingBag,
 } from 'lucide-react';
 
 export const Customers: React.FC = () => {
@@ -41,6 +43,11 @@ export const Customers: React.FC = () => {
   const [editAddress, setEditAddress] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Member Liquor History Modal State
+  const [liquorHistoryCustomer, setLiquorHistoryCustomer] = useState<Customer | null>(null);
+  const [customerSales, setCustomerSales] = useState<DetailedSale[]>([]);
+  const [liquorLoading, setLiquorLoading] = useState(false);
 
   // Form & Bulk Import States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,6 +139,20 @@ export const Customers: React.FC = () => {
     setEditError('');
   };
 
+  // Open Member Liquor Purchase History Modal
+  const openLiquorHistory = async (customer: Customer) => {
+    setLiquorHistoryCustomer(customer);
+    setLiquorLoading(true);
+    try {
+      const data = await saleApi.getCustomerSales(customer.id);
+      setCustomerSales(data);
+    } catch (err) {
+      console.error('Failed to fetch customer liquor history:', err);
+    } finally {
+      setLiquorLoading(false);
+    }
+  };
+
   // Submit Edit Customer
   const handleUpdateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +181,7 @@ export const Customers: React.FC = () => {
     }
   };
 
-  // XLSX & CSV Sheet File Parser & Batch Importer (Strictly uses CARD column for Member ID; ignores ID NO!)
+  // XLSX & CSV Sheet File Parser & Batch Importer
   const handleSheetFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -185,7 +206,6 @@ export const Customers: React.FC = () => {
 
         const headers = (rawRows[0] || []).map((h: any) => String(h || '').trim().toLowerCase());
 
-        // STRICT EXCEL COLUMN RESOLUTION (Ignores S NO column A e.g. 32; Uses CARD column B e.g. 100):
         let cardIdx = headers.findIndex(
           (h: string) => h === 'card' || h === 'card no' || h === 'card_no' || h === 'card number' || h.includes('card')
         );
@@ -203,7 +223,6 @@ export const Customers: React.FC = () => {
         );
         if (phoneIdx === -1) phoneIdx = 4;
 
-        // ONLY map explicit address fields (address, location, addr). IGNORE ID NO / Aadhaar / Gov ID!
         let addressIdx = headers.findIndex(
           (h: string) => h.includes('address') || h.includes('location') || h.includes('addr')
         );
@@ -219,7 +238,6 @@ export const Customers: React.FC = () => {
           const phoneVal = phoneIdx !== -1 && row[phoneIdx] !== undefined ? String(row[phoneIdx] || '').trim() : String(row[4] || '').trim();
           
           const rawAddr = addressIdx !== -1 && row[addressIdx] !== undefined ? String(row[addressIdx] || '').trim() : '';
-          // Ensure pure digit ID numbers (like 981330057970) are NEVER treated as address
           const isPureDigits = /^\d+$/.test(rawAddr);
           const addrVal = (rawAddr.length > 0 && !isPureDigits) ? rawAddr : null;
 
@@ -253,7 +271,6 @@ export const Customers: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // Download Sample Excel CSV Template
   const downloadSampleTemplate = () => {
     const sampleCsv = `CARD,NAME,PHONE,ADDRESS
 1,MADANKUMAR V,9080962162,3 MGR Nagar Ondipudur Coimbatore
@@ -309,6 +326,10 @@ export const Customers: React.FC = () => {
       (c.address && c.address.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // Total liquor spend calculation for modal
+  const totalMemberLiquorSpend = customerSales.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+  const totalMemberBottles = customerSales.reduce((acc, curr) => acc + curr.quantity, 0);
+
   return (
     <div className="space-y-5 w-full min-w-0">
       {/* Header Bar */}
@@ -319,7 +340,7 @@ export const Customers: React.FC = () => {
             <span>Customer Database & Member Cards</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Member IDs generated from Card No (1, 55, 57...) • Edit member details & address anytime
+            Member IDs generated from Card No (1, 55, 57...) • Track Member Liquor Purchase Details
           </p>
         </div>
 
@@ -385,9 +406,6 @@ export const Customers: React.FC = () => {
                 placeholder="Card No (e.g. 1, 55, 57...) or leave blank"
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-amber-400 placeholder-slate-600 font-mono text-xs focus:outline-none focus:border-amber-500"
               />
-              <span className="text-[10px] text-slate-500 block mt-0.5">
-                Maps to CARD column in Excel
-              </span>
             </div>
 
             <div>
@@ -433,9 +451,6 @@ export const Customers: React.FC = () => {
                 placeholder="e.g. 3 MGR Nagar Coimbatore"
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 text-xs focus:outline-none focus:border-amber-500"
               />
-              <span className="text-[10px] text-slate-500 block mt-0.5">
-                Can be updated later using Edit button
-              </span>
             </div>
 
             <button
@@ -467,7 +482,7 @@ export const Customers: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
                 Member Records ({createdCustomers.length})
               </h3>
-              <p className="text-[11px] text-slate-400">Search by Member ID / Card No or Name to print card</p>
+              <p className="text-[11px] text-slate-400">View Member Card or Liquor Purchase History</p>
             </div>
 
             <div className="relative w-full sm:w-56">
@@ -492,9 +507,6 @@ export const Customers: React.FC = () => {
             <div className="flex-1 min-h-56 flex flex-col items-center justify-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl p-6 text-center">
               <CreditCard className="w-10 h-10 stroke-1 mb-2 text-slate-600" />
               <p className="font-semibold text-slate-400">No member records found</p>
-              <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                Import an Excel (.xlsx) sheet or add a member using the form. Click <b>"Pass Card"</b> to print QR card.
-              </p>
             </div>
           ) : (
             <div className="overflow-x-auto min-w-0">
@@ -529,6 +541,14 @@ export const Customers: React.FC = () => {
                       <td className="py-2.5 px-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1">
                           <button
+                            onClick={() => openLiquorHistory(c)}
+                            className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-[11px] font-bold transition-all flex items-center gap-1"
+                            title="View Member Liquor Purchase History"
+                          >
+                            <Wine className="w-3.5 h-3.5" />
+                            <span>Liquor History</span>
+                          </button>
+                          <button
                             onClick={() => setActiveQRModal(c)}
                             className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black shadow-sm transition-all flex items-center gap-1"
                           >
@@ -538,7 +558,7 @@ export const Customers: React.FC = () => {
                           <button
                             onClick={() => openEditModal(c)}
                             className="p-1.5 rounded-lg bg-[#21262d] hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 transition-colors"
-                            title="Edit Member Details / Address"
+                            title="Edit Member Details"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -559,6 +579,102 @@ export const Customers: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* MEMBER LIQUOR PURCHASE HISTORY MODAL */}
+      {liquorHistoryCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-2xl w-full relative shadow-2xl animate-in fade-in zoom-in duration-200 space-y-4">
+            <button
+              onClick={() => setLiquorHistoryCustomer(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-black text-amber-400 text-lg">
+                  #{liquorHistoryCustomer.customer_code}
+                </span>
+                <h3 className="text-lg font-black text-slate-100">
+                  {liquorHistoryCustomer.full_name} — Member Liquor Details
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Phone: {liquorHistoryCustomer.phone} • Full itemized bar liquor purchase log
+              </p>
+            </div>
+
+            {/* Spend & Bottle Summary Badges */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#0d1117] border border-[#30363d] p-3.5 rounded-xl text-xs">
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-mono block">Total Orders</span>
+                <span className="font-black text-slate-200 font-mono text-sm">{customerSales.length} Transactions</span>
+              </div>
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-mono block">Bottles Purchased</span>
+                <span className="font-black text-amber-400 font-mono text-sm">{totalMemberBottles} Drinks / Bottles</span>
+              </div>
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-mono block">Total Bar Spend</span>
+                <span className="font-black text-emerald-400 font-mono text-sm">₹{totalMemberLiquorSpend}</span>
+              </div>
+            </div>
+
+            {/* Purchases Table */}
+            {liquorLoading ? (
+              <div className="py-8 flex justify-center text-slate-400 gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                <span>Loading member liquor history...</span>
+              </div>
+            ) : customerSales.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+                No liquor purchases recorded for this member yet.
+              </div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto overflow-x-auto border border-[#21262d] rounded-xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#0d1117] text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-[#21262d]">
+                      <th className="py-2 px-3">Date / Time</th>
+                      <th className="py-2 px-3">Liquor Name</th>
+                      <th className="py-2 px-3">Brand & Volume</th>
+                      <th className="py-2 px-3 text-center">Qty</th>
+                      <th className="py-2 px-3 text-right">Unit Price</th>
+                      <th className="py-2 px-3 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#21262d]/70 text-slate-200 text-[11px]">
+                    {customerSales.map((s) => (
+                      <tr key={s.id} className="hover:bg-[#0d1117]/60 transition-colors">
+                        <td className="py-2 px-3 font-mono text-slate-400 whitespace-nowrap">
+                          {s.sale_date ? new Date(s.sale_date).toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="py-2 px-3 font-bold text-slate-100">{s.product_name}</td>
+                        <td className="py-2 px-3 text-slate-400">
+                          {s.brand_name || 'N/A'} ({s.volume_ml}ml)
+                        </td>
+                        <td className="py-2 px-3 text-center font-mono font-bold text-amber-400">{s.quantity}</td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-300">₹{s.unit_price}</td>
+                        <td className="py-2 px-3 text-right font-mono font-black text-amber-400">₹{s.total_price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setLiquorHistoryCustomer(null)}
+                className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* EDIT MEMBER DETAILS MODAL */}
       {editingCustomer && (
