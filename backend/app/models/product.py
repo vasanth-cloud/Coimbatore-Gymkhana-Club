@@ -47,6 +47,24 @@ class Product(BaseModel):
         nullable=False,
     )
 
+    mrp = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    basic_rate = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    pack_size = Column(
+        Integer,
+        default=24,
+        nullable=False,
+    )
+
     is_active = Column(
         Boolean,
         default=True,
@@ -60,12 +78,17 @@ class Product(BaseModel):
         back_populates="products",
     )
 
-    sales = relationship(
-        "Sale",
+    stock_receipt_items = relationship(
+        "StockReceiptItem",
         back_populates="product",
     )
 
     stock_transactions = relationship(
         "StockTransaction",
+        back_populates="product",
+    )
+
+    inventory_adjustments = relationship(
+        "InventoryAdjustment",
         back_populates="product",
     )

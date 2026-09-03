@@ -18,7 +18,9 @@ import {
   Download,
   Calendar,
   Upload,
-  FileCode,
+  IndianRupee,
+  BadgePercent,
+  Coins,
 } from 'lucide-react';
 
 export const Stock: React.FC = () => {
@@ -146,7 +148,6 @@ export const Stock: React.FC = () => {
         const items: { productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[] = [];
 
         rawData.forEach((row) => {
-          // Normalize column headers
           const nameVal = row['Product Name'] || row['Item Name'] || row['Product'] || row['Item'] || row['Name'] || Object.values(row)[0];
           const qtyVal = row['Quantity'] || row['Qty'] || row['Bottles'] || row['Cases'] || Object.values(row)[1];
 
@@ -154,7 +155,6 @@ export const Stock: React.FC = () => {
             const searchStr = String(nameVal).trim().toLowerCase();
             const qtyNum = parseInt(String(qtyVal)) || 1;
 
-            // Match with existing products
             const matched = products.find(
               (p) =>
                 p.name.toLowerCase() === searchStr ||
@@ -257,22 +257,42 @@ export const Stock: React.FC = () => {
       'Product Name',
       'Category',
       'Volume (ml)',
-      'Unit Price (INR)',
-      'OPENING STOCK (Yesterday Closing)',
-      'PURCHASES (Stock IN Today)',
-      'SALES (POS OUT Today)',
-      'CLOSING STOCK (End of Day)',
+      'Pack Size (Btts/Case)',
+      'Sales Rate (INR)',
+      'Basic Purchase Rate (INR)',
+      'MRP Rate (INR)',
+      'OPENING (Cases + Bottles)',
+      'OPENING TOTAL BOTTLES',
+      'PURCHASES (Cases + Bottles)',
+      'PURCHASES TOTAL BOTTLES',
+      'SALES (Cases + Bottles)',
+      'SALES TOTAL BOTTLES',
+      'CLOSING (Cases + Bottles)',
+      'CLOSING TOTAL BOTTLES',
+      'CLOSING TOTAL SALES VALUE (INR)',
+      'CLOSING TOTAL BASIC COST VALUE (INR)',
+      'CLOSING TOTAL MRP VALUE (INR)',
     ];
 
     const rows = filteredLedgerItems.map((item) => [
       `"${item.product_name}"`,
       `"${item.category}"`,
       item.volume_ml,
-      item.unit_price,
+      item.pack_size,
+      item.selling_price,
+      item.basic_rate,
+      item.mrp,
+      `"${item.opening_str}"`,
       item.opening_stock,
+      `"${item.purchase_str}"`,
       item.purchase_qty,
+      `"${item.sale_str}"`,
       item.sale_qty,
+      `"${item.closing_str}"`,
       item.closing_stock,
+      item.closing_sales_value,
+      item.closing_cost_value,
+      item.closing_mrp_value,
     ]);
 
     const csvContent =
@@ -283,7 +303,7 @@ export const Stock: React.FC = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Stock_Ledger_Opening_Closing_${ledgerDate}.csv`;
+    link.download = `Stock_Ledger_Cases_Bottles_Rates_${ledgerDate}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -305,10 +325,15 @@ export const Stock: React.FC = () => {
     item.product_name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalOpening = filteredLedgerItems.reduce((sum, item) => sum + item.opening_stock, 0);
-  const totalPurchases = filteredLedgerItems.reduce((sum, item) => sum + item.purchase_qty, 0);
-  const totalSales = filteredLedgerItems.reduce((sum, item) => sum + item.sale_qty, 0);
-  const totalClosing = filteredLedgerItems.reduce((sum, item) => sum + item.closing_stock, 0);
+  const totalOpeningBottles = filteredLedgerItems.reduce((sum, item) => sum + item.opening_stock, 0);
+  const totalPurchaseBottles = filteredLedgerItems.reduce((sum, item) => sum + item.purchase_qty, 0);
+  const totalSaleBottles = filteredLedgerItems.reduce((sum, item) => sum + item.sale_qty, 0);
+  const totalClosingBottles = filteredLedgerItems.reduce((sum, item) => sum + item.closing_stock, 0);
+
+  // Total Evening Valuations
+  const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_sales_value, 0);
+  const totalClosingCostVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_cost_value, 0);
+  const totalClosingMrpVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_mrp_value, 0);
 
   // Unique categories for pills
   const allCategories = Array.from(new Set(products.map((p) => p.category)));
@@ -320,10 +345,10 @@ export const Stock: React.FC = () => {
         <div>
           <h2 className="text-xl font-extrabold text-slate-100 flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-amber-400" />
-            <span>Stock Inventory & Ledger</span>
+            <span>Stock Inventory & Ledger (Cases & Bottles)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Opening Stock • Purchases • POS Sales • Closing Balances
+            Cases (C) + Loose Bottles (B) • Sales Rate • Basic Rate • MRP • Evening Valuation
           </p>
         </div>
 
@@ -451,32 +476,62 @@ export const Stock: React.FC = () => {
             </div>
           </div>
 
-          {/* Summary Metric Cards */}
+          {/* Summary Metric Cards for Bottle Counts */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Opening Stock (Yesterday Closing):</span>
-              <h4 className="text-xl font-black text-slate-100 font-mono mt-1">{totalOpening.toLocaleString()} Bottles</h4>
+              <h4 className="text-xl font-black text-slate-100 font-mono mt-1">{totalOpeningBottles.toLocaleString()} Bottles</h4>
             </div>
             <div className="bg-[#161b22] border border-emerald-500/30 p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Purchases (Stock IN Today):</span>
-              <h4 className="text-xl font-black text-emerald-400 font-mono mt-1">+{totalPurchases.toLocaleString()} Bottles</h4>
+              <h4 className="text-xl font-black text-emerald-400 font-mono mt-1">+{totalPurchaseBottles.toLocaleString()} Bottles</h4>
             </div>
             <div className="bg-[#161b22] border border-rose-500/30 p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">Sales (POS OUT Today):</span>
-              <h4 className="text-xl font-black text-rose-400 font-mono mt-1">-{totalSales.toLocaleString()} Bottles</h4>
+              <h4 className="text-xl font-black text-rose-400 font-mono mt-1">-{totalSaleBottles.toLocaleString()} Bottles</h4>
             </div>
             <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl">
               <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Closing Stock Balance:</span>
-              <h4 className="text-xl font-black text-amber-400 font-mono mt-1">{totalClosing.toLocaleString()} Bottles</h4>
+              <h4 className="text-xl font-black text-amber-400 font-mono mt-1">{totalClosingBottles.toLocaleString()} Bottles</h4>
             </div>
           </div>
 
-          {/* Ledger Table */}
+          {/* EVENING REMAINING STOCK TOTAL RATE / VALUATION BANNER */}
+          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                <Coins className="w-4 h-4" />
+                <span>Evening Total Stock Valuation ({ledgerDate})</span>
+              </h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Total monetary value of all {totalClosingBottles.toLocaleString()} remaining closing bottles
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full xl:w-auto">
+              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">Total Sales Value (Bar Price):</span>
+                <h3 className="text-lg font-black text-amber-400 font-mono mt-0.5">₹{totalClosingSalesVal.toLocaleString()}</h3>
+              </div>
+
+              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value (Purchase):</span>
+                <h3 className="text-lg font-black text-sky-400 font-mono mt-0.5">₹{totalClosingCostVal.toLocaleString()}</h3>
+              </div>
+
+              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Total MRP Value:</span>
+                <h3 className="text-lg font-black text-emerald-400 font-mono mt-0.5">₹{totalClosingMrpVal.toLocaleString()}</h3>
+              </div>
+            </div>
+          </div>
+
+          {/* Ledger Table with Cases (C) & Loose Bottles (B) */}
           <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg">
             {ledgerLoading ? (
               <div className="py-16 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                <span>Calculating daily opening, purchase, sale, and closing balances...</span>
+                <span>Calculating daily opening, purchase, sale, closing cases & rates...</span>
               </div>
             ) : filteredLedgerItems.length === 0 ? (
               <div className="py-16 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
@@ -490,9 +545,10 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-3">Product Name</th>
                       <th className="py-3 px-3">Category</th>
                       <th className="py-3 px-3">Volume</th>
-                      <th className="py-3 px-3 text-right">Unit Price</th>
+                      <th className="py-3 px-3">Pack Size</th>
+                      <th className="py-3 px-3 text-right">Rates (Sales / Basic / MRP)</th>
                       <th className="py-3 px-3 text-center bg-[#0d1117] text-slate-200 border-l border-[#30363d]">
-                        OPENING STOCK
+                        OPENING STOCK (C+B)
                       </th>
                       <th className="py-3 px-3 text-center bg-emerald-500/10 text-emerald-400">
                         PURCHASES (+)
@@ -501,8 +557,9 @@ export const Stock: React.FC = () => {
                         SALES (-)
                       </th>
                       <th className="py-3 px-3 text-center bg-amber-500/10 text-amber-400 border-r border-[#30363d]">
-                        CLOSING STOCK
+                        CLOSING STOCK (C+B)
                       </th>
+                      <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#21262d] text-slate-200">
@@ -511,18 +568,30 @@ export const Stock: React.FC = () => {
                         <td className="py-3 px-3 font-bold text-slate-100">{item.product_name}</td>
                         <td className="py-3 px-3 text-slate-400">{item.category}</td>
                         <td className="py-3 px-3 font-mono text-slate-400">{item.volume_ml}ml</td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-300">₹{item.unit_price}</td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-100 bg-[#0d1117]/40 border-l border-[#30363d]">
-                          {item.opening_stock}
+                        <td className="py-3 px-3 font-mono text-slate-500">{item.pack_size} / Case</td>
+                        <td className="py-3 px-3 text-right font-mono text-xs">
+                          <span className="font-bold text-amber-400 block">Sales: ₹{item.selling_price}</span>
+                          <span className="text-[10px] text-sky-400 block">Basic: ₹{item.basic_rate}</span>
+                          <span className="text-[10px] text-emerald-400 block">MRP: ₹{item.mrp}</span>
                         </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">
-                          {item.purchase_qty > 0 ? `+${item.purchase_qty}` : '0'}
+                        <td className="py-3 px-3 text-center font-mono bg-[#0d1117]/40 border-l border-[#30363d]">
+                          <span className="font-bold text-slate-100 block">{item.opening_str}</span>
+                          <span className="text-[10px] text-slate-400 block">({item.opening_stock} Btts)</span>
                         </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-rose-400 bg-rose-500/5">
-                          {item.sale_qty > 0 ? `-${item.sale_qty}` : '0'}
+                        <td className="py-3 px-3 text-center font-mono bg-emerald-500/5">
+                          <span className="font-bold text-emerald-400 block">{item.purchase_str}</span>
+                          <span className="text-[10px] text-emerald-400/80 block">({item.purchase_qty} Btts)</span>
                         </td>
-                        <td className="py-3 px-3 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-r border-[#30363d]">
-                          {item.closing_stock}
+                        <td className="py-3 px-3 text-center font-mono bg-rose-500/5">
+                          <span className="font-bold text-rose-400 block">{item.sale_str}</span>
+                          <span className="text-[10px] text-rose-400/80 block">({item.sale_qty} Btts)</span>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono bg-amber-500/5 border-r border-[#30363d]">
+                          <span className="font-black text-amber-400 block">{item.closing_str}</span>
+                          <span className="text-[10px] text-amber-400/80 font-bold block">({item.closing_stock} Total Btts)</span>
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-black text-amber-400">
+                          ₹{item.closing_sales_value.toLocaleString()}
                         </td>
                       </tr>
                     ))}
