@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.database import get_db
+from app.core.dependencies import require_admin, require_staff_or_admin
 from app.models.user import User
 from app.models.employee import Employee
 from app.models.attendance import Attendance
 from app.models.salary_advance import SalaryAdvance
-from app.api.dependencies.auth import require_admin, require_staff_or_admin
 
 router = APIRouter(prefix="/attendance", tags=["Attendance & Payroll"])
 
