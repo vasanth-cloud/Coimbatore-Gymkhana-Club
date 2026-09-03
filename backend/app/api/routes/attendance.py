@@ -1,4 +1,3 @@
-import openpyxl
 from io import BytesIO
 from calendar import monthrange
 from datetime import date, datetime
@@ -210,6 +209,8 @@ def export_attendance_excel(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    import openpyxl
+
     summary_data = get_attendance_summary(month=month, year=year, db=db, current_user=current_user)
 
     wb = openpyxl.Workbook()
