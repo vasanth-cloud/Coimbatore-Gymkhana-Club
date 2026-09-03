@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
 
 from app.repositories.product_repository import ProductRepository
@@ -89,9 +89,14 @@ class SaleService:
     def get_customer_sales(self, customer_id: int):
         return self.sale_repository.get_sales_by_customer(customer_id)
 
-    def get_daily_sales(self, target_date_str: str | None = None):
-        if target_date_str:
-            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+    def get_daily_sales(self, target_date_input: str | date | None = None):
+        if target_date_input:
+            if isinstance(target_date_input, date):
+                target_date = target_date_input
+            elif isinstance(target_date_input, str):
+                target_date = datetime.strptime(target_date_input, "%Y-%m-%d").date()
+            else:
+                target_date = datetime.utcnow().date()
         else:
             target_date = datetime.utcnow().date()
 

@@ -75,10 +75,10 @@ export const Sales: React.FC = () => {
     try {
       setLoading(true);
       const [detSales, prodList, custList, dailyData] = await Promise.all([
-        saleApi.getDetailedSales(500),
-        productApi.getProducts(),
-        customerApi.getCustomers(),
-        saleApi.getDailySales(reportDate),
+        saleApi.getDetailedSales(500).catch((err) => { console.error('getDetailedSales error:', err); return []; }),
+        productApi.getProducts().catch((err) => { console.error('getProducts error:', err); return []; }),
+        customerApi.getCustomers().catch((err) => { console.error('getCustomers error:', err); return []; }),
+        saleApi.getDailySales(reportDate).catch((err) => { console.error('getDailySales error:', err); return []; }),
       ]);
       setDetailedSales(detSales);
       setProducts(prodList);
