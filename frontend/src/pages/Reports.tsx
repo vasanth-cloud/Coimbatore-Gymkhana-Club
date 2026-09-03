@@ -100,9 +100,9 @@ export const Reports: React.FC = () => {
     fetchReport();
   }, [reportType, period, selectedDate, selectedYear, selectedMonth]);
 
-  // Export Cash Denominations Tally Sheet to CSV
+  // Export Cash & Online UPI Denominations Tally Sheet to CSV
   const exportDenominationsCSV = () => {
-    const headers = ['Currency Note', 'Note Count', 'Subtotal (INR)'];
+    const headers = ['Category / Note', 'Count / Source', 'Amount (INR)'];
     const rows = [
       ['₹500 Notes', cash500, cash500 * 500],
       ['₹200 Notes', cash200, cash200 * 200],
@@ -110,18 +110,20 @@ export const Reports: React.FC = () => {
       ['₹50 Notes', cash50, cash50 * 50],
       ['₹20 Notes', cash20, cash20 * 20],
       ['₹10 Notes', cash10, cash10 * 10],
-      ['TOTAL CASH IN DRAWER', '-', totalCalculatedCash],
+      ['TOTAL CASH IN DRAWER', 'Cash Notes', totalCalculatedCash],
+      ['ONLINE PAYTM / PHONEPE / UPI', 'QR Collection', upiPaytmTotal],
+      ['GRAND TOTAL DAY REVENUE', 'Cash + Online', grandTotalDayCollection],
     ];
 
     const csvContent =
       '\uFEFF' +
-      [`End of Day Cash Tally Report - Date: ${selectedDate}`, headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      [`End of Day Cash & Online UPI Tally Report - Date: ${selectedDate}`, headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Cash_Denominations_Tally_${selectedDate}.csv`;
+    link.download = `End_Of_Day_Cash_And_UPI_Tally_${selectedDate}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
