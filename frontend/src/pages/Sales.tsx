@@ -457,7 +457,7 @@ export const Sales: React.FC = () => {
           {/* Prominent Sales Log View Button */}
           <button
             onClick={() => setShowSalesLogModal(true)}
-            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all"
             title="Open Sales Log History Window"
           >
             <Receipt className="w-4 h-4 stroke-[2.5]" />
@@ -466,31 +466,11 @@ export const Sales: React.FC = () => {
 
           <button
             onClick={() => setShowQRModal(true)}
-            className="px-3 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/10 transition-all"
+            className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/10 transition-all"
             title="Display Paytm, PhonePe, and Google Pay QR Codes"
           >
             <QrCode className="w-4 h-4" />
             <span>UPI PAYMENT QRs</span>
-          </button>
-
-          <button
-            onClick={exportMemberLiquorSalesCSV}
-            disabled={detailedSales.length === 0}
-            className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
-            title="Download Excel Sheet with Member Card IDs, Names & Liquor Bought"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-            <span>1. MEMBER EXCEL</span>
-          </button>
-
-          <button
-            onClick={exportGeneralBottleSalesCSV}
-            disabled={detailedSales.length === 0}
-            className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
-            title="Download General Bottle Sales Report (No Member Details)"
-          >
-            <Download className="w-4 h-4 text-amber-400" />
-            <span>2. BOTTLE EXCEL</span>
           </button>
         </div>
       </div>
