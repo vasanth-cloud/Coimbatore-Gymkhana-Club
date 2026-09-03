@@ -3,7 +3,6 @@ import { productApi, saleApi, customerApi } from '../api/services';
 import { DailyProductSale, Product, DetailedSale, Customer } from '../types';
 import {
   Wine,
-  Calendar,
   Check,
   Loader2,
   Zap,
@@ -14,12 +13,15 @@ import {
   Minus,
   Receipt,
   Download,
-  UserCheck,
   CreditCard,
-  User,
-  ShoppingBag,
-  FileSpreadsheet,
+  ShoppingCart,
+  Trash2,
 } from 'lucide-react';
+
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
 
 export const Sales: React.FC = () => {
   const [detailedSales, setDetailedSales] = useState<DetailedSale[]>([]);
@@ -29,19 +31,17 @@ export const Sales: React.FC = () => {
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
 
-  // Right Panel Tab State: 'receipts' (individual transactions) | 'summary' (aggregated tally)
-  const [rightPanelTab, setRightPanelTab] = useState<'receipts' | 'summary'>('receipts');
-
   // Form Filter & Search States (Touch POS Grid)
   const [posCategoryPill, setPosCategoryPill] = useState<string>('ALL');
   const [posSearch, setPosSearch] = useState<string>('');
 
-  // Member Card Selector State
+  // Persistent Member Card Selector State (Stays active across multiple drink sales!)
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [memberSearch, setMemberSearch] = useState<string>('');
   const [showMemberDropdown, setShowMemberDropdown] = useState<boolean>(false);
 
-  // Form state
+  // Multi-Item Cart Basket State
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -101,18 +101,79 @@ export const Sales: React.FC = () => {
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
-  const unitPrice = selectedProduct?.selling_price ?? 0;
-  const totalPrice = unitPrice * quantity;
 
-  const handleRecordSale = async (e: React.FormEvent) => {
+  // Add Item to Multi-Item Cart Basket
+  const handleAddToCart = (product: Product, qty: number = 1) => {
+    setCartItems((prev) => {
+      const existingIdx = prev.findIndex((item) => item.product.id === product.id);
+      if (existingIdx > -1) {
+        const updated = [...prev];
+        updated[existingIdx].quantity += qty;
+        return updated;
+      }
+      return [...prev, { product, quantity: qty }];
+    });
+  };
+
+  const handleRemoveFromCart = (productId: number) => {
+    setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const cartTotalAmount = cartItems.reduce(
+    (sum, item) => sum + item.product.selling_price * item.quantity,
+    0
+  );
+
+  // Submit Cart Order (Records each drink item under the selected member card!)
+  const handleCheckoutCart = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
-    if (!selectedProductId) {
-      setMsg({ type: 'error', text: 'Please tap a drink card to select' });
+
+    // If cart has items, process cart items
+    if (cartItems.length > 0) {
+      setSubmitting(true);
+      try {
+        let totalCount = 0;
+        for (const item of cartItems) {
+          await saleApi.createSale({
+            product_id: item.product.id,
+            quantity: item.quantity,
+            customer_id: selectedCustomerId || null,
+          });
+          totalCount += item.quantity;
+        }
+
+        const memberBadge = selectedCustomer
+          ? ` Member #${selectedCustomer.customer_code} (${selectedCustomer.full_name})`
+          : '';
+        setMsg({
+          type: 'success',
+          text: `Recorded ${cartItems.length} items (${totalCount} bottles) for${memberBadge} — Total: ₹${cartTotalAmount}`,
+        });
+
+        setCartItems([]);
+        await loadData();
+      } catch (err: any) {
+        console.error(err);
+        setMsg({
+          type: 'error',
+          text: err.response?.data?.detail || 'Failed to record sales. Check stock availability.',
+        });
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
-    setSubmitting(true);
 
+    // Quick single item sale fallback
+    if (!selectedProductId) {
+      setMsg({ type: 'error', text: 'Please select a drink or add items to cart' });
+      return;
+    }
+
+    if (!selectedProduct) return;
+
+    setSubmitting(true);
     try {
       await saleApi.createSale({
         product_id: selectedProductId,
@@ -120,15 +181,16 @@ export const Sales: React.FC = () => {
         customer_id: selectedCustomerId || null,
       });
 
-      const memberBadge = selectedCustomer ? ` Member #${selectedCustomer.customer_code} (${selectedCustomer.full_name})` : '';
+      const memberBadge = selectedCustomer
+        ? ` Member #${selectedCustomer.customer_code} (${selectedCustomer.full_name})`
+        : '';
       setMsg({
         type: 'success',
-        text: `Sale Recorded: ${quantity}x ${selectedProduct?.name}${memberBadge} — Total: ₹${totalPrice}`,
+        text: `Recorded ${quantity}x ${selectedProduct.name} for${memberBadge} — Total: ₹${selectedProduct.selling_price * quantity}`,
       });
 
       setQuantity(1);
-      setSelectedCustomerId(null);
-      setMemberSearch('');
+      // NOTE: DO NOT CLEAR MEMBER CARD! Keep selected member active for next items/visits!
       await loadData();
     } catch (err: any) {
       console.error(err);
@@ -141,7 +203,7 @@ export const Sales: React.FC = () => {
     }
   };
 
-  // Export Sales Log to CSV / Excel File
+  // Export Sales Log to CSV / Excel File (Without any 'Walk-in' text!)
   const exportSalesLogCSV = () => {
     if (detailedSales.length === 0) {
       alert('No sales log records available to export');
@@ -166,9 +228,9 @@ export const Sales: React.FC = () => {
     const rows = detailedSales.map((s) => [
       s.id,
       s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
-      s.customer_code ? `"#${s.customer_code}"` : '"Walk-in Guest"',
-      s.customer_name ? `"${s.customer_name}"` : '"N/A"',
-      s.phone ? `"${s.phone}"` : '"N/A"',
+      s.customer_code ? `"#${s.customer_code}"` : '""',
+      s.customer_name ? `"${s.customer_name}"` : '""',
+      s.phone ? `"${s.phone}"` : '""',
       `"${s.product_name}"`,
       `"${s.brand_name || 'N/A'}"`,
       `"${s.category}"`,
@@ -201,7 +263,7 @@ export const Sales: React.FC = () => {
             <span>Bar POS Counter & Sales Log</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Link Member Cards to liquor purchases • Itemized sales log with 1-tap Excel download
+            Select Member Card once to record multiple drinks (Beer, Whisky...) • Itemized sales log download
           </p>
         </div>
 
@@ -223,12 +285,12 @@ export const Sales: React.FC = () => {
         {/* Left Column: Bar POS Counter & Drink Picker (7 cols) */}
         <div className="xl:col-span-7 space-y-4 min-w-0">
           
-          {/* Member Card Linker Selector Box */}
+          {/* Persistent Member Card Linker Selector Box */}
           <div className="bg-[#161b22] border border-amber-500/30 rounded-2xl p-4 shadow-lg relative">
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                 <CreditCard className="w-4 h-4 text-amber-400" />
-                <span>Step 1: Link Member Card (Optional)</span>
+                <span>Step 1: Select Member Card (Stays Active for Multiple Drinks)</span>
               </label>
               {selectedCustomer && (
                 <button
@@ -236,9 +298,9 @@ export const Sales: React.FC = () => {
                     setSelectedCustomerId(null);
                     setMemberSearch('');
                   }}
-                  className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 font-bold"
+                  className="text-[11px] text-rose-400 hover:underline flex items-center gap-1 font-bold bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/30"
                 >
-                  <X className="w-3 h-3" /> Unlink Card
+                  <X className="w-3.5 h-3.5" /> Clear Member Card
                 </button>
               )}
             </div>
@@ -246,7 +308,7 @@ export const Sales: React.FC = () => {
             {selectedCustomer ? (
               <div className="bg-[#0d1117] border border-amber-500/50 p-3 rounded-xl flex items-center justify-between animate-in fade-in">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold font-mono text-sm">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-black font-mono text-base shadow-sm">
                     #{selectedCustomer.customer_code}
                   </div>
                   <div>
@@ -254,9 +316,14 @@ export const Sales: React.FC = () => {
                     <p className="text-[10px] text-slate-400 font-mono">Phone: {selectedCustomer.phone}</p>
                   </div>
                 </div>
-                <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full font-extrabold uppercase">
-                  Card Linked
-                </span>
+                <div className="text-right">
+                  <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full font-black uppercase tracking-wider block">
+                    Active Member Card
+                  </span>
+                  <span className="text-[9px] text-slate-500 mt-0.5 block">
+                    All drinks will be recorded for #{selectedCustomer.customer_code}
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="relative">
@@ -270,7 +337,7 @@ export const Sales: React.FC = () => {
                       setMemberSearch(e.target.value);
                       setShowMemberDropdown(true);
                     }}
-                    placeholder="Search Member Card # (e.g. 1, 55), Name, or Phone..."
+                    placeholder="Search Member Card # (e.g. 100, 55), Name, or Phone..."
                     className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-2 text-slate-100 placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -313,9 +380,9 @@ export const Sales: React.FC = () => {
               <div>
                 <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-amber-400" />
-                  <span>Step 2: Select Drink & Quantity</span>
+                  <span>Step 2: Select Liquor Items & Cart</span>
                 </h3>
-                <p className="text-[11px] text-slate-400">Tap drink card to select for checkout</p>
+                <p className="text-[11px] text-slate-400">Tap drink card to add to order cart</p>
               </div>
 
               {/* Search Bar */}
@@ -373,20 +440,22 @@ export const Sales: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
                 {filteredPosProducts.map((p) => {
                   const isSelected = selectedProductId === p.id;
+                  const cartCount = cartItems.find((item) => item.product.id === p.id)?.quantity || 0;
                   return (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
-                      onClick={() => setSelectedProductId(p.id)}
-                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all relative ${
+                      onClick={() => {
+                        setSelectedProductId(p.id);
+                      }}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer relative ${
                         isSelected
                           ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10 scale-[0.98]'
                           : 'bg-[#0d1117] border-[#21262d] hover:border-slate-600 hover:bg-[#161b22]'
                       }`}
                     >
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
-                          <Check className="w-3 h-3 stroke-[3]" />
+                      {cartCount > 0 && (
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] font-mono">
+                          {cartCount} in Cart
                         </div>
                       )}
                       <div>
@@ -397,17 +466,116 @@ export const Sales: React.FC = () => {
                       </div>
                       <div className="mt-2 flex items-center justify-between border-t border-[#21262d] pt-1.5">
                         <span className="text-xs font-black text-amber-400 font-mono">₹{p.selling_price}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">{p.unit}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(p, 1);
+                          }}
+                          className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1 shadow-sm"
+                        >
+                          <Plus className="w-3 h-3 stroke-[3]" /> Add
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Sale Checkout Panel */}
-            {selectedProduct && (
-              <form onSubmit={handleRecordSale} className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 space-y-3">
+            {/* Cart Basket Summary Box (Multi-Item Order Checkout) */}
+            {cartItems.length > 0 && (
+              <div className="bg-[#0d1117] border border-amber-500/40 rounded-2xl p-4 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-extrabold text-slate-100 uppercase tracking-wider">
+                      Current Cart Basket ({cartItems.length} Drinks)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setCartItems([])}
+                    className="text-[10px] text-rose-400 hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear Cart
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 divide-y divide-[#21262d]">
+                  {cartItems.map((item) => (
+                    <div key={item.product.id} className="pt-2 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-100 block">{item.product.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {item.product.category} • {item.product.volume_ml}ml
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 font-mono">
+                        <div className="flex items-center gap-1 bg-[#161b22] border border-[#30363d] px-2 py-0.5 rounded-lg">
+                          <button
+                            onClick={() => {
+                              if (item.quantity > 1) {
+                                setCartItems((prev) =>
+                                  prev.map((i) =>
+                                    i.product.id === item.product.id ? { ...i, quantity: i.quantity - 1 } : i
+                                  )
+                                );
+                              } else {
+                                handleRemoveFromCart(item.product.id);
+                              }
+                            }}
+                            className="text-slate-400 hover:text-slate-100"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-bold text-amber-400 px-1">{item.quantity}</span>
+                          <button
+                            onClick={() => {
+                              setCartItems((prev) =>
+                                prev.map((i) =>
+                                  i.product.id === item.product.id ? { ...i, quantity: i.quantity + 1 } : i
+                                )
+                              );
+                            }}
+                            className="text-slate-400 hover:text-slate-100"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <span className="font-black text-amber-400">₹{item.product.selling_price * item.quantity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Checkout Cart Button */}
+                <button
+                  type="button"
+                  onClick={handleCheckoutCart}
+                  disabled={submitting}
+                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processing Cart Sale...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>
+                        RECORD CART SALE ({cartItems.length} ITEMS) — TOTAL ₹{cartTotalAmount}
+                        {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Quick Single Item Sale Checkout Panel (When cart is empty) */}
+            {cartItems.length === 0 && selectedProduct && (
+              <form onSubmit={handleCheckoutCart} className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-slate-400 font-mono uppercase block">Selected Bottle</span>
@@ -443,7 +611,7 @@ export const Sales: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Submit Sale Button */}
+                {/* Submit Quick Sale Button */}
                 <button
                   type="submit"
                   disabled={submitting}
@@ -457,20 +625,23 @@ export const Sales: React.FC = () => {
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>COMPLETE SALE — TOTAL ₹{totalPrice}</span>
+                      <span>
+                        RECORD SALE — TOTAL ₹{selectedProduct.selling_price * quantity}
+                        {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
+                      </span>
                     </>
                   )}
                 </button>
-
-                {msg && (
-                  <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
-                    msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                  }`}>
-                    {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-rose-400 shrink-0" />}
-                    <span>{msg.text}</span>
-                  </div>
-                )}
               </form>
+            )}
+
+            {msg && (
+              <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+              }`}>
+                {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-rose-400 shrink-0" />}
+                <span>{msg.text}</span>
+              </div>
             )}
           </div>
         </div>
@@ -522,7 +693,7 @@ export const Sales: React.FC = () => {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic">Walk-in</span>
+                          <span className="text-slate-600 font-mono text-[10px]">-</span>
                         )}
                       </td>
                       <td className="py-2.5 px-3">
