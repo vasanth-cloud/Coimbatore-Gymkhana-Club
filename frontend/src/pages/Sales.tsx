@@ -149,14 +149,16 @@ export const Sales: React.FC = () => {
   // Scan or find customer by QR Token or Card # / Phone
   const handleScanOrFindCustomer = (tokenOrCode: string) => {
     if (!tokenOrCode) return;
-    const term = tokenOrCode.trim().toLowerCase();
+    const raw = tokenOrCode.trim();
+    const term = raw.toLowerCase();
 
-    // Find customer matching QR Token, Card #, or Phone
+    // Find customer matching QR Token, Card #, Phone, or Name
     const matched = customers.find(
       (c) =>
-        c.qr_token === tokenOrCode.trim() ||
+        (c.qr_token && (c.qr_token === raw || c.qr_token.toLowerCase() === term || raw.includes(c.qr_token))) ||
         c.customer_code.toLowerCase() === term ||
-        c.phone === term
+        c.phone === term ||
+        c.full_name.toLowerCase() === term
     );
 
     if (matched) {

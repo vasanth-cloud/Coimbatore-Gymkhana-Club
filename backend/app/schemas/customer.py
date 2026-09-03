@@ -34,6 +34,7 @@ class CustomerResponse(BaseModel):
     full_name: str
     phone: str
     address: str | None = None
+    qr_token: str | None = None
     is_active: bool
 
     model_config = {
