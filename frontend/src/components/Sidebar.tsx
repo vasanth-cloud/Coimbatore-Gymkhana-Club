@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-64 bg-[#161b22] border-r border-[#21262d] flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="w-64 bg-[#161b22] border-r border-[#21262d] flex flex-col justify-between shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-20">
       <nav className="p-4 space-y-1.5">
         <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">
           Main Navigation
