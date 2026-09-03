@@ -550,21 +550,25 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-right text-sky-400">Basic</th>
                       <th className="py-3 px-2 text-right text-amber-400">Sales</th>
                       
-                      {/* Opening Stock C & B */}
+                      {/* Opening Stock C, B & Total */}
                       <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-200 border-l border-[#30363d]">OB (C)</th>
                       <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-200">OB (B)</th>
+                      <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-100 font-black">OB Total</th>
                       
-                      {/* Purchases C & B */}
+                      {/* Purchases C, B & Total */}
                       <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-400 border-l border-[#30363d]">PUR (C)</th>
                       <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-400">PUR (B)</th>
+                      <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-300 font-black">PUR Total</th>
                       
-                      {/* Sales C & B */}
+                      {/* Sales C, B & Total */}
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400 border-l border-[#30363d]">SALE (C)</th>
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400">SALE (B)</th>
+                      <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-300 font-black">SALE Total</th>
                       
-                      {/* Closing Stock C & B */}
+                      {/* Closing Stock C, B & Total */}
                       <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400 border-l border-[#30363d]">CB (C)</th>
-                      <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400 border-r border-[#30363d]">CB (B)</th>
+                      <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400">CB (B)</th>
+                      <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-300 font-black border-r border-[#30363d]">CB Total</th>
                       
                       <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
                     </tr>
@@ -580,36 +584,48 @@ export const Stock: React.FC = () => {
                         <td className="py-2.5 px-2 text-right font-mono text-sky-400 font-bold">₹{item.basic_rate}</td>
                         <td className="py-2.5 px-2 text-right font-mono text-amber-400 font-extrabold">₹{item.selling_price}</td>
                         
-                        {/* Opening Stock C & B */}
+                        {/* Opening Stock C, B & Total */}
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 border-l border-[#30363d] bg-[#0d1117]/40">
                           {item.opening_cases}
                         </td>
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 bg-[#0d1117]/40">
                           {item.opening_bottles}
                         </td>
+                        <td className="py-2.5 px-2 text-center font-mono font-black text-slate-100 bg-[#0d1117]/60">
+                          {item.opening_stock}
+                        </td>
                         
-                        {/* Purchases C & B */}
+                        {/* Purchases C, B & Total */}
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5 border-l border-[#30363d]">
                           {item.purchase_cases}
                         </td>
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">
                           {item.purchase_bottles}
                         </td>
+                        <td className="py-2.5 px-2 text-center font-mono font-black text-emerald-300 bg-emerald-500/10">
+                          {item.purchase_qty}
+                        </td>
                         
-                        {/* Sales C & B */}
+                        {/* Sales C, B & Total */}
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5 border-l border-[#30363d]">
                           {item.sale_cases}
                         </td>
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5">
                           {item.sale_bottles}
                         </td>
+                        <td className="py-2.5 px-2 text-center font-mono font-black text-rose-300 bg-rose-500/10">
+                          {item.sale_qty}
+                        </td>
                         
-                        {/* Closing Stock C & B */}
+                        {/* Closing Stock C, B & Total */}
                         <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-l border-[#30363d]">
                           {item.closing_cases}
                         </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-r border-[#30363d]">
+                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5">
                           {item.closing_bottles}
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-300 bg-amber-500/10 border-r border-[#30363d]">
+                          {item.closing_stock}
                         </td>
                         
                         <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
