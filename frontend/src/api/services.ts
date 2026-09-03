@@ -221,4 +221,22 @@ export const reportApi = {
     const response = await api.get('/reports/sales', { params });
     return response.data;
   },
+  saveTally: async (data: {
+    tally_date: string;
+    cash_500: number;
+    cash_200: number;
+    cash_100: number;
+    cash_50: number;
+    cash_20: number;
+    cash_10: number;
+    upi_paytm_total: number;
+    notes?: string;
+  }): Promise<any> => {
+    const response = await api.post('/reports/tally', data);
+    return response.data;
+  },
+  getTallies: async (params: { period: string; report_date?: string; year?: number; month?: number }): Promise<any[]> => {
+    const response = await api.get('/reports/tally', { params });
+    return response.data;
+  },
 };
