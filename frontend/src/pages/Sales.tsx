@@ -147,19 +147,28 @@ export const Sales: React.FC = () => {
   }, [cardEntryMethod]);
 
   // Scan or find customer by QR Token or Card # / Phone
-  const handleScanOrFindCustomer = (tokenOrCode: string) => {
+  const handleScanOrFindCustomer = async (tokenOrCode: string) => {
     if (!tokenOrCode) return;
     const raw = tokenOrCode.trim();
     const term = raw.toLowerCase();
 
-    // Find customer matching QR Token, Card #, Phone, or Name
-    const matched = customers.find(
+    // 1. Try finding customer in memory first
+    let matched = customers.find(
       (c) =>
         (c.qr_token && (c.qr_token === raw || c.qr_token.toLowerCase() === term || raw.includes(c.qr_token))) ||
         c.customer_code.toLowerCase() === term ||
         c.phone === term ||
         c.full_name.toLowerCase() === term
     );
+
+    // 2. If not found in memory, query PostgreSQL backend lookup API directly!
+    if (!matched) {
+      try {
+        matched = await customerApi.lookupCustomer(raw);
+      } catch (e) {
+        console.warn('Backend customer lookup failed:', e);
+      }
+    }
 
     if (matched) {
       setSelectedCustomerId(matched.id);

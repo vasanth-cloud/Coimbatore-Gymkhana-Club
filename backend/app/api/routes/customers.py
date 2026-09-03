@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import require_admin
+from app.core.dependencies import require_admin, require_staff_or_admin
 from app.models.user import User
 from app.repositories.customer_repository import CustomerRepository
 from app.schemas.customer import (
@@ -95,12 +95,31 @@ def bulk_import_customers(
 
 
 @router.get(
+    "/lookup",
+    response_model=CustomerResponse,
+)
+def lookup_customer(
+    query: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    repository = CustomerRepository(db)
+    cust = repository.lookup_customer(query)
+    if not cust:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active member card found for '{query}'",
+        )
+    return cust
+
+
+@router.get(
     "",
     response_model=list[CustomerResponse],
 )
 def get_customers(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     repository = CustomerRepository(db)
     return repository.get_all()

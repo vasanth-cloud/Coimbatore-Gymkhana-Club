@@ -66,6 +66,10 @@ export const customerApi = {
     const response = await api.get<Customer[]>('/customers');
     return response.data;
   },
+  lookupCustomer: async (query: string): Promise<Customer> => {
+    const response = await api.get<Customer>(`/customers/lookup?query=${encodeURIComponent(query)}`);
+    return response.data;
+  },
   getQRUrl: (customerId: number): string => {
     const token = localStorage.getItem('token');
     return `/api/customers/${customerId}/qr`;
