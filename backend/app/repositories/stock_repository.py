@@ -21,6 +21,7 @@ class StockRepository:
         product_id: int,
         quantity: int,
         transaction_type: str,
+        note: str | None = None,
         transaction_date: datetime | None = None,
     ):
 

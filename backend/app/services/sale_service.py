@@ -48,10 +48,7 @@ class SaleService:
                 if not customer:
                     raise ValueError("Customer / Member Card not found")
 
-            current_stock = self.stock_repository.get_current_stock(product_id)
-            if quantity > current_stock:
-                raise ValueError(f"Insufficient stock. Available stock: {current_stock}")
-
+            # Create sale record
             sale = self.sale_repository.create(
                 product_id=product_id,
                 quantity=quantity,
@@ -68,7 +65,7 @@ class SaleService:
                 sale_date=sale_date,
             )
 
-            # Deduct stock
+            # Deduct stock transaction
             self.stock_repository.create_transaction(
                 product_id=product_id,
                 quantity=quantity,
