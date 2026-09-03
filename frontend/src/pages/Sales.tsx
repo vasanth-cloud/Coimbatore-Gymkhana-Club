@@ -241,6 +241,27 @@ export const Sales: React.FC = () => {
     setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
+  const handleClearCart = () => setCartItems([]);
+
+  const handleUpdateCartQty = (productId: number, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemoveFromCart(productId);
+      return;
+    }
+    const stockItem = stockList.find((s) => s.product_id === productId);
+    const availStock = stockItem ? stockItem.current_stock : 0;
+    if (newQty > availStock) {
+      setMsg({
+        type: 'error',
+        text: `Cannot set ${newQty} bottles — Only ${availStock} available in stock!`,
+      });
+      return;
+    }
+    setCartItems((prev) =>
+      prev.map((i) => (i.product.id === productId ? { ...i, quantity: newQty } : i))
+    );
+  };
+
   const cartTotalAmount = cartItems.reduce(
     (sum, item) => sum + item.product.selling_price * item.quantity,
     0
@@ -415,6 +436,9 @@ export const Sales: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // Sales Log Modal State
+  const [showSalesLogModal, setShowSalesLogModal] = useState<boolean>(false);
+
   return (
     <div className="space-y-5 w-full min-w-0">
       {/* Header Bar with Action Buttons */}
@@ -430,6 +454,16 @@ export const Sales: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Prominent Sales Log View Button */}
+          <button
+            onClick={() => setShowSalesLogModal(true)}
+            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all"
+            title="Open Sales Log History Window"
+          >
+            <Receipt className="w-4 h-4 stroke-[2.5]" />
+            <span>VIEW SALES LOG ({detailedSales.length})</span>
+          </button>
+
           <button
             onClick={() => setShowQRModal(true)}
             className="px-3 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/10 transition-all"
@@ -442,11 +476,11 @@ export const Sales: React.FC = () => {
           <button
             onClick={exportMemberLiquorSalesCSV}
             disabled={detailedSales.length === 0}
-            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/10 transition-all disabled:opacity-50"
+            className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
             title="Download Excel Sheet with Member Card IDs, Names & Liquor Bought"
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>1. MEMBER LIQUOR EXCEL</span>
+            <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+            <span>1. MEMBER EXCEL</span>
           </button>
 
           <button
@@ -456,351 +490,372 @@ export const Sales: React.FC = () => {
             title="Download General Bottle Sales Report (No Member Details)"
           >
             <Download className="w-4 h-4 text-amber-400" />
-            <span>2. BOTTLE SALES EXCEL (NO MEMBER INFO)</span>
+            <span>2. BOTTLE EXCEL</span>
           </button>
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 min-w-0">
+      {/* Full-Width Minimalist Bar POS Counter Container */}
+      <div className="w-full space-y-5 min-w-0">
         
-        {/* Left Column: Bar POS Counter & Drink Picker (7 cols) */}
-        <div className="xl:col-span-7 space-y-4 min-w-0">
-          
-          {/* Member Card Camera & Search Selector Box */}
-          <div className="bg-[#161b22] border border-amber-500/30 rounded-2xl p-4 shadow-lg relative">
-            <div className="flex items-center justify-between mb-3 border-b border-[#21262d] pb-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <CreditCard className="w-4 h-4 text-amber-400" />
-                <span>Step 1: Scan Member Card (Camera or Scanner)</span>
-              </label>
+        {/* Step 1: Member Card Camera & Search Selector Box */}
+        <div className="bg-[#161b22] border border-amber-500/30 rounded-2xl p-4 shadow-lg relative">
+          <div className="flex items-center justify-between mb-3 border-b border-[#21262d] pb-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <CreditCard className="w-4 h-4 text-amber-400" />
+              <span>Step 1: Scan Member Card (Camera or Scanner)</span>
+            </label>
 
-              {/* Mode Switcher Buttons */}
-              <div className="flex items-center gap-1 bg-[#0d1117] p-1 rounded-xl border border-[#30363d]">
-                <button
-                  type="button"
-                  onClick={() => setCardEntryMethod('search')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    cardEntryMethod === 'search'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Search / USB
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCardEntryMethod('camera')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
-                    cardEntryMethod === 'camera'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Camera className="w-3 h-3" /> Camera Scan
-                </button>
-              </div>
-            </div>
-
-            {/* Active Member Card Banner */}
-            {selectedCustomer ? (
-              <div className="bg-[#0d1117] border border-amber-500/50 p-3 rounded-xl flex items-center justify-between animate-in fade-in">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-black font-mono text-base shadow-sm">
-                    #{selectedCustomer.customer_code}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-100">{selectedCustomer.full_name}</h4>
-                    <p className="text-[10px] text-slate-400 font-mono">Phone: {selectedCustomer.phone}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full font-black uppercase tracking-wider">
-                    Member Linked
-                  </span>
-                  <button
-                    onClick={() => {
-                      setSelectedCustomerId(null);
-                      setMemberSearch('');
-                    }}
-                    className="p-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 transition-colors"
-                    title="Unlink Card"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : cardEntryMethod === 'camera' ? (
-              /* Camera QR Scanner Box */
-              <div className="flex flex-col items-center p-2 bg-[#0d1117] border border-[#30363d] rounded-xl">
-                <div id="pos-qr-reader" className="w-full max-w-sm rounded-lg overflow-hidden" />
-                <p className="text-[11px] text-slate-400 mt-2 text-center">
-                  Hold member QR card in front of camera to scan automatically
-                </p>
-              </div>
-            ) : (
-              /* Search Input & Dropdown */
-              <div className="relative">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={memberSearch}
-                    onFocus={() => setShowMemberDropdown(true)}
-                    onChange={(e) => {
-                      setMemberSearch(e.target.value);
-                      setShowMemberDropdown(true);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleScanOrFindCustomer(memberSearch);
-                      }
-                    }}
-                    placeholder="Scan QR or enter Member Card # (e.g. 100, 55), Name, Phone..."
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-2 text-amber-400 placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                {/* Dropdown Options */}
-                {showMemberDropdown && memberSearch.trim().length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-[#21262d]">
-                    {filteredCustomers.length === 0 ? (
-                      <div className="p-3 text-slate-500 text-xs text-center">No member card found</div>
-                    ) : (
-                      filteredCustomers.slice(0, 10).map((cust) => (
-                        <button
-                          key={cust.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCustomerId(cust.id);
-                            setShowMemberDropdown(false);
-                          }}
-                          className="w-full p-2.5 text-left hover:bg-[#21262d] flex items-center justify-between transition-colors"
-                        >
-                          <div>
-                            <span className="font-mono font-bold text-amber-400 text-xs mr-2">
-                              #{cust.customer_code}
-                            </span>
-                            <span className="font-bold text-slate-200 text-xs">{cust.full_name}</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 font-mono">{cust.phone}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Touch POS Drink Picker Grid */}
-          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                  <span>Step 2: Select Drink & Quantity</span>
-                </h3>
-                <p className="text-[11px] text-slate-400">Tap drink card to select for checkout</p>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-48">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={posSearch}
-                  onChange={(e) => setPosSearch(e.target.value)}
-                  placeholder="Filter liquor name..."
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-1.5 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-
-            {/* Horizontal Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {/* Mode Switcher Buttons */}
+            <div className="flex items-center gap-1 bg-[#0d1117] p-1 rounded-xl border border-[#30363d]">
               <button
                 type="button"
-                onClick={() => setPosCategoryPill('ALL')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                  posCategoryPill === 'ALL'
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                    : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                onClick={() => setCardEntryMethod('search')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  cardEntryMethod === 'search'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                ALL ({products.length})
+                Search / USB
               </button>
+              <button
+                type="button"
+                onClick={() => setCardEntryMethod('camera')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                  cardEntryMethod === 'camera'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Camera className="w-3 h-3" /> Camera Scan
+              </button>
+            </div>
+          </div>
 
-              {allCategories.map((cat) => {
-                const count = products.filter((p) => p.category.toLowerCase() === cat.toLowerCase()).length;
+          {/* Active Member Card Banner */}
+          {selectedCustomer ? (
+            <div className="bg-[#0d1117] border border-amber-500/50 p-3 rounded-xl flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-black font-mono text-base shadow-sm">
+                  #{selectedCustomer.customer_code}
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-100">{selectedCustomer.full_name}</h4>
+                  <p className="text-[10px] text-slate-400 font-mono">Phone: {selectedCustomer.phone}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full font-black uppercase tracking-wider">
+                  Member Linked
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="p-1 text-slate-400 hover:text-rose-400 hover:bg-[#21262d] rounded-lg transition-colors"
+                  title="Unlink Customer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {cardEntryMethod === 'camera' ? (
+                <div className="space-y-3">
+                  {!scannerActive ? (
+                    <button
+                      type="button"
+                      onClick={startCameraScanner}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition-all"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>START CAMERA SCANNER FOR MEMBER QR CARD</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopCameraScanner}
+                      className="w-full py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>STOP CAMERA SCANNER</span>
+                    </button>
+                  )}
+                  <div
+                    id="reader-sales"
+                    className="overflow-hidden rounded-xl bg-black border border-[#30363d] min-h-[160px] flex items-center justify-center text-slate-500 text-xs"
+                  />
+                </div>
+              ) : (
+                /* Search Input & Dropdown */
+                <div className="relative">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={memberSearch}
+                      onFocus={() => setShowMemberDropdown(true)}
+                      onChange={(e) => {
+                        setMemberSearch(e.target.value);
+                        setShowMemberDropdown(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleScanOrFindCustomer(memberSearch);
+                        }
+                      }}
+                      placeholder="Scan QR or enter Member Card # (e.g. 100, 55), Name, Phone..."
+                      className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-2 text-amber-400 placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  {/* Dropdown Options */}
+                  {showMemberDropdown && memberSearch.trim().length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-[#21262d]">
+                      {filteredCustomers.length === 0 ? (
+                        <div className="p-3 text-slate-500 text-xs text-center">No member card found</div>
+                      ) : (
+                        filteredCustomers.slice(0, 10).map((cust) => (
+                          <button
+                            key={cust.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId(cust.id);
+                              setShowMemberDropdown(false);
+                            }}
+                            className="w-full p-2.5 text-left hover:bg-[#21262d] flex items-center justify-between transition-colors"
+                          >
+                            <div>
+                              <span className="font-mono font-bold text-amber-400 text-xs mr-2">
+                                #{cust.customer_code}
+                              </span>
+                              <span className="font-bold text-slate-200 text-xs">{cust.full_name}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">{cust.phone}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Step 2: Touch POS Drink Picker Grid (Spacious Full Width) */}
+        <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>Step 2: Select Drink & Quantity</span>
+              </h3>
+              <p className="text-[11px] text-slate-400">Tap drink card to select for checkout</p>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={posSearch}
+                onChange={(e) => setPosSearch(e.target.value)}
+                placeholder="Filter liquor drink name..."
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-1.5 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          </div>
+
+          {/* Horizontal Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setPosCategoryPill('ALL')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                posCategoryPill === 'ALL'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+              }`}
+            >
+              ALL ({products.length})
+            </button>
+
+            {allCategories.map((cat) => {
+              const count = products.filter((p) => p.category.toLowerCase() === cat.toLowerCase()).length;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setPosCategoryPill(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                    posCategoryPill === cat
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                  }`}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Drink Grid (Spacious 4 Columns) */}
+          {filteredPosProducts.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+              No products found matching filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 max-h-96 overflow-y-auto pr-1">
+              {filteredPosProducts.map((p) => {
+                const isSelected = selectedProductId === p.id;
+                const cartCount = cartItems.find((item) => item.product.id === p.id)?.quantity || 0;
+                const stockItem = stockList.find((s) => s.product_id === p.id);
+                const availStock = stockItem ? stockItem.current_stock : 0;
+                const isOutOfStock = availStock <= 0;
+
                 return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setPosCategoryPill(cat)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                      posCategoryPill === cat
-                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                        : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedProductId(p.id);
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer relative shadow-sm ${
+                      isOutOfStock
+                        ? 'bg-[#0d1117]/60 border-[#21262d] opacity-75'
+                        : isSelected
+                        ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10 scale-[0.98]'
+                        : 'bg-[#0d1117] border-[#21262d] hover:border-slate-600 hover:bg-[#161b22]'
                     }`}
                   >
-                    {cat} ({count})
-                  </button>
+                    {cartCount > 0 && (
+                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] font-mono z-10">
+                        {cartCount} in Cart
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[9px] font-bold font-mono text-amber-400/80 uppercase block">
+                          {p.category} • {p.volume_ml}ml
+                        </span>
+                        {isOutOfStock ? (
+                          <span className="text-[9px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono uppercase">
+                            NO STOCK
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono">
+                            {availStock} Left
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-extrabold text-slate-100 truncate">{p.name}</h4>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-[#21262d] pt-2">
+                      <span className="text-sm font-black text-amber-400 font-mono">₹{p.selling_price}</span>
+                      {isOutOfStock ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="px-2.5 py-1 bg-[#21262d] text-rose-400 font-bold text-[10px] rounded-lg cursor-not-allowed opacity-75"
+                        >
+                          NO STOCK
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(p, 1);
+                          }}
+                          className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] rounded-xl transition-all flex items-center gap-1 shadow-sm"
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
+          )}
 
-            {/* Drink Grid */}
-            {filteredPosProducts.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-                No products found matching filters.
+          {/* Cart Basket Summary Box (Multi-Item Order Checkout) */}
+          {cartItems.length > 0 && (
+            <div className="bg-[#0d1117] border border-amber-500/40 rounded-2xl p-4 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-extrabold text-slate-100 uppercase tracking-wider">
+                    Selected Cart Items ({cartItems.length})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearCart}
+                  className="text-[11px] text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" /> Clear Cart
+                </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
-                {filteredPosProducts.map((p) => {
-                  const isSelected = selectedProductId === p.id;
-                  const cartCount = cartItems.find((item) => item.product.id === p.id)?.quantity || 0;
-                  const stockItem = stockList.find((s) => s.product_id === p.id);
-                  const availStock = stockItem ? stockItem.current_stock : 0;
-                  const isOutOfStock = availStock <= 0;
 
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedProductId(p.id);
-                      }}
-                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer relative ${
-                        isOutOfStock
-                          ? 'bg-[#0d1117]/60 border-[#21262d] opacity-75'
-                          : isSelected
-                          ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10 scale-[0.98]'
-                          : 'bg-[#0d1117] border-[#21262d] hover:border-slate-600 hover:bg-[#161b22]'
-                      }`}
-                    >
-                      {cartCount > 0 && (
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] font-mono z-10">
-                          {cartCount} in Cart
-                        </div>
-                      )}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold font-mono text-amber-400/80 uppercase block">
-                            {p.category} • {p.volume_ml}ml
-                          </span>
-                          {isOutOfStock ? (
-                            <span className="text-[9px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono uppercase">
-                              NO STOCK
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono">
-                              {availStock} Left
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-100 truncate mt-1">{p.name}</h4>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between border-t border-[#21262d] pt-1.5">
-                        <span className="text-xs font-black text-amber-400 font-mono">₹{p.selling_price}</span>
-                        {isOutOfStock ? (
-                          <button
-                            type="button"
-                            disabled
-                            className="px-2 py-0.5 bg-[#21262d] text-rose-400 font-bold text-[10px] rounded-lg cursor-not-allowed opacity-75"
-                          >
-                            NO STOCK
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCart(p, 1);
-                            }}
-                            className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                          >
-                            <Plus className="w-3 h-3 stroke-[3]" /> Add
-                          </button>
-                        )}
-                      </div>
+              {/* Itemized Cart List */}
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1 divide-y divide-[#21262d]/50">
+                {cartItems.map((item) => (
+                  <div key={item.product.id} className="flex items-center justify-between pt-1.5 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-200 block">{item.product.name} ({item.product.volume_ml}ml)</span>
+                      <span className="text-[10px] text-slate-400 font-mono">₹{item.product.selling_price} each</span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
 
-            {/* Cart Basket Summary Box (Multi-Item Order Checkout) */}
-            {cartItems.length > 0 && (
-              <div className="bg-[#0d1117] border border-amber-500/40 rounded-2xl p-4 space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-extrabold text-slate-100 uppercase tracking-wider">
-                      Current Cart Basket ({cartItems.length} Drinks)
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 bg-[#161b22] px-2 py-1 rounded-lg border border-[#21262d]">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)}
+                          className="text-slate-400 hover:text-amber-400 p-0.5"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-black text-amber-400 font-mono px-1">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)}
+                          className="text-slate-400 hover:text-amber-400 p-0.5"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <span className="font-black text-amber-400 font-mono w-16 text-right">
+                        ₹{item.product.selling_price * item.quantity}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFromCart(item.product.id)}
+                        className="text-slate-500 hover:text-rose-400 p-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setCartItems([])}
-                    className="text-[10px] text-rose-400 hover:underline flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" /> Clear Cart
-                  </button>
+                ))}
+              </div>
+
+              {/* Cart Grand Total & Record Sale Action Button */}
+              <div className="border-t border-[#21262d] pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono uppercase block">Cart Grand Total</span>
+                  <h3 className="text-xl font-black text-amber-400 font-mono">₹{cartTotalAmount}</h3>
                 </div>
 
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 divide-y divide-[#21262d]">
-                  {cartItems.map((item) => (
-                    <div key={item.product.id} className="pt-2 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-100 block">{item.product.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {item.product.category} • {item.product.volume_ml}ml
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 font-mono">
-                        <div className="flex items-center gap-1 bg-[#161b22] border border-[#30363d] px-2 py-0.5 rounded-lg">
-                          <button
-                            onClick={() => {
-                              if (item.quantity > 1) {
-                                setCartItems((prev) =>
-                                  prev.map((i) =>
-                                    i.product.id === item.product.id ? { ...i, quantity: i.quantity - 1 } : i
-                                  )
-                                );
-                              } else {
-                                handleRemoveFromCart(item.product.id);
-                              }
-                            }}
-                            className="text-slate-400 hover:text-slate-100"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="font-bold text-amber-400 px-1">{item.quantity}</span>
-                          <button
-                            onClick={() => {
-                              setCartItems((prev) =>
-                                prev.map((i) =>
-                                  i.product.id === item.product.id ? { ...i, quantity: i.quantity + 1 } : i
-                                )
-                              );
-                            }}
-                            className="text-slate-400 hover:text-slate-100"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <span className="font-black text-amber-400">₹{item.product.selling_price * item.quantity}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Checkout Cart Button */}
                 <button
                   type="button"
                   onClick={handleCheckoutCart}
                   disabled={submitting}
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
+                  className="py-3 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
                 >
                   {submitting ? (
                     <>
@@ -812,154 +867,184 @@ export const Sales: React.FC = () => {
                       <CheckCircle2 className="w-4 h-4" />
                       <span>
                         RECORD CART SALE ({cartItems.length} ITEMS) — TOTAL ₹{cartTotalAmount}
-                        {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
                       </span>
                     </>
                   )}
                 </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Quick Single Item Sale Checkout Panel (When cart is empty) */}
-            {cartItems.length === 0 && selectedProduct && (
-              <form onSubmit={handleCheckoutCart} className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-mono uppercase block">Selected Bottle</span>
-                    <h4 className="text-sm font-extrabold text-slate-100">
-                      {selectedProduct.name} ({selectedProduct.volume_ml}ml)
-                    </h4>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 font-mono uppercase block">Unit Price</span>
-                    <span className="text-sm font-black text-amber-400 font-mono">₹{selectedProduct.selling_price}</span>
-                  </div>
+          {/* Quick Single Item Sale Checkout Panel (When cart is empty) */}
+          {cartItems.length === 0 && selectedProduct && (
+            <form onSubmit={handleCheckoutCart} className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono uppercase block">Selected Bottle</span>
+                  <h4 className="text-sm font-extrabold text-slate-100">
+                    {selectedProduct.name} ({selectedProduct.volume_ml}ml)
+                  </h4>
                 </div>
-
-                {/* Quantity Stepper */}
-                <div className="flex items-center justify-between bg-[#161b22] border border-[#21262d] p-2 rounded-xl">
-                  <span className="text-xs font-bold text-slate-300">Bottles / Drinks Quantity:</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-7 h-7 rounded-lg bg-[#21262d] text-slate-200 flex items-center justify-center hover:bg-[#30363d]"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-8 text-center text-sm font-black text-amber-400 font-mono">{quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => q + 1)}
-                      className="w-7 h-7 rounded-lg bg-[#21262d] text-slate-200 flex items-center justify-center hover:bg-[#30363d]"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 font-mono uppercase block">Unit Price</span>
+                  <span className="text-sm font-black text-amber-400 font-mono">₹{selectedProduct.selling_price}</span>
                 </div>
-
-                {/* Submit Quick Sale Button */}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Recording Sale...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>
-                        RECORD SALE — TOTAL ₹{selectedProduct.selling_price * quantity}
-                        {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {msg && (
-              <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
-                msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-              }`}>
-                {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-rose-400 shrink-0" />}
-                <span>{msg.text}</span>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Right Column: Detailed Itemized Sales Log (5 cols) */}
-        <div className="xl:col-span-5 bg-[#161b22] border border-[#21262d] rounded-2xl p-5 flex flex-col shadow-lg min-w-0">
-          <div className="flex items-center justify-between mb-4 border-b border-[#21262d] pb-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-amber-400" />
-                <span>Sales Log ({detailedSales.length})</span>
-              </h3>
-              <p className="text-[11px] text-slate-400">Live itemized sales linked to member cards</p>
-            </div>
-          </div>
+              {/* Quantity Stepper */}
+              <div className="flex items-center justify-between bg-[#161b22] border border-[#21262d] p-2 rounded-xl">
+                <span className="text-xs font-bold text-slate-300">Bottles / Drinks Quantity:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="w-7 h-7 rounded-lg bg-[#21262d] text-slate-200 flex items-center justify-center hover:bg-[#30363d]"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-black text-amber-400 font-mono">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="w-7 h-7 rounded-lg bg-[#21262d] text-slate-200 flex items-center justify-center hover:bg-[#30363d]"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
 
-          {loading ? (
-            <div className="py-12 flex justify-center text-slate-400 gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-              <span>Loading sales log...</span>
-            </div>
-          ) : detailedSales.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-              No sales recorded yet today.
-            </div>
-          ) : (
-            <div className="overflow-x-auto min-w-0 flex-1">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-[#0d1117] text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-[#21262d]">
-                    <th className="py-2.5 px-3">Date / Time</th>
-                    <th className="py-2.5 px-3">Member Card</th>
-                    <th className="py-2.5 px-3">Liquor Item</th>
-                    <th className="py-2.5 px-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#21262d]/70 text-slate-200">
-                  {detailedSales.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#0d1117]/60 transition-colors text-[11px]">
-                      <td className="py-2.5 px-3 font-mono text-slate-400 whitespace-nowrap">
-                        {s.sale_date ? new Date(s.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                      </td>
-                      <td className="py-2.5 px-3 font-semibold">
-                        {s.customer_code ? (
-                          <div>
-                            <span className="font-mono font-black text-amber-400">#{s.customer_code}</span>
-                            <span className="block text-[10px] text-slate-300 truncate max-w-[90px]" title={s.customer_name || ''}>
-                              {s.customer_name}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-600 font-mono text-[10px]">-</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <span className="font-bold text-slate-100 block truncate max-w-[120px]">{s.product_name}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">
-                          {s.quantity}x @ ₹{s.unit_price} ({s.volume_ml}ml)
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
-                        ₹{s.total_price}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {/* Submit Quick Sale Button */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Recording Sale...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>
+                      RECORD SALE — TOTAL ₹{selectedProduct.selling_price * quantity}
+                      {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
+                    </span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {msg && (
+            <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+              msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+            }`}>
+              {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-rose-400 shrink-0" />}
+              <span>{msg.text}</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* SALES LOG POPUP MODAL */}
+      {showSalesLogModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-4xl w-full relative shadow-2xl animate-in fade-in zoom-in duration-200 space-y-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setShowSalesLogModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-100 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-amber-400" />
+                  <span>Itemized Sales Log History ({detailedSales.length})</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Live itemized liquor sales linked to member cards</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportMemberLiquorSalesCSV}
+                  disabled={detailedSales.length === 0}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Member Excel</span>
+                </button>
+
+                <button
+                  onClick={exportGeneralBottleSalesCSV}
+                  disabled={detailedSales.length === 0}
+                  className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4 text-amber-400" />
+                  <span>Bottle Excel</span>
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="py-16 flex justify-center text-slate-400 gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                <span>Loading sales log...</span>
+              </div>
+            ) : detailedSales.length === 0 ? (
+              <div className="py-16 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+                No sales recorded yet today.
+              </div>
+            ) : (
+              <div className="overflow-x-auto min-w-0 flex-1">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#0d1117] text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-[#21262d]">
+                      <th className="py-3 px-3">Date / Time</th>
+                      <th className="py-3 px-3">Member Card</th>
+                      <th className="py-3 px-3">Liquor Item</th>
+                      <th className="py-3 px-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#21262d]/70 text-slate-200">
+                    {detailedSales.map((s) => (
+                      <tr key={s.id} className="hover:bg-[#0d1117]/60 transition-colors text-[11px]">
+                        <td className="py-2.5 px-3 font-mono text-slate-400 whitespace-nowrap">
+                          {s.sale_date ? new Date(s.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold">
+                          {s.customer_code ? (
+                            <div>
+                              <span className="font-mono font-black text-amber-400">#{s.customer_code}</span>
+                              <span className="block text-[10px] text-slate-300 truncate max-w-[150px]" title={s.customer_name || ''}>
+                                {s.customer_name}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 font-mono text-[10px]">-</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-bold text-slate-100 block">{s.product_name}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {s.quantity}x @ ₹{s.unit_price} ({s.volume_ml}ml)
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400 text-sm">
+                          ₹{s.total_price}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 3 UPI PAYMENT QR DISPLAY MODAL */}
       {showQRModal && (
