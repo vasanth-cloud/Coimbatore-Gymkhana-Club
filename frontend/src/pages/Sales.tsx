@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { productApi, saleApi, customerApi } from '../api/services';
 import { DailyProductSale, Product, DetailedSale, Customer } from '../types';
 import {
@@ -16,6 +17,10 @@ import {
   CreditCard,
   ShoppingCart,
   Trash2,
+  Camera,
+  QrCode,
+  FileSpreadsheet,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface CartItem {
@@ -30,6 +35,11 @@ export const Sales: React.FC = () => {
   const [dailySales, setDailySales] = useState<DailyProductSale[]>([]);
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
+
+  // Card Entry Method: 'camera' | 'search'
+  const [cardEntryMethod, setCardEntryMethod] = useState<'camera' | 'search'>('search');
+  const [scannerActive, setScannerActive] = useState(false);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   // Form Filter & Search States (Touch POS Grid)
   const [posCategoryPill, setPosCategoryPill] = useState<string>('ALL');
@@ -73,6 +83,83 @@ export const Sales: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [reportDate]);
+
+  // Camera QR Scanner Initialization
+  const startCameraScanner = () => {
+    setScannerActive(true);
+    setTimeout(() => {
+      if (!scannerRef.current) {
+        const scanner = new Html5QrcodeScanner(
+          'pos-qr-reader',
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          },
+          /* verbose= */ false
+        );
+
+        scanner.render(
+          (decodedText) => {
+            handleScanOrFindCustomer(decodedText);
+          },
+          (errorMessage) => {
+            // handle scan error silently
+          }
+        );
+        scannerRef.current = scanner;
+      }
+    }, 100);
+  };
+
+  const stopCameraScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch((e) => console.error(e));
+      scannerRef.current = null;
+    }
+    setScannerActive(false);
+  };
+
+  useEffect(() => {
+    if (cardEntryMethod === 'camera') {
+      startCameraScanner();
+    } else {
+      stopCameraScanner();
+    }
+
+    return () => {
+      stopCameraScanner();
+    };
+  }, [cardEntryMethod]);
+
+  // Scan or find customer by QR Token or Card # / Phone
+  const handleScanOrFindCustomer = (tokenOrCode: string) => {
+    if (!tokenOrCode) return;
+    const term = tokenOrCode.trim().toLowerCase();
+    
+    // Find customer matching QR Token, Card #, or Phone
+    const matched = customers.find(
+      (c) =>
+        c.qr_token === tokenOrCode.trim() ||
+        c.customer_code.toLowerCase() === term ||
+        c.phone === term
+    );
+
+    if (matched) {
+      setSelectedCustomerId(matched.id);
+      setMsg({
+        type: 'success',
+        text: `Linked Member Card #${matched.customer_code} (${matched.full_name})! Select liquor drinks below.`,
+      });
+      stopCameraScanner();
+      setCardEntryMethod('search');
+    } else {
+      setMsg({
+        type: 'error',
+        text: `No active member card found for "${tokenOrCode}". Try searching Card # or Name.`,
+      });
+    }
+  };
 
   // Unique categories for horizontal pills
   const allCategories = Array.from(new Set(products.map((p) => p.category)));
@@ -129,7 +216,7 @@ export const Sales: React.FC = () => {
     e.preventDefault();
     setMsg(null);
 
-    // If cart has items, process cart items
+    // Process Cart Basket items
     if (cartItems.length > 0) {
       setSubmitting(true);
       try {
@@ -166,12 +253,10 @@ export const Sales: React.FC = () => {
     }
 
     // Quick single item sale fallback
-    if (!selectedProductId) {
+    if (!selectedProductId || !selectedProduct) {
       setMsg({ type: 'error', text: 'Please select a drink or add items to cart' });
       return;
     }
-
-    if (!selectedProduct) return;
 
     setSubmitting(true);
     try {
@@ -190,7 +275,7 @@ export const Sales: React.FC = () => {
       });
 
       setQuantity(1);
-      // NOTE: DO NOT CLEAR MEMBER CARD! Keep selected member active for next items/visits!
+      // NOTE: DO NOT CLEAR MEMBER CARD! Stays active for subsequent drinks!
       await loadData();
     } catch (err: any) {
       console.error(err);
@@ -203,8 +288,8 @@ export const Sales: React.FC = () => {
     }
   };
 
-  // Export Sales Log to CSV / Excel File (Without any 'Walk-in' text!)
-  const exportSalesLogCSV = () => {
+  // EXCEL REPORT TYPE 1: Member Card Liquor Purchase Details Report
+  const exportMemberLiquorSalesCSV = () => {
     if (detailedSales.length === 0) {
       alert('No sales log records available to export');
       return;
@@ -247,7 +332,51 @@ export const Sales: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Coimbatore_Gymkhana_Sales_Log_${dateStr}.csv`);
+    link.setAttribute('download', `Member_Liquor_Purchases_Report_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // EXCEL REPORT TYPE 2: General Bottle Sales Log Report (NO Member Details)
+  const exportGeneralBottleSalesCSV = () => {
+    if (detailedSales.length === 0) {
+      alert('No sales log records available to export');
+      return;
+    }
+
+    const headers = [
+      'Sale ID',
+      'Date & Time',
+      'Bottle / Product Name',
+      'Brand Name',
+      'Category',
+      'Volume (ml)',
+      'Quantity Sold',
+      'Unit Price (INR)',
+      'Total Sales Amount (INR)',
+    ];
+
+    const rows = detailedSales.map((s) => [
+      s.id,
+      s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
+      `"${s.product_name}"`,
+      `"${s.brand_name || 'N/A'}"`,
+      `"${s.category}"`,
+      s.volume_ml,
+      s.quantity,
+      s.unit_price,
+      s.total_price,
+    ]);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `General_Bottle_Sales_Summary_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -255,26 +384,37 @@ export const Sales: React.FC = () => {
 
   return (
     <div className="space-y-5 w-full min-w-0">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#161b22] p-4 rounded-2xl border border-[#21262d]">
+      {/* Header Bar with TWO Separate Excel Export Buttons */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-[#161b22] p-4 rounded-2xl border border-[#21262d]">
         <div>
           <h2 className="text-xl font-extrabold text-slate-100 flex items-center gap-2">
             <Wine className="w-5 h-5 text-amber-400" />
             <span>Bar POS Counter & Sales Log</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Select Member Card once to record multiple drinks (Beer, Whisky...) • Itemized sales log download
+            Scan Member QR Card with camera • Download Member Details or Bottle Sales Excel reports
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
-            onClick={exportSalesLogCSV}
+            onClick={exportMemberLiquorSalesCSV}
             disabled={detailedSales.length === 0}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/10 transition-all disabled:opacity-50"
+            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/10 transition-all disabled:opacity-50"
+            title="Download Excel Sheet with Member Card IDs, Names & Liquor Bought"
           >
-            <Download className="w-4 h-4" />
-            <span>DOWNLOAD SALES EXCEL LOG</span>
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>1. MEMBER LIQUOR EXCEL</span>
+          </button>
+
+          <button
+            onClick={exportGeneralBottleSalesCSV}
+            disabled={detailedSales.length === 0}
+            className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+            title="Download General Bottle Sales Report (No Member Details)"
+          >
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>2. BOTTLE SALES EXCEL (NO MEMBER INFO)</span>
           </button>
         </div>
       </div>
@@ -285,26 +425,42 @@ export const Sales: React.FC = () => {
         {/* Left Column: Bar POS Counter & Drink Picker (7 cols) */}
         <div className="xl:col-span-7 space-y-4 min-w-0">
           
-          {/* Persistent Member Card Linker Selector Box */}
+          {/* Member Card Camera & Search Selector Box */}
           <div className="bg-[#161b22] border border-amber-500/30 rounded-2xl p-4 shadow-lg relative">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3 border-b border-[#21262d] pb-2">
               <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                 <CreditCard className="w-4 h-4 text-amber-400" />
-                <span>Step 1: Select Member Card (Stays Active for Multiple Drinks)</span>
+                <span>Step 1: Scan Member Card (Camera or Scanner)</span>
               </label>
-              {selectedCustomer && (
+
+              {/* Mode Switcher Buttons */}
+              <div className="flex items-center gap-1 bg-[#0d1117] p-1 rounded-xl border border-[#30363d]">
                 <button
-                  onClick={() => {
-                    setSelectedCustomerId(null);
-                    setMemberSearch('');
-                  }}
-                  className="text-[11px] text-rose-400 hover:underline flex items-center gap-1 font-bold bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/30"
+                  type="button"
+                  onClick={() => setCardEntryMethod('search')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    cardEntryMethod === 'search'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
                 >
-                  <X className="w-3.5 h-3.5" /> Clear Member Card
+                  Search / USB
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setCardEntryMethod('camera')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    cardEntryMethod === 'camera'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Camera className="w-3 h-3" /> Camera Scan
+                </button>
+              </div>
             </div>
 
+            {/* Active Member Card Banner */}
             {selectedCustomer ? (
               <div className="bg-[#0d1117] border border-amber-500/50 p-3 rounded-xl flex items-center justify-between animate-in fade-in">
                 <div className="flex items-center gap-2.5">
@@ -316,16 +472,32 @@ export const Sales: React.FC = () => {
                     <p className="text-[10px] text-slate-400 font-mono">Phone: {selectedCustomer.phone}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full font-black uppercase tracking-wider block">
-                    Active Member Card
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-full font-black uppercase tracking-wider">
+                    Member Linked
                   </span>
-                  <span className="text-[9px] text-slate-500 mt-0.5 block">
-                    All drinks will be recorded for #{selectedCustomer.customer_code}
-                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedCustomerId(null);
+                      setMemberSearch('');
+                    }}
+                    className="p-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 transition-colors"
+                    title="Unlink Card"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+            ) : cardEntryMethod === 'camera' ? (
+              /* Camera QR Scanner Box */
+              <div className="flex flex-col items-center p-2 bg-[#0d1117] border border-[#30363d] rounded-xl">
+                <div id="pos-qr-reader" className="w-full max-w-sm rounded-lg overflow-hidden" />
+                <p className="text-[11px] text-slate-400 mt-2 text-center">
+                  Hold member QR card in front of camera to scan automatically
+                </p>
+              </div>
             ) : (
+              /* Search Input & Dropdown */
               <div className="relative">
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -337,8 +509,14 @@ export const Sales: React.FC = () => {
                       setMemberSearch(e.target.value);
                       setShowMemberDropdown(true);
                     }}
-                    placeholder="Search Member Card # (e.g. 100, 55), Name, or Phone..."
-                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-2 text-slate-100 placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-amber-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleScanOrFindCustomer(memberSearch);
+                      }
+                    }}
+                    placeholder="Scan QR or enter Member Card # (e.g. 100, 55), Name, Phone..."
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-2 text-amber-400 placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -374,7 +552,7 @@ export const Sales: React.FC = () => {
             )}
           </div>
 
-          {/* Touch POS Drink Picker */}
+          {/* Touch POS Drink Picker Grid */}
           <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
               <div>

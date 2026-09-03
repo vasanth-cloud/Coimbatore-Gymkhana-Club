@@ -20,6 +20,7 @@ export interface Customer {
   full_name: string;
   phone: string;
   address?: string;
+  qr_token?: string;
   is_active: boolean;
 }
 
