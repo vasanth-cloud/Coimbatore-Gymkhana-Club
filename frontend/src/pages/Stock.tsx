@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { productApi, stockApi } from '../api/services';
 import { CurrentStock, Product, StockTransaction } from '../types';
 import {
@@ -16,9 +17,8 @@ import {
   FileSpreadsheet,
   Download,
   Calendar,
-  Layers,
-  Plus,
-  Minus,
+  Upload,
+  FileCode,
 } from 'lucide-react';
 
 export const Stock: React.FC = () => {
@@ -41,10 +41,15 @@ export const Stock: React.FC = () => {
 
   // Receive Stock Modal State
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [receiveMode, setReceiveMode] = useState<'single' | 'excel'>('single');
   const [selectedProductId, setSelectedProductId] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(12);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Bulk Excel Import States
+  const [parsedItems, setParsedItems] = useState<{ productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[]>([]);
+  const [excelFileName, setExcelFileName] = useState('');
 
   const loadStockData = async () => {
     try {
@@ -89,6 +94,7 @@ export const Stock: React.FC = () => {
     }
   }, [activeTab, ledgerDate]);
 
+  // Single Item Receive Stock Submit
   const handleReceiveStock = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
@@ -113,6 +119,131 @@ export const Stock: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Excel / CSV File Upload Parser Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelFileName(file.name);
+    setMsg(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const bstr = event.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rawData: any[] = XLSX.utils.sheet_to_json(sheet);
+
+        if (rawData.length === 0) {
+          setMsg({ type: 'error', text: 'Excel sheet is empty' });
+          return;
+        }
+
+        const items: { productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[] = [];
+
+        rawData.forEach((row) => {
+          // Normalize column headers
+          const nameVal = row['Product Name'] || row['Item Name'] || row['Product'] || row['Item'] || row['Name'] || Object.values(row)[0];
+          const qtyVal = row['Quantity'] || row['Qty'] || row['Bottles'] || row['Cases'] || Object.values(row)[1];
+
+          if (nameVal && qtyVal) {
+            const searchStr = String(nameVal).trim().toLowerCase();
+            const qtyNum = parseInt(String(qtyVal)) || 1;
+
+            // Match with existing products
+            const matched = products.find(
+              (p) =>
+                p.name.toLowerCase() === searchStr ||
+                p.name.toLowerCase().includes(searchStr) ||
+                searchStr.includes(p.name.toLowerCase())
+            );
+
+            if (matched) {
+              items.push({
+                productId: matched.id,
+                productName: matched.name,
+                qty: qtyNum,
+                status: 'matched',
+              });
+            } else {
+              items.push({
+                productId: 0,
+                productName: String(nameVal),
+                qty: qtyNum,
+                status: 'unmatched',
+              });
+            }
+          }
+        });
+
+        setParsedItems(items);
+      } catch (err) {
+        console.error('Failed to parse Excel:', err);
+        setMsg({ type: 'error', text: 'Failed to read Excel file. Please use standard format.' });
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  // Submit Bulk Imported Excel Stock Items
+  const handleBulkSubmit = async () => {
+    const validItems = parsedItems.filter((i) => i.status === 'matched');
+    if (validItems.length === 0) {
+      setMsg({ type: 'error', text: 'No matched products found in uploaded sheet' });
+      return;
+    }
+
+    setSubmitting(true);
+    setMsg(null);
+
+    try {
+      const payload = validItems.map((i) => ({
+        product_id: i.productId,
+        quantity: i.qty,
+      }));
+
+      await stockApi.bulkReceiveStock(payload);
+
+      setMsg({
+        type: 'success',
+        text: `Successfully imported stock for ${validItems.length} items from Excel sheet!`,
+      });
+
+      setParsedItems([]);
+      setExcelFileName('');
+      await loadStockData();
+      if (activeTab === 'ledger') await loadLedgerData();
+      setTimeout(() => setShowReceiveModal(false), 1500);
+    } catch (err: any) {
+      setMsg({ type: 'error', text: 'Failed to save bulk stock import' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Download Sample Excel Import Template
+  const downloadSampleTemplate = () => {
+    const headers = ['Product Name', 'Quantity'];
+    const sampleRows = [
+      ['10000 VOLTS SUPER STRONG 750ml', 24],
+      ['1848 Premium Grain 180ml', 48],
+      ['AMSTEL PREMIUM BEER 650ml', 12],
+    ];
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Stock_Import_Template.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Export Daily Opening / Purchase / Sale / Closing Ledger CSV
@@ -497,10 +628,10 @@ export const Stock: React.FC = () => {
         </div>
       )}
 
-      {/* RECEIVE INCOMING STOCK MODAL DIALOG */}
+      {/* RECEIVE INCOMING STOCK MODAL DIALOG WITH EXCEL / CSV IMPORT */}
       {showReceiveModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-lg w-full relative shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-xl w-full relative shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
             <button
               type="button"
               onClick={() => setShowReceiveModal(false)}
@@ -515,68 +646,190 @@ export const Stock: React.FC = () => {
                 <span>Record Incoming Stock (TASMAC Delivery)</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Add received bottle quantities to update available stock
+                Add single drink quantity or import full delivery Excel / CSV invoice sheet
               </p>
             </div>
 
-            <form onSubmit={handleReceiveStock} className="space-y-4 pt-2">
-              <div>
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                  Select Liquor Drink:
-                </label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(parseInt(e.target.value))}
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-bold"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.volume_ml}ml) — ₹{p.selling_price}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Mode Tabs: Single Item vs Bulk Excel Import */}
+            <div className="flex bg-[#0d1117] p-1 rounded-xl border border-[#30363d]">
+              <button
+                type="button"
+                onClick={() => setReceiveMode('single')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  receiveMode === 'single'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Single Drink Entry
+              </button>
+              <button
+                type="button"
+                onClick={() => setReceiveMode('excel')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  receiveMode === 'excel'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Bulk Import Excel / CSV</span>
+              </button>
+            </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                  Quantity Received (Bottles):
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-2.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowReceiveModal(false)}
-                  className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
-                >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  <span>CONFIRM STOCK RECEIPT</span>
-                </button>
-              </div>
-
-              {msg && (
-                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                  msg.type === 'success' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                }`}>
-                  {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400" /> : <X className="w-4 h-4 text-rose-400" />}
-                  <span>{msg.text}</span>
+            {receiveMode === 'single' ? (
+              /* MODE 1: SINGLE ITEM ENTRY FORM */
+              <form onSubmit={handleReceiveStock} className="space-y-4 pt-1">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    Select Liquor Drink:
+                  </label>
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(parseInt(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-bold"
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.volume_ml}ml) — ₹{p.selling_price}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </form>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    Quantity Received (Bottles):
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-2.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReceiveModal(false)}
+                    className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    <span>CONFIRM STOCK RECEIPT</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* MODE 2: BULK IMPORT EXCEL / CSV SHEET */
+              <div className="space-y-4 pt-1">
+                <div className="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-200">Format: Product Name, Quantity</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadSampleTemplate}
+                    className="text-[10px] text-amber-400 hover:underline flex items-center gap-1 font-mono font-bold"
+                  >
+                    <Download className="w-3 h-3" /> Download Template
+                  </button>
+                </div>
+
+                {/* Upload File Input */}
+                <div className="border-2 border-dashed border-[#30363d] hover:border-amber-500/50 rounded-2xl p-5 text-center bg-[#0d1117] transition-all">
+                  <Upload className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                  <label className="cursor-pointer block">
+                    <span className="text-xs font-bold text-slate-200 block">
+                      Click to upload Excel / CSV File (.xlsx, .csv)
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      {excelFileName || 'Drag and drop or select delivery file'}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Preview Parsed Items Table */}
+                {parsedItems.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                      <span>Parsed Items Preview ({parsedItems.length} rows):</span>
+                      <span className="text-emerald-400 font-mono">
+                        {parsedItems.filter((i) => i.status === 'matched').length} Matched
+                      </span>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto border border-[#30363d] rounded-xl divide-y divide-[#21262d] bg-[#0d1117]">
+                      {parsedItems.map((item, idx) => (
+                        <div key={idx} className="p-2.5 flex items-center justify-between text-xs font-mono">
+                          <div>
+                            <span className={`font-bold block ${item.status === 'matched' ? 'text-slate-100' : 'text-rose-400'}`}>
+                              {item.productName}
+                            </span>
+                            {item.status === 'unmatched' && (
+                              <span className="text-[9px] text-rose-400 block">Product not found in database</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-amber-400">{item.qty} Bottles</span>
+                            {item.status === 'matched' ? (
+                              <Check className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <X className="w-4 h-4 text-rose-400" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReceiveModal(false)}
+                    className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkSubmit}
+                    disabled={submitting || parsedItems.filter((i) => i.status === 'matched').length === 0}
+                    className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    <span>
+                      IMPORT {parsedItems.filter((i) => i.status === 'matched').length} MATCHED ITEMS
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {msg && (
+              <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                msg.type === 'success' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+              }`}>
+                {msg.type === 'success' ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-rose-400 shrink-0" />}
+                <span>{msg.text}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

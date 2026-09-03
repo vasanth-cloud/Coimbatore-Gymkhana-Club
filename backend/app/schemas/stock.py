@@ -1,9 +1,14 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class StockReceiveRequest(BaseModel):
+    product_id: int
+    quantity: int = Field(gt=0)
+    transaction_date: datetime | None = None
+
+
+class StockBulkReceiveItem(BaseModel):
     product_id: int
     quantity: int = Field(gt=0)
     transaction_date: datetime | None = None

@@ -9,6 +9,7 @@ from app.repositories.stock_repository import StockRepository
 
 from app.schemas.stock import (
     StockReceiveRequest,
+    StockBulkReceiveItem,
     StockTransactionResponse,
     CurrentStockResponse,
 )
@@ -30,7 +31,7 @@ router = APIRouter(
 def receive_stock(
     request: StockReceiveRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = StockService(db)
 
@@ -46,6 +47,30 @@ def receive_stock(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.post(
+    "/bulk-receive",
+    status_code=status.HTTP_201_CREATED,
+)
+def bulk_receive_stock(
+    items: list[StockBulkReceiveItem],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    service = StockService(db)
+    received_count = 0
+    for item in items:
+        try:
+            service.receive_stock(
+                product_id=item.product_id,
+                quantity=item.quantity,
+                transaction_date=item.transaction_date,
+            )
+            received_count += 1
+        except Exception as e:
+            print(f"Bulk receive error for product {item.product_id}:", e)
+    return {"message": f"Successfully imported incoming stock for {received_count} items"}
 
 
 @router.get(
