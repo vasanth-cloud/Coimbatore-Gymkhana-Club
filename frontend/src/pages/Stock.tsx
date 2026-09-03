@@ -546,7 +546,9 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-3">Category</th>
                       <th className="py-3 px-3">Volume</th>
                       <th className="py-3 px-3">Pack Size</th>
-                      <th className="py-3 px-3 text-right">Rates (Sales / Basic / MRP)</th>
+                      <th className="py-3 px-3 text-right text-emerald-400">MRP Rate</th>
+                      <th className="py-3 px-3 text-right text-sky-400">Basic Rate</th>
+                      <th className="py-3 px-3 text-right text-amber-400">Sales Rate</th>
                       <th className="py-3 px-3 text-center bg-[#0d1117] text-slate-200 border-l border-[#30363d]">
                         OPENING STOCK (C+B)
                       </th>
@@ -569,11 +571,9 @@ export const Stock: React.FC = () => {
                         <td className="py-3 px-3 text-slate-400">{item.category}</td>
                         <td className="py-3 px-3 font-mono text-slate-400">{item.volume_ml}ml</td>
                         <td className="py-3 px-3 font-mono text-slate-500">{item.pack_size} / Case</td>
-                        <td className="py-3 px-3 text-right font-mono text-xs">
-                          <span className="font-bold text-amber-400 block">Sales: ₹{item.selling_price}</span>
-                          <span className="text-[10px] text-sky-400 block">Basic: ₹{item.basic_rate}</span>
-                          <span className="text-[10px] text-emerald-400 block">MRP: ₹{item.mrp}</span>
-                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-emerald-400 font-bold">₹{item.mrp}</td>
+                        <td className="py-3 px-3 text-right font-mono text-sky-400 font-bold">₹{item.basic_rate}</td>
+                        <td className="py-3 px-3 text-right font-mono text-amber-400 font-extrabold">₹{item.selling_price}</td>
                         <td className="py-3 px-3 text-center font-mono bg-[#0d1117]/40 border-l border-[#30363d]">
                           <span className="font-bold text-slate-100 block">{item.opening_str}</span>
                           <span className="text-[10px] text-slate-400 block">({item.opening_stock} Btts)</span>
