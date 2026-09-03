@@ -329,6 +329,7 @@ export const Stock: React.FC = () => {
   const totalPurchaseBottles = filteredLedgerItems.reduce((sum, item) => sum + item.purchase_qty, 0);
   const totalSaleBottles = filteredLedgerItems.reduce((sum, item) => sum + item.sale_qty, 0);
   const totalClosingBottles = filteredLedgerItems.reduce((sum, item) => sum + item.closing_stock, 0);
+  const totalClosingCases = filteredLedgerItems.reduce((sum, item) => sum + item.closing_cases, 0);
 
   // Total Evening Valuations
   const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_sales_value, 0);
@@ -496,26 +497,32 @@ export const Stock: React.FC = () => {
             </div>
           </div>
 
-          {/* EVENING REMAINING STOCK TOTAL RATE / VALUATION BANNER */}
+          {/* EVENING REMAINING STOCK TOTAL RATE & BOTTLES VALUATION BANNER */}
           <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
             <div>
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
                 <Coins className="w-4 h-4" />
-                <span>Evening Total Stock Valuation ({ledgerDate})</span>
+                <span>Evening Total Stock & Valuation Summary ({ledgerDate})</span>
               </h4>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Total monetary value of all {totalClosingBottles.toLocaleString()} remaining closing bottles
+                Total remaining closing bottles and total monetary rates in stock
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full xl:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full xl:w-auto">
+              <div className="bg-[#161b22] p-3 rounded-xl border border-amber-500/50">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Closing Total Bottles:</span>
+                <h3 className="text-lg font-black text-amber-400 font-mono mt-0.5">{totalClosingBottles.toLocaleString()} Btts</h3>
+                <span className="text-[10px] text-slate-400 font-mono block">({totalClosingCases.toLocaleString()} Cases)</span>
+              </div>
+
               <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">Total Sales Value (Bar Price):</span>
                 <h3 className="text-lg font-black text-amber-400 font-mono mt-0.5">₹{totalClosingSalesVal.toLocaleString()}</h3>
               </div>
 
               <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value (Purchase):</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value:</span>
                 <h3 className="text-lg font-black text-sky-400 font-mono mt-0.5">₹{totalClosingCostVal.toLocaleString()}</h3>
               </div>
 
