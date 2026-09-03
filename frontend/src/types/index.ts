@@ -137,6 +137,8 @@ export interface Sale {
   customer_id?: number;
   quantity: number;
   total_price?: number;
+  payment_mode?: string;
+  paytm_order_id?: string | null;
   sale_date: string;
 }
 
@@ -144,6 +146,14 @@ export interface SaleCreatePayload {
   product_id: number;
   quantity: number;
   customer_id?: number | null;
+  payment_mode?: string;
+  paytm_order_id?: string | null;
+  cash_500?: number;
+  cash_200?: number;
+  cash_100?: number;
+  cash_50?: number;
+  cash_20?: number;
+  cash_10?: number;
   sale_date?: string | null;
 }
 
@@ -153,6 +163,14 @@ export interface DetailedSale {
   quantity: number;
   unit_price: number;
   total_price: number;
+  payment_mode?: string;
+  paytm_order_id?: string | null;
+  cash_500?: number;
+  cash_200?: number;
+  cash_100?: number;
+  cash_50?: number;
+  cash_20?: number;
+  cash_10?: number;
   customer_id?: number | null;
   customer_code?: string | null;
   customer_name?: string | null;

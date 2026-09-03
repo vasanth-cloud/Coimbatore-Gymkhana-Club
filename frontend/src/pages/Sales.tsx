@@ -19,6 +19,9 @@ import {
   Trash2,
   Camera,
   FileSpreadsheet,
+  Banknote,
+  Smartphone,
+  Calculator,
 } from 'lucide-react';
 
 interface CartItem {
@@ -43,10 +46,23 @@ export const Sales: React.FC = () => {
   const [posCategoryPill, setPosCategoryPill] = useState<string>('ALL');
   const [posSearch, setPosSearch] = useState<string>('');
 
-  // Persistent Member Card Selector State (Stays active across multiple drink sales!)
+  // Persistent Member Card Selector State
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [memberSearch, setMemberSearch] = useState<string>('');
   const [showMemberDropdown, setShowMemberDropdown] = useState<boolean>(false);
+
+  // Payment Mode & Paytm / Cash Denomination States
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'PAYTM_UPI'>('CASH');
+  const [paytmOrderId, setPaytmOrderId] = useState<string>('');
+  const [showDenominations, setShowDenominations] = useState<boolean>(false);
+
+  // Cash Denomination note counts
+  const [cash500, setCash500] = useState<number>(0);
+  const [cash200, setCash200] = useState<number>(0);
+  const [cash100, setCash100] = useState<number>(0);
+  const [cash50, setCash50] = useState<number>(0);
+  const [cash20, setCash20] = useState<number>(0);
+  const [cash10, setCash10] = useState<number>(0);
 
   // Multi-Item Cart Basket State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -209,10 +225,30 @@ export const Sales: React.FC = () => {
     0
   );
 
-  // Submit Cart Order (Records each drink item under the selected member card!)
+  // Total cash calculated from denominations
+  const totalCashCalculated =
+    cash500 * 500 +
+    cash200 * 200 +
+    cash100 * 100 +
+    cash50 * 50 +
+    cash20 * 20 +
+    cash10 * 10;
+
+  // Submit Cart Order
   const handleCheckoutCart = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
+
+    const payloadPayment: any = {
+      payment_mode: paymentMode,
+      paytm_order_id: paymentMode === 'PAYTM_UPI' ? (paytmOrderId.trim() || null) : null,
+      cash_500: paymentMode === 'CASH' ? cash500 : 0,
+      cash_200: paymentMode === 'CASH' ? cash200 : 0,
+      cash_100: paymentMode === 'CASH' ? cash100 : 0,
+      cash_50: paymentMode === 'CASH' ? cash50 : 0,
+      cash_20: paymentMode === 'CASH' ? cash20 : 0,
+      cash_10: paymentMode === 'CASH' ? cash10 : 0,
+    };
 
     // Process Cart Basket items
     if (cartItems.length > 0) {
@@ -224,6 +260,7 @@ export const Sales: React.FC = () => {
             product_id: item.product.id,
             quantity: item.quantity,
             customer_id: selectedCustomerId || null,
+            ...payloadPayment,
           });
           totalCount += item.quantity;
         }
@@ -233,10 +270,12 @@ export const Sales: React.FC = () => {
           : '';
         setMsg({
           type: 'success',
-          text: `Recorded ${cartItems.length} items (${totalCount} bottles) for${memberBadge} — Total: ₹${cartTotalAmount}`,
+          text: `Recorded ${cartItems.length} items (${totalCount} bottles) via ${paymentMode} for${memberBadge} — Total: ₹${cartTotalAmount}`,
         });
 
         setCartItems([]);
+        setPaytmOrderId('');
+        setCash500(0); setCash200(0); setCash100(0); setCash50(0); setCash20(0); setCash10(0);
         await loadData();
       } catch (err: any) {
         console.error(err);
@@ -262,6 +301,7 @@ export const Sales: React.FC = () => {
         product_id: selectedProductId,
         quantity,
         customer_id: selectedCustomerId || null,
+        ...payloadPayment,
       });
 
       const memberBadge = selectedCustomer
@@ -269,11 +309,12 @@ export const Sales: React.FC = () => {
         : '';
       setMsg({
         type: 'success',
-        text: `Recorded ${quantity}x ${selectedProduct.name} for${memberBadge} — Total: ₹${selectedProduct.selling_price * quantity}`,
+        text: `Recorded ${quantity}x ${selectedProduct.name} via ${paymentMode} for${memberBadge} — Total: ₹${selectedProduct.selling_price * quantity}`,
       });
 
       setQuantity(1);
-      // NOTE: DO NOT CLEAR MEMBER CARD! Stays active for subsequent drinks!
+      setPaytmOrderId('');
+      setCash500(0); setCash200(0); setCash100(0); setCash50(0); setCash20(0); setCash10(0);
       await loadData();
     } catch (err: any) {
       console.error(err);
@@ -286,7 +327,7 @@ export const Sales: React.FC = () => {
     }
   };
 
-  // EXCEL REPORT TYPE 1: Member Card Liquor Purchase Details Report (With UTF-8 BOM for Microsoft Excel)
+  // EXCEL REPORT TYPE 1: Member Card Liquor Purchase Details Report
   const exportMemberLiquorSalesCSV = () => {
     if (detailedSales.length === 0) {
       alert('No sales log records available to export');
@@ -306,22 +347,34 @@ export const Sales: React.FC = () => {
       'Quantity',
       'Unit Price (INR)',
       'Total Amount (INR)',
+      'Payment Mode',
+      'Paytm Order ID / Txn ID',
+      'Cash Denominations (500/200/100/50/20/10)',
     ];
 
-    const rows = detailedSales.map((s) => [
-      s.id,
-      s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
-      s.customer_code ? `"#${s.customer_code}"` : '"N/A"',
-      s.customer_name ? `"${s.customer_name}"` : '"N/A"',
-      s.phone ? `"${s.phone}"` : '"N/A"',
-      `"${s.product_name}"`,
-      `"${s.brand_name || 'N/A'}"`,
-      `"${s.category}"`,
-      s.volume_ml,
-      s.quantity,
-      s.unit_price,
-      s.total_price,
-    ]);
+    const rows = detailedSales.map((s) => {
+      const denomStr = s.payment_mode === 'CASH'
+        ? `"500x${s.cash_500 || 0}, 200x${s.cash_200 || 0}, 100x${s.cash_100 || 0}, 50x${s.cash_50 || 0}, 20x${s.cash_20 || 0}, 10x${s.cash_10 || 0}"`
+        : '"N/A"';
+
+      return [
+        s.id,
+        s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
+        s.customer_code ? `"#${s.customer_code}"` : '"N/A"',
+        s.customer_name ? `"${s.customer_name}"` : '"N/A"',
+        s.phone ? `"${s.phone}"` : '"N/A"',
+        `"${s.product_name}"`,
+        `"${s.brand_name || 'N/A'}"`,
+        `"${s.category}"`,
+        s.volume_ml,
+        s.quantity,
+        s.unit_price,
+        s.total_price,
+        `"${s.payment_mode || 'CASH'}"`,
+        `"${s.paytm_order_id || 'N/A'}"`,
+        denomStr,
+      ];
+    });
 
     const dateStr = new Date().toISOString().split('T')[0];
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -352,6 +405,8 @@ export const Sales: React.FC = () => {
       'Quantity Sold',
       'Unit Price (INR)',
       'Total Sales Amount (INR)',
+      'Payment Mode',
+      'Paytm Order ID / Txn ID',
     ];
 
     const rows = detailedSales.map((s) => [
@@ -364,6 +419,8 @@ export const Sales: React.FC = () => {
       s.quantity,
       s.unit_price,
       s.total_price,
+      `"${s.payment_mode || 'CASH'}"`,
+      `"${s.paytm_order_id || 'N/A'}"`,
     ]);
 
     const dateStr = new Date().toISOString().split('T')[0];
@@ -388,7 +445,7 @@ export const Sales: React.FC = () => {
             <span>Bar POS Counter & Sales Log</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Scan Member QR Card with camera • Download Member Details or Bottle Sales Excel reports
+            Scan Member QR Card • Record Cash Denominations (500,200,100...) or Paytm Txn ID
           </p>
         </div>
 
@@ -548,15 +605,15 @@ export const Sales: React.FC = () => {
             )}
           </div>
 
-          {/* Touch POS Drink Picker Grid */}
+          {/* Step 2: Touch POS Drink Picker Grid */}
           <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-amber-400" />
-                  <span>Step 2: Select Liquor Items & Cart</span>
+                  <span>Step 2: Select Liquor Items & Payment Method</span>
                 </h3>
-                <p className="text-[11px] text-slate-400">Tap drink card to add to order cart</p>
+                <p className="text-[11px] text-slate-400">Tap drink card to add to cart, select Cash / Paytm payment</p>
               </div>
 
               {/* Search Bar */}
@@ -611,7 +668,7 @@ export const Sales: React.FC = () => {
                 No products found matching filters.
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1">
                 {filteredPosProducts.map((p) => {
                   const isSelected = selectedProductId === p.id;
                   const cartCount = cartItems.find((item) => item.product.id === p.id)?.quantity || 0;
@@ -656,6 +713,138 @@ export const Sales: React.FC = () => {
                 })}
               </div>
             )}
+
+            {/* Payment Mode Selector & Cash Denominations Box */}
+            <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-200 uppercase tracking-wider">
+                  Payment Method & Denominations
+                </span>
+
+                {/* Payment Mode Toggle */}
+                <div className="flex items-center gap-1 bg-[#161b22] p-1 rounded-xl border border-[#30363d]">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode('CASH')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                      paymentMode === 'CASH'
+                        ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Banknote className="w-3.5 h-3.5" /> CASH
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode('PAYTM_UPI')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                      paymentMode === 'PAYTM_UPI'
+                        ? 'bg-sky-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" /> PAYTM / UPI
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode Specific Inputs */}
+              {paymentMode === 'PAYTM_UPI' ? (
+                <div className="space-y-1.5 animate-in fade-in">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-sky-400">
+                    Paytm Order ID / Transaction ID (Scanned or Typed from Paytm Machine)
+                  </label>
+                  <input
+                    type="text"
+                    value={paytmOrderId}
+                    onChange={(e) => setPaytmOrderId(e.target.value)}
+                    placeholder="e.g. AX19ad80/89c79a495691ae1ca42a2c370c..."
+                    className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-sky-300 placeholder-slate-600 text-xs font-mono focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              ) : (
+                /* Cash Denominations Counter Grid */
+                <div className="space-y-2 border-t border-[#21262d] pt-2 animate-in fade-in">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-emerald-400 flex items-center gap-1">
+                      <Calculator className="w-3.5 h-3.5" /> Cash Denominations Breakdown (Notes Count):
+                    </span>
+                    <span className="font-mono font-black text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                      Total Cash: ₹{totalCashCalculated}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs font-mono">
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹500 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash500 || ''}
+                        onChange={(e) => setCash500(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹200 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash200 || ''}
+                        onChange={(e) => setCash200(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹100 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash100 || ''}
+                        onChange={(e) => setCash100(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹50 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash50 || ''}
+                        onChange={(e) => setCash50(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹20 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash20 || ''}
+                        onChange={(e) => setCash20(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div className="bg-[#161b22] border border-[#21262d] p-1.5 rounded-xl text-center">
+                      <span className="text-[10px] text-slate-400 block font-bold">₹10 x</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={cash10 || ''}
+                        onChange={(e) => setCash10(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full bg-[#0d1117] text-center font-black text-amber-400 py-1 rounded-lg border border-[#30363d] focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Cart Basket Summary Box (Multi-Item Order Checkout) */}
             {cartItems.length > 0 && (
@@ -738,7 +927,7 @@ export const Sales: React.FC = () => {
                     <>
                       <CheckCircle2 className="w-4 h-4" />
                       <span>
-                        RECORD CART SALE ({cartItems.length} ITEMS) — TOTAL ₹{cartTotalAmount}
+                        RECORD CART SALE ({cartItems.length} ITEMS) — TOTAL ₹{cartTotalAmount} ({paymentMode})
                         {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
                       </span>
                     </>
@@ -800,7 +989,7 @@ export const Sales: React.FC = () => {
                     <>
                       <CheckCircle2 className="w-4 h-4" />
                       <span>
-                        RECORD SALE — TOTAL ₹{selectedProduct.selling_price * quantity}
+                        RECORD SALE — TOTAL ₹{selectedProduct.selling_price * quantity} ({paymentMode})
                         {selectedCustomer ? ` FOR #${selectedCustomer.customer_code}` : ''}
                       </span>
                     </>
@@ -828,7 +1017,7 @@ export const Sales: React.FC = () => {
                 <Receipt className="w-4 h-4 text-amber-400" />
                 <span>Sales Log ({detailedSales.length})</span>
               </h3>
-              <p className="text-[11px] text-slate-400">Live itemized sales linked to member cards</p>
+              <p className="text-[11px] text-slate-400">Live itemized sales linked to member cards & payment mode</p>
             </div>
           </div>
 
@@ -849,7 +1038,7 @@ export const Sales: React.FC = () => {
                     <th className="py-2.5 px-3">Date / Time</th>
                     <th className="py-2.5 px-3">Member Card</th>
                     <th className="py-2.5 px-3">Liquor Item</th>
-                    <th className="py-2.5 px-3 text-right">Amount</th>
+                    <th className="py-2.5 px-3 text-right">Payment & Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#21262d]/70 text-slate-200">
@@ -876,8 +1065,15 @@ export const Sales: React.FC = () => {
                           {s.quantity}x @ ₹{s.unit_price} ({s.volume_ml}ml)
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
-                        ₹{s.total_price}
+                      <td className="py-2.5 px-3 text-right">
+                        <span className="font-mono font-black text-amber-400 block text-xs">
+                          ₹{s.total_price}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase font-mono px-1.5 py-0.5 rounded ${
+                          s.payment_mode === 'PAYTM_UPI' ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                          {s.payment_mode === 'PAYTM_UPI' ? 'PAYTM' : 'CASH'}
+                        </span>
                       </td>
                     </tr>
                   ))}

@@ -19,6 +19,14 @@ class SaleRepository:
         quantity: int,
         customer_id: int | None = None,
         unit_price: int = 0,
+        payment_mode: str = "CASH",
+        paytm_order_id: str | None = None,
+        cash_500: int = 0,
+        cash_200: int = 0,
+        cash_100: int = 0,
+        cash_50: int = 0,
+        cash_20: int = 0,
+        cash_10: int = 0,
         sale_date: datetime | None = None,
     ):
         total_price = quantity * unit_price
@@ -28,6 +36,14 @@ class SaleRepository:
             customer_id=customer_id,
             quantity=quantity,
             total_price=total_price,
+            payment_mode=payment_mode,
+            paytm_order_id=paytm_order_id,
+            cash_500=cash_500,
+            cash_200=cash_200,
+            cash_100=cash_100,
+            cash_50=cash_50,
+            cash_20=cash_20,
+            cash_10=cash_10,
         )
 
         if sale_date:
@@ -53,6 +69,14 @@ class SaleRepository:
                 Sale.sale_date,
                 Sale.quantity,
                 Sale.total_price,
+                Sale.payment_mode,
+                Sale.paytm_order_id,
+                Sale.cash_500,
+                Sale.cash_200,
+                Sale.cash_100,
+                Sale.cash_50,
+                Sale.cash_20,
+                Sale.cash_10,
                 Product.id.label("product_id"),
                 Product.name.label("product_name"),
                 Product.category.label("category"),
@@ -83,6 +107,14 @@ class SaleRepository:
                 "quantity": r.quantity,
                 "unit_price": unit_price,
                 "total_price": total_p,
+                "payment_mode": r.payment_mode or "CASH",
+                "paytm_order_id": r.paytm_order_id,
+                "cash_500": r.cash_500 or 0,
+                "cash_200": r.cash_200 or 0,
+                "cash_100": r.cash_100 or 0,
+                "cash_50": r.cash_50 or 0,
+                "cash_20": r.cash_20 or 0,
+                "cash_10": r.cash_10 or 0,
                 "product_id": r.product_id,
                 "product_name": r.product_name,
                 "brand_name": r.brand_name or "N/A",
@@ -102,24 +134,18 @@ class SaleRepository:
                 Sale.sale_date,
                 Sale.quantity,
                 Sale.total_price,
-                Product.id.label("product_id"),
+                Sale.payment_mode,
+                Sale.paytm_order_id,
                 Product.name.label("product_name"),
                 Product.category.label("category"),
                 Product.volume_ml.label("volume_ml"),
                 Product.selling_price.label("unit_price"),
                 Brand.name.label("brand_name"),
-                Customer.id.label("customer_id"),
-                Customer.customer_code.label("customer_code"),
-                Customer.full_name.label("customer_name"),
-                Customer.phone.label("phone"),
             )
             .join(Product, Sale.product_id == Product.id)
             .outerjoin(Brand, Product.brand_id == Brand.id)
-            .join(Customer, Sale.customer_id == Customer.id)
-            .filter(
-                Sale.customer_id == customer_id,
-                Sale.is_deleted == False,
-            )
+            .filter(Sale.customer_id == customer_id)
+            .filter(Sale.is_deleted == False)
             .order_by(Sale.sale_date.desc())
             .all()
         )
@@ -134,35 +160,37 @@ class SaleRepository:
                 "quantity": r.quantity,
                 "unit_price": unit_price,
                 "total_price": total_p,
-                "product_id": r.product_id,
+                "payment_mode": r.payment_mode or "CASH",
+                "paytm_order_id": r.paytm_order_id,
+                "product_id": 0,
                 "product_name": r.product_name,
                 "brand_name": r.brand_name or "N/A",
                 "category": r.category,
                 "volume_ml": r.volume_ml,
-                "customer_id": r.customer_id,
-                "customer_code": r.customer_code,
-                "customer_name": r.customer_name,
-                "phone": r.phone,
+                "customer_id": customer_id,
+                "customer_code": None,
+                "customer_name": None,
+                "phone": None,
             })
         return results
 
-    def get_daily_sales(self, start_date: datetime, end_date: datetime):
-        results = (
+    def get_by_id(self, sale_id: int):
+        return (
+            self.db.query(Sale)
+            .filter(Sale.id == sale_id, Sale.is_deleted == False)
+            .first()
+        )
+
+    def get_daily_sales_by_date(self, target_date):
+        return (
             self.db.query(
-                Product.id.label("product_id"),
+                Sale.product_id,
                 Product.name.label("product_name"),
                 func.sum(Sale.quantity).label("quantity_sold"),
             )
-            .join(Sale, Sale.product_id == Product.id)
-            .filter(
-                Sale.sale_date >= start_date,
-                Sale.sale_date < end_date,
-                Sale.is_deleted == False,
-                Product.is_deleted == False,
-            )
-            .group_by(Product.id, Product.name)
-            .order_by(Product.name.asc())
+            .join(Product, Sale.product_id == Product.id)
+            .filter(func.date(Sale.sale_date) == target_date)
+            .filter(Sale.is_deleted == False)
+            .group_by(Sale.product_id, Product.name)
             .all()
         )
-
-        return results

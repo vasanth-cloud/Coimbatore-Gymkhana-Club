@@ -21,6 +21,14 @@ class SaleService:
         product_id: int,
         quantity: int,
         customer_id: int | None = None,
+        payment_mode: str = "CASH",
+        paytm_order_id: str | None = None,
+        cash_500: int = 0,
+        cash_200: int = 0,
+        cash_100: int = 0,
+        cash_50: int = 0,
+        cash_20: int = 0,
+        cash_10: int = 0,
         sale_date: datetime | None = None,
     ):
         try:
@@ -49,6 +57,14 @@ class SaleService:
                 quantity=quantity,
                 customer_id=customer_id,
                 unit_price=product.selling_price or 0,
+                payment_mode=payment_mode,
+                paytm_order_id=paytm_order_id,
+                cash_500=cash_500,
+                cash_200=cash_200,
+                cash_100=cash_100,
+                cash_50=cash_50,
+                cash_20=cash_20,
+                cash_10=cash_10,
                 sale_date=sale_date,
             )
 
@@ -58,29 +74,25 @@ class SaleService:
                 quantity=quantity,
                 transaction_type="OUT",
                 transaction_date=sale_date,
+                note=f"Sale ID: {sale.id} ({payment_mode})",
             )
 
             self.db.commit()
-            self.db.refresh(sale)
             return sale
-
-        except ValueError:
+        except Exception as e:
             self.db.rollback()
-            raise
-        except Exception:
-            self.db.rollback()
-            raise
-
-    def get_all_sales(self):
-        return self.sale_repository.get_all()
+            raise e
 
     def get_detailed_sales(self, limit: int = 500):
         return self.sale_repository.get_detailed_sales(limit=limit)
 
     def get_customer_sales(self, customer_id: int):
-        return self.sale_repository.get_sales_by_customer(customer_id=customer_id)
+        return self.sale_repository.get_sales_by_customer(customer_id)
 
-    def get_daily_sales(self, date_value):
-        start_date = datetime.combine(date_value, datetime.min.time())
-        end_date = start_date + timedelta(days=1)
-        return self.sale_repository.get_daily_sales(start_date=start_date, end_date=end_date)
+    def get_daily_sales(self, target_date_str: str | None = None):
+        if target_date_str:
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+        else:
+            target_date = datetime.utcnow().date()
+
+        return self.sale_repository.get_daily_sales_by_date(target_date)

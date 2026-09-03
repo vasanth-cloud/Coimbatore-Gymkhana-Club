@@ -29,7 +29,7 @@ def get_sales(
     current_user: User = Depends(require_staff_or_admin),
 ):
     service = SaleService(db)
-    return service.get_all_sales()
+    return service.sale_repository.get_all()
 
 
 @router.get(
@@ -75,6 +75,14 @@ def create_sale(
             product_id=request.product_id,
             quantity=request.quantity,
             customer_id=request.customer_id,
+            payment_mode=request.payment_mode,
+            paytm_order_id=request.paytm_order_id,
+            cash_500=request.cash_500,
+            cash_200=request.cash_200,
+            cash_100=request.cash_100,
+            cash_50=request.cash_50,
+            cash_20=request.cash_20,
+            cash_10=request.cash_10,
             sale_date=request.sale_date,
         )
 

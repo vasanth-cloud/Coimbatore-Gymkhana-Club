@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -31,6 +31,25 @@ class Sale(BaseModel):
         Integer,
         nullable=True,
     )
+
+    payment_mode = Column(
+        String(50),
+        default="CASH",
+        nullable=False,
+    )
+
+    paytm_order_id = Column(
+        String(100),
+        nullable=True,
+    )
+
+    # Cash Denomination Breakdown
+    cash_500 = Column(Integer, default=0, nullable=False)
+    cash_200 = Column(Integer, default=0, nullable=False)
+    cash_100 = Column(Integer, default=0, nullable=False)
+    cash_50 = Column(Integer, default=0, nullable=False)
+    cash_20 = Column(Integer, default=0, nullable=False)
+    cash_10 = Column(Integer, default=0, nullable=False)
 
     sale_date = Column(
         DateTime(timezone=True),
