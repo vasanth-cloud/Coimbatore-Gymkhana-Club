@@ -18,9 +18,7 @@ import {
   ShoppingCart,
   Trash2,
   Camera,
-  QrCode,
   FileSpreadsheet,
-  ShieldCheck,
 } from 'lucide-react';
 
 interface CartItem {
@@ -136,7 +134,7 @@ export const Sales: React.FC = () => {
   const handleScanOrFindCustomer = (tokenOrCode: string) => {
     if (!tokenOrCode) return;
     const term = tokenOrCode.trim().toLowerCase();
-    
+
     // Find customer matching QR Token, Card #, or Phone
     const matched = customers.find(
       (c) =>
@@ -288,7 +286,7 @@ export const Sales: React.FC = () => {
     }
   };
 
-  // EXCEL REPORT TYPE 1: Member Card Liquor Purchase Details Report
+  // EXCEL REPORT TYPE 1: Member Card Liquor Purchase Details Report (With UTF-8 BOM for Microsoft Excel)
   const exportMemberLiquorSalesCSV = () => {
     if (detailedSales.length === 0) {
       alert('No sales log records available to export');
@@ -313,9 +311,9 @@ export const Sales: React.FC = () => {
     const rows = detailedSales.map((s) => [
       s.id,
       s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
-      s.customer_code ? `"#${s.customer_code}"` : '""',
-      s.customer_name ? `"${s.customer_name}"` : '""',
-      s.phone ? `"${s.phone}"` : '""',
+      s.customer_code ? `"#${s.customer_code}"` : '"N/A"',
+      s.customer_name ? `"${s.customer_name}"` : '"N/A"',
+      s.phone ? `"${s.phone}"` : '"N/A"',
       `"${s.product_name}"`,
       `"${s.brand_name || 'N/A'}"`,
       `"${s.category}"`,
@@ -326,13 +324,12 @@ export const Sales: React.FC = () => {
     ]);
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Member_Liquor_Purchases_Report_${dateStr}.csv`);
+    link.href = url;
+    link.download = `Member_Liquor_Purchases_Report_${dateStr}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -370,13 +367,12 @@ export const Sales: React.FC = () => {
     ]);
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `General_Bottle_Sales_Summary_${dateStr}.csv`);
+    link.href = url;
+    link.download = `General_Bottle_Sales_Summary_${dateStr}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
