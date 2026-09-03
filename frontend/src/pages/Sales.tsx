@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { productApi, saleApi, customerApi } from '../api/services';
+import { productApi, saleApi, customerApi, stockApi } from '../api/services';
 import { DailyProductSale, Product, DetailedSale, Customer } from '../types';
 import {
   Wine,
@@ -55,6 +55,7 @@ export const Sales: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [stockList, setStockList] = useState<Array<{ product_id: number; product_name: string; current_stock: number }>>([]);
 
   // 3 QR Payment Display Modal State
   const [showQRModal, setShowQRModal] = useState<boolean>(false);
@@ -62,16 +63,18 @@ export const Sales: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [detSales, prodList, custList, dailyData] = await Promise.all([
+      const [detSales, prodList, custList, dailyData, stocks] = await Promise.all([
         saleApi.getDetailedSales(500).catch((err) => { console.error('getDetailedSales error:', err); return []; }),
         productApi.getProducts().catch((err) => { console.error('getProducts error:', err); return []; }),
         customerApi.getCustomers().catch((err) => { console.error('getCustomers error:', err); return []; }),
         saleApi.getDailySales(reportDate).catch((err) => { console.error('getDailySales error:', err); return []; }),
+        stockApi.getAllCurrentStock().catch((err) => { console.error('getAllCurrentStock error:', err); return []; }),
       ]);
       setDetailedSales(detSales);
       setProducts(prodList);
       setCustomers(custList);
       setDailySales(dailyData);
+      setStockList(stocks);
       if (prodList.length > 0 && selectedProductId === 0) {
         setSelectedProductId(prodList[0].id);
       }
@@ -204,11 +207,30 @@ export const Sales: React.FC = () => {
 
   // Add Item to Multi-Item Cart Basket
   const handleAddToCart = (product: Product, qty: number = 1) => {
+    const stockItem = stockList.find((s) => s.product_id === product.id);
+    const availStock = stockItem ? stockItem.current_stock : 0;
+
+    if (availStock <= 0) {
+      setMsg({
+        type: 'error',
+        text: `Cannot add "${product.name}" - OUT OF STOCK (0 Available)! Receive stock first.`,
+      });
+      return;
+    }
+
     setCartItems((prev) => {
       const existingIdx = prev.findIndex((item) => item.product.id === product.id);
       if (existingIdx > -1) {
         const updated = [...prev];
-        updated[existingIdx].quantity += qty;
+        const newQty = updated[existingIdx].quantity + qty;
+        if (newQty > availStock) {
+          setMsg({
+            type: 'error',
+            text: `Cannot add ${newQty} bottles of "${product.name}" - Only ${availStock} available in stock!`,
+          });
+          return prev;
+        }
+        updated[existingIdx].quantity = newQty;
         return updated;
       }
       return [...prev, { product, quantity: qty }];
@@ -639,6 +661,10 @@ export const Sales: React.FC = () => {
                 {filteredPosProducts.map((p) => {
                   const isSelected = selectedProductId === p.id;
                   const cartCount = cartItems.find((item) => item.product.id === p.id)?.quantity || 0;
+                  const stockItem = stockList.find((s) => s.product_id === p.id);
+                  const availStock = stockItem ? stockItem.current_stock : 0;
+                  const isOutOfStock = availStock <= 0;
+
                   return (
                     <div
                       key={p.id}
@@ -646,34 +672,57 @@ export const Sales: React.FC = () => {
                         setSelectedProductId(p.id);
                       }}
                       className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer relative ${
-                        isSelected
+                        isOutOfStock
+                          ? 'bg-[#0d1117]/60 border-[#21262d] opacity-75'
+                          : isSelected
                           ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/10 scale-[0.98]'
                           : 'bg-[#0d1117] border-[#21262d] hover:border-slate-600 hover:bg-[#161b22]'
                       }`}
                     >
                       {cartCount > 0 && (
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] font-mono">
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] font-mono z-10">
                           {cartCount} in Cart
                         </div>
                       )}
                       <div>
-                        <span className="text-[9px] font-bold font-mono text-amber-400/80 uppercase block">
-                          {p.category} • {p.volume_ml}ml
-                        </span>
-                        <h4 className="text-xs font-bold text-slate-100 truncate mt-0.5">{p.name}</h4>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold font-mono text-amber-400/80 uppercase block">
+                            {p.category} • {p.volume_ml}ml
+                          </span>
+                          {isOutOfStock ? (
+                            <span className="text-[9px] font-black text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded font-mono uppercase">
+                              NO STOCK
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono">
+                              {availStock} Left
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-100 truncate mt-1">{p.name}</h4>
                       </div>
                       <div className="mt-2 flex items-center justify-between border-t border-[#21262d] pt-1.5">
                         <span className="text-xs font-black text-amber-400 font-mono">₹{p.selling_price}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddToCart(p, 1);
-                          }}
-                          className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                        >
-                          <Plus className="w-3 h-3 stroke-[3]" /> Add
-                        </button>
+                        {isOutOfStock ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="px-2 py-0.5 bg-[#21262d] text-rose-400 font-bold text-[10px] rounded-lg cursor-not-allowed opacity-75"
+                          >
+                            NO STOCK
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(p, 1);
+                            }}
+                            className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1 shadow-sm"
+                          >
+                            <Plus className="w-3 h-3 stroke-[3]" /> Add
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

@@ -68,7 +68,7 @@ class StockRepository:
             or 0
         )
 
-        return stock_in - stock_out
+        return max(0, stock_in - stock_out)
 
     def get_all_current_stock(self):
         products = (
@@ -129,7 +129,7 @@ class StockRepository:
                 .scalar() or 0
             )
 
-            opening_stock = prior_in - prior_out
+            opening_stock = max(0, prior_in - prior_out)
 
             # 3. Today Purchase IN (date == target_date)
             today_purchase = (
@@ -155,7 +155,8 @@ class StockRepository:
                 .scalar() or 0
             )
 
-            closing_stock = opening_stock + today_purchase - today_sale
+            closing_stock_calc = opening_stock + today_purchase - today_sale
+            closing_stock = max(0, closing_stock_calc)
 
             # Format Cases & Loose Bottles
             def format_case_bottle(total_bottles, psz):
@@ -191,7 +192,7 @@ class StockRepository:
                 "mrp": mrp_rate,                 # MRP Rate
                 "basic_rate": basic_rate,         # Basic Purchase Rate
                 
-                # Totals in Bottles
+                # Totals in Bottles (No negative numbers)
                 "opening_stock": opening_stock,
                 "purchase_qty": today_purchase,
                 "sale_qty": today_sale,
@@ -214,7 +215,7 @@ class StockRepository:
                 "closing_bottles": closing_cb["bottles"],
                 "closing_str": closing_cb["formatted"],
 
-                # Valuation (Evening Total Rate)
+                # Valuation (Evening Total Rate - No negative values)
                 "closing_sales_value": closing_stock * selling_rate,
                 "closing_cost_value": closing_stock * basic_rate,
                 "closing_mrp_value": closing_stock * mrp_rate,
