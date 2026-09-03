@@ -489,7 +489,7 @@ export const Stock: React.FC = () => {
             </div>
             <div className="bg-[#161b22] border border-rose-500/30 p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">Sales (POS OUT Today):</span>
-              <h4 className="text-xl font-black text-rose-400 font-mono mt-1">-{totalSaleBottles.toLocaleString()} Bottles</h4>
+              <h4 className="text-xl font-black text-rose-400 font-mono mt-1">{totalSaleBottles.toLocaleString()} Bottles</h4>
             </div>
             <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl">
               <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Closing Stock Balance:</span>
