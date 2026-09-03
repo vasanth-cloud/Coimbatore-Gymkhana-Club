@@ -9,6 +9,7 @@ from app.api.routes.brands import router as brands_router
 from app.api.routes.products import router as products_router
 from app.api.routes.stock import router as stock_router
 from app.api.routes.sales import router as sales_router
+from app.api.routes.attendance import router as attendance_router
 
 
 app = FastAPI(
@@ -63,18 +64,15 @@ app.include_router(
     prefix="/api",
 )
 
+app.include_router(
+    attendance_router,
+    prefix="/api",
+)
+
 
 @app.get("/")
-def root():
-
+def read_root():
     return {
-        "message": "Bar Management System API is running"
-    }
-
-
-@app.get("/health")
-def health_check():
-
-    return {
-        "status": "healthy"
+        "status": "healthy",
+        "service": "Bar Management System API",
     }

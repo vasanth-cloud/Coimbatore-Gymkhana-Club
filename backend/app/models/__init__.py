@@ -6,6 +6,9 @@ from app.models.product import Product
 from app.models.stock_transaction import StockTransaction
 from app.models.sale import Sale
 from app.models.daily_tally import DailyTally
+from app.models.employee import Employee
+from app.models.attendance import Attendance
+from app.models.salary_advance import SalaryAdvance
 
 
 __all__ = [
@@ -18,4 +21,7 @@ __all__ = [
     "StockTransaction",
     "Sale",
     "DailyTally",
+    "Employee",
+    "Attendance",
+    "SalaryAdvance",
 ]

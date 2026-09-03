@@ -12,6 +12,7 @@ import { Stock } from './pages/Stock';
 import { Sales } from './pages/Sales';
 import { Reports } from './pages/Reports';
 import { Staff } from './pages/Staff';
+import { Attendance } from './pages/Attendance';
 
 export const App: React.FC = () => {
   return (
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
               <Route path="/customers" element={<Customers />} />
               <Route path="/products" element={<Products />} />
               <Route path="/stock" element={<Stock />} />
+              <Route path="/attendance" element={<Attendance />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/staff" element={<Staff />} />
             </Route>

@@ -224,3 +224,28 @@ export interface StaffCreatePayload {
   phone?: string;
   password: string;
 }
+
+export interface AttendanceEmployee {
+  employee_id: number;
+  employee_code: string;
+  name: string;
+  designation: string;
+  daily_wage: number;
+  present_days: number;
+  absent_days: number;
+  leave_days: number;
+  earned_salary: number;
+  advance_amount: number;
+  net_payable: number;
+  daily_status: Record<string, string>;
+}
+
+export interface AttendanceSummary {
+  month: number;
+  year: number;
+  total_days: number;
+  total_employees: number;
+  total_payroll: number;
+  total_advances: number;
+  employees: AttendanceEmployee[];
+}

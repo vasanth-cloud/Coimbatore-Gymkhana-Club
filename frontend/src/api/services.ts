@@ -248,3 +248,25 @@ export const reportApi = {
     return response.data;
   },
 };
+
+export const attendanceApi = {
+  getSummary: async (month: number, year: number): Promise<any> => {
+    const response = await api.get(`/attendance/summary?month=${month}&year=${year}`);
+    return response.data;
+  },
+  markAttendance: async (data: { employee_id: number; date: string; status: string }): Promise<any> => {
+    const response = await api.post('/attendance/mark', data);
+    return response.data;
+  },
+  createEmployee: async (data: { employee_code: string; name: string; designation: string; daily_wage: number }): Promise<any> => {
+    const response = await api.post('/attendance/employee', data);
+    return response.data;
+  },
+  recordAdvance: async (data: { employee_id: number; amount: number; notes?: string }): Promise<any> => {
+    const response = await api.post('/attendance/advance', data);
+    return response.data;
+  },
+  downloadExcel: (month: number, year: number): string => {
+    return `/api/attendance/export?month=${month}&year=${year}`;
+  },
+};

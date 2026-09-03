@@ -10,6 +10,7 @@ import {
   TrendingUp,
   FileText,
   UserCheck,
+  ClipboardList,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -51,6 +52,12 @@ export const Sidebar: React.FC = () => {
       path: '/sales',
       icon: TrendingUp,
       roles: ['ADMIN', 'STAFF'],
+    },
+    {
+      name: 'Staff Attendance',
+      path: '/attendance',
+      icon: ClipboardList,
+      roles: ['ADMIN'],
     },
     {
       name: 'Reports & Downloads',
