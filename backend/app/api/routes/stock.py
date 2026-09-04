@@ -149,21 +149,43 @@ def import_tasmac_stock(
             # Match by name
             prod = db.query(Product).filter(Product.name.ilike(f"%{p_name}%")).first()
 
-        if prod:
-            # Update product basic rate and prices if provided
-            prod.basic_rate = calc_basic_cost
-            if item.mrp and item.mrp > 0:
-                prod.mrp = item.mrp
-            if item.selling_price and item.selling_price > 0:
-                prod.selling_price = item.selling_price
-            db.add(prod)
-
-            # Record stock receiving transaction
-            service.receive_stock(
-                product_id=prod.id,
-                quantity=t_bottles,
-                transaction_date=datetime.combine(inv_date, datetime.min.time()),
+        if not prod:
+            # Clean name matching
+            clean_name = p_name.strip()
+            # Try to get default brand_id
+            from app.models.brand import Brand
+            brand = db.query(Brand).first()
+            b_id = brand.id if brand else 1
+            
+            # Create product if missing
+            prod = Product(
+                brand_id=b_id,
+                name=clean_name if clean_name.lower().endswith('ml') else f"{clean_name} {pack}pack",
+                category="Liquor",
+                volume_ml=180 if pack == 48 else (375 if pack == 24 else 750),
+                unit="ml",
+                selling_price=item.selling_price if item.selling_price and item.selling_price > 0 else (item.mrp if item.mrp and item.mrp > 0 else calc_basic_cost * 1.2),
+                mrp=item.mrp or calc_basic_cost,
+                basic_rate=calc_basic_cost,
+                is_active=True
             )
+            db.add(prod)
+            db.flush()
+
+        # Update product basic rate and prices if provided
+        prod.basic_rate = calc_basic_cost
+        if item.mrp and item.mrp > 0:
+            prod.mrp = item.mrp
+        if item.selling_price and item.selling_price > 0:
+            prod.selling_price = item.selling_price
+        db.add(prod)
+
+        # Record stock receiving transaction
+        service.receive_stock(
+            product_id=prod.id,
+            quantity=t_bottles,
+            transaction_date=datetime.combine(inv_date, datetime.min.time()),
+        )
 
         # Create Receipt Item
         rc_item = StockReceiptItem(

@@ -246,6 +246,16 @@ export const Stock: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'pdf', 'webp', 'bmp'].includes(ext || '')) {
+      alert(`Image and PDF files (${file.name}) cannot be parsed directly as spreadsheet data. Please upload a valid Excel file (.xlsx, .xls) or CSV file, or select products manually from the catalog dropdown.`);
+      setImportMsg({
+        type: 'error',
+        text: `Image/PDF file detected (${file.name}). Please upload an Excel (.xlsx/.xls) or CSV file, or use the Product Catalog dropdown below.`,
+      });
+      return;
+    }
+
     setImportFileName(file.name);
     const reader = new FileReader();
 
@@ -1087,11 +1097,23 @@ export const Stock: React.FC = () => {
           </div>
 
           {importMsg && (
-            <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
+            <div className={`p-4 rounded-xl text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               importMsg.type === 'success' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
             }`}>
-              {importMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />}
-              <span>{importMsg.text}</span>
+              <div className="flex items-center gap-2">
+                {importMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />}
+                <span>{importMsg.text}</span>
+              </div>
+              {importMsg.type === 'success' && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('grid')}
+                  className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-md"
+                >
+                  <Wine className="w-4 h-4" />
+                  <span>View in Available Bottle Grid &rarr;</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -1206,14 +1228,28 @@ export const Stock: React.FC = () => {
 
                     return (
                       <tr key={item.id} className="hover:bg-[#161b22]/50 transition-colors">
-                        <td className="py-2.5 px-3">
-                          <input
-                            type="text"
-                            value={item.productName}
-                            onChange={(e) => handleUpdateFormRow(item.id, 'productName', e.target.value)}
-                            placeholder="e.g. DIAMOND BRANDY 375ml"
-                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-sky-500"
-                          />
+                        <td className="py-2.5 px-3 min-w-[240px]">
+                          <div className="space-y-1">
+                            <select
+                              value={item.productId || 0}
+                              onChange={(e) => handleUpdateFormRow(item.id, 'productId', Number(e.target.value))}
+                              className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-[11px] font-bold text-amber-400 focus:outline-none focus:border-sky-500"
+                            >
+                              <option value={0}>-- Select from Catalog ({products.length} Items) --</option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.volume_ml}ml) - ₹{p.selling_price}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={item.productName}
+                              onChange={(e) => handleUpdateFormRow(item.id, 'productName', e.target.value)}
+                              placeholder="Or type custom liquor name..."
+                              className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-sky-500"
+                            />
+                          </div>
                         </td>
                         <td className="py-2.5 px-2 text-center">
                           <select
