@@ -89,6 +89,8 @@ export interface Product {
   volume_ml: number;
   unit: string;
   selling_price: number;
+  mrp?: number;
+  basic_rate?: number;
   is_active: boolean;
 }
 
@@ -99,6 +101,8 @@ export interface ProductCreatePayload {
   volume_ml: number;
   unit: string;
   selling_price: number;
+  mrp?: number;
+  basic_rate?: number;
 }
 
 export interface ProductUpdatePayload {
@@ -108,6 +112,8 @@ export interface ProductUpdatePayload {
   volume_ml?: number;
   unit?: string;
   selling_price?: number;
+  mrp?: number;
+  basic_rate?: number;
   is_active?: boolean;
 }
 

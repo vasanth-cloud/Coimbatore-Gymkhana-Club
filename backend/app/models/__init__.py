@@ -9,6 +9,7 @@ from app.models.daily_tally import DailyTally
 from app.models.employee import Employee
 from app.models.attendance import Attendance
 from app.models.salary_advance import SalaryAdvance
+from app.models.stock_receipt import StockReceipt, StockReceiptItem
 
 
 __all__ = [
@@ -24,4 +25,6 @@ __all__ = [
     "Employee",
     "Attendance",
     "SalaryAdvance",
+    "StockReceipt",
+    "StockReceiptItem",
 ]

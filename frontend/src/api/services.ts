@@ -189,6 +189,21 @@ export const stockApi = {
     const response = await api.get<any[]>(`/stock/ledger?report_date=${dateStr}`);
     return response.data;
   },
+  importTasmacStock: async (data: {
+    invoice_number?: string;
+    invoice_date: string;
+    depot_name?: string;
+    supplier_name?: string;
+    file_name?: string;
+    items: any[];
+  }): Promise<any> => {
+    const response = await api.post('/stock/tasmac-import', data);
+    return response.data;
+  },
+  getReceipts: async (): Promise<any[]> => {
+    const response = await api.get<any[]>('/stock/receipts');
+    return response.data;
+  },
 };
 
 export const saleApi = {

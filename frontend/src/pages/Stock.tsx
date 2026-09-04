@@ -22,16 +22,39 @@ import {
   IndianRupee,
   BadgePercent,
   Coins,
+  Receipt,
+  FileText,
+  Plus,
+  Trash2,
+  Eye,
+  Building2,
+  Truck,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
+
+interface TasmacFormItem {
+  id: string;
+  productId: number;
+  productName: string;
+  packSize: number;
+  cases: number;
+  looseBottles: number;
+  ratePerCase: number;
+  addedValuePercent: number;
+  mrp: number;
+  sellingPrice: number;
+}
 
 export const Stock: React.FC = () => {
   const [stockList, setStockList] = useState<CurrentStock[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<StockTransaction[]>([]);
+  const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Active Main Tab: 'ledger' | 'grid' | 'logs'
-  const [activeTab, setActiveTab] = useState<'ledger' | 'grid' | 'logs'>('ledger');
+  // Active Main Tab: 'ledger' | 'grid' | 'tasmac_import' | 'receipts' | 'logs'
+  const [activeTab, setActiveTab] = useState<'ledger' | 'grid' | 'tasmac_import' | 'receipts' | 'logs'>('ledger');
 
   // Daily Opening/Purchase/Sale/Closing Ledger States
   const [ledgerDate, setLedgerDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -51,9 +74,39 @@ export const Stock: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Bulk Excel Import States
+  // Bulk Excel Import States (Legacy Modal)
   const [parsedItems, setParsedItems] = useState<{ productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[]>([]);
   const [excelFileName, setExcelFileName] = useState('');
+
+  // TASMAC BULK STOCK IMPORT TAB STATES
+  const [invoiceDate, setInvoiceDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [invoiceNumber, setInvoiceNumber] = useState<string>(`TASMAC-${new Date().getFullYear()}${(new Date().getMonth()+1).toString().padStart(2,'0')}${new Date().getDate().toString().padStart(2,'0')}`);
+  const [depotName, setDepotName] = useState<string>('TASMAC COIMBATORE (SOUTH)');
+  const [supplierName, setSupplierName] = useState<string>('TASMAC LTD');
+  const [importFileName, setImportFileName] = useState<string>('');
+  
+  const [formItems, setFormItems] = useState<TasmacFormItem[]>([
+    {
+      id: '1',
+      productId: 0,
+      productName: '',
+      packSize: 24,
+      cases: 1,
+      looseBottles: 0,
+      ratePerCase: 3500,
+      addedValuePercent: 220,
+      mrp: 0,
+      sellingPrice: 0,
+    },
+  ]);
+
+  const [pasteText, setPasteText] = useState('');
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [importingSubmitting, setImportingSubmitting] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Receipt Detail View Modal
+  const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
 
   const loadStockData = async () => {
     try {
@@ -88,293 +141,541 @@ export const Stock: React.FC = () => {
     }
   };
 
+  const loadReceiptsData = async () => {
+    try {
+      const data = await stockApi.getReceipts();
+      setReceipts(data || []);
+    } catch (err) {
+      console.error('Failed to load arrival receipts:', err);
+    }
+  };
+
   useEffect(() => {
     loadStockData();
+    loadReceiptsData();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'ledger') {
       loadLedgerData();
     }
+    if (activeTab === 'receipts') {
+      loadReceiptsData();
+    }
   }, [activeTab, ledgerDate]);
 
-  // Single Item Receive Stock Submit
+  // SINGLE ITEM STOCK RECEIVE HANDLER
   const handleReceiveStock = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
-    if (!selectedProductId) {
-      setMsg({ type: 'error', text: 'Please select a drink' });
-      return;
-    }
+    if (!selectedProductId) return;
     setSubmitting(true);
+    setMsg(null);
+
     try {
-      await stockApi.receiveStock({ product_id: selectedProductId, quantity });
-      const p = products.find((prod) => prod.id === selectedProductId);
-      setMsg({
-        type: 'success',
-        text: `Received ${quantity} bottles of ${p?.name || 'drink'}! Stock updated.`,
+      await stockApi.receiveStock({
+        product_id: selectedProductId,
+        quantity,
       });
-      setQuantity(12);
+
+      setMsg({ type: 'success', text: `Successfully added ${quantity} bottles to inventory!` });
       await loadStockData();
       if (activeTab === 'ledger') await loadLedgerData();
-      setTimeout(() => setShowReceiveModal(false), 1500);
+
+      setTimeout(() => {
+        setShowReceiveModal(false);
+        setMsg(null);
+      }, 1500);
     } catch (err: any) {
-      setMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to record stock entry' });
+      setMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to record stock receipt' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Excel / CSV File Upload Parser Handler
+  // LEGACY FILE UPLOAD HANDLER FOR MODAL
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setExcelFileName(file.name);
-    setMsg(null);
-
     const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const bstr = event.target?.result;
-        const workbook = XLSX.read(bstr, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rawData: any[] = XLSX.utils.sheet_to_json(sheet);
 
-        if (rawData.length === 0) {
-          setMsg({ type: 'error', text: 'Excel sheet is empty' });
-          return;
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+
+        const parsed: { productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[] = [];
+
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.length === 0) continue;
+
+          const rawName = String(row[0] || row[1] || '').trim();
+          const rawQty = parseInt(row[1] || row[2] || '0', 10);
+
+          if (!rawName || isNaN(rawQty) || rawQty <= 0) continue;
+
+          const matchedProd = products.find(
+            (p) => p.name.toLowerCase() === rawName.toLowerCase() || p.name.toLowerCase().includes(rawName.toLowerCase())
+          );
+
+          parsed.push({
+            productId: matchedProd ? matchedProd.id : 0,
+            productName: rawName,
+            qty: rawQty,
+            status: matchedProd ? 'matched' : 'unmatched',
+          });
         }
 
-        const items: { productId: number; productName: string; qty: number; status: 'matched' | 'unmatched' }[] = [];
-
-        rawData.forEach((row) => {
-          const nameVal = row['Product Name'] || row['Item Name'] || row['Product'] || row['Item'] || row['Name'] || Object.values(row)[0];
-          const qtyVal = row['Quantity'] || row['Qty'] || row['Bottles'] || row['Cases'] || Object.values(row)[1];
-
-          if (nameVal && qtyVal) {
-            const searchStr = String(nameVal).trim().toLowerCase();
-            const qtyNum = parseInt(String(qtyVal)) || 1;
-
-            const matched = products.find(
-              (p) =>
-                p.name.toLowerCase() === searchStr ||
-                p.name.toLowerCase().includes(searchStr) ||
-                searchStr.includes(p.name.toLowerCase())
-            );
-
-            if (matched) {
-              items.push({
-                productId: matched.id,
-                productName: matched.name,
-                qty: qtyNum,
-                status: 'matched',
-              });
-            } else {
-              items.push({
-                productId: 0,
-                productName: String(nameVal),
-                qty: qtyNum,
-                status: 'unmatched',
-              });
-            }
-          }
-        });
-
-        setParsedItems(items);
+        setParsedItems(parsed);
       } catch (err) {
-        console.error('Failed to parse Excel:', err);
-        setMsg({ type: 'error', text: 'Failed to read Excel file. Please use standard format.' });
+        console.error('Failed to parse file:', err);
+        alert('Invalid file format. Please upload a valid Excel or CSV file.');
       }
     };
 
     reader.readAsBinaryString(file);
   };
 
-  // Submit Bulk Imported Excel Stock Items
-  const handleBulkSubmit = async () => {
-    const validItems = parsedItems.filter((i) => i.status === 'matched');
+  // MULTI-FORMAT FILE UPLOAD HANDLER FOR TASMAC BULK IMPORT TAB (.xlsx, .xls, .csv, .txt)
+  const handleTasmacFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        
+        // Pick best sheet
+        const sheetName = wb.SheetNames.find((s) => s.includes('Sheet3') || s.includes('Sheet1')) || wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+
+        const newFormItems: TasmacFormItem[] = [];
+
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || r.length < 2) continue;
+
+          // Find item name
+          let name = '';
+          let packSize = 24;
+          let cases = 0;
+          let looseBottles = 0;
+          let rateCase = 0;
+          let addedValue = 220;
+
+          // Search row cells for product text and numbers
+          for (let j = 0; j < r.length; j++) {
+            const val = r[j];
+            if (typeof val === 'string' && val.length > 3 && !['Item', 'SubProduct', 'Product', 'S.No.', 'INVOICE', 'COIMBATORE'].includes(val.trim())) {
+              if (!name) name = val.trim();
+            }
+          }
+
+          if (!name || name.startsWith('FROM:') || name.startsWith('Basic Purchase')) continue;
+
+          // Extract numeric values from row
+          const nums = r.filter((x: any) => typeof x === 'number' && !isNaN(x));
+          if (nums.length >= 1) {
+            // Check if pack size
+            if (name.toLowerCase().includes('180')) packSize = 48;
+            else if (name.toLowerCase().includes('375')) packSize = 24;
+            else packSize = 12;
+
+            cases = nums[0] || 1;
+            rateCase = nums[1] || nums[0] || 3500;
+          }
+
+          // Match product from DB list if available
+          const matchedProd = products.find(
+            (p) => p.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(p.name.toLowerCase())
+          );
+
+          newFormItems.push({
+            id: Math.random().toString(),
+            productId: matchedProd ? matchedProd.id : 0,
+            productName: name,
+            packSize: matchedProd ? matchedProd.volume_ml === 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12 : packSize,
+            cases: cases > 0 ? cases : 1,
+            looseBottles: 0,
+            ratePerCase: rateCase > 0 ? rateCase : 3500,
+            addedValuePercent: addedValue,
+            mrp: matchedProd ? matchedProd.mrp || 0 : 0,
+            sellingPrice: matchedProd ? matchedProd.selling_price || 0 : 0,
+          });
+        }
+
+        if (newFormItems.length > 0) {
+          setFormItems(newFormItems);
+          setImportMsg({ type: 'success', text: `Loaded ${newFormItems.length} items from ${file.name}!` });
+        }
+      } catch (err) {
+        console.error('File parse error:', err);
+        alert('Could not parse file. Try uploading standard Excel/CSV or pasting text.');
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  // PARSE BULK PASTED TEXT
+  const handleParsePastedText = () => {
+    if (!pasteText.trim()) return;
+
+    const lines = pasteText.split('\n');
+    const newItems: TasmacFormItem[] = [];
+
+    lines.forEach((line) => {
+      if (!line.trim()) return;
+      const parts = line.split(/[\t,;|]/).map((p) => p.trim()).filter(Boolean);
+      
+      if (parts.length >= 1) {
+        const name = parts[0];
+        const cases = parseInt(parts[1] || '1', 10) || 1;
+        const rateCase = parseFloat(parts[2] || '3500') || 3500;
+        const pack = name.toLowerCase().includes('180') ? 48 : name.toLowerCase().includes('375') ? 24 : 12;
+
+        const matched = products.find((p) => p.name.toLowerCase().includes(name.toLowerCase()));
+
+        newItems.push({
+          id: Math.random().toString(),
+          productId: matched ? matched.id : 0,
+          productName: name,
+          packSize: matched ? matched.volume_ml === 180 ? 48 : matched.volume_ml === 375 ? 24 : 12 : pack,
+          cases: cases,
+          looseBottles: 0,
+          ratePerCase: rateCase,
+          addedValuePercent: 220,
+          mrp: matched ? matched.mrp || 0 : 0,
+          sellingPrice: matched ? matched.selling_price || 0 : 0,
+        });
+      }
+    });
+
+    if (newItems.length > 0) {
+      setFormItems(newItems);
+      setShowPasteModal(false);
+      setPasteText('');
+      setImportMsg({ type: 'success', text: `Parsed ${newItems.length} items from text paste!` });
+    }
+  };
+
+  // ADD / REMOVE / UPDATE LIVE TASMAC FORM ITEM
+  const handleAddFormRow = () => {
+    setFormItems((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        productId: products.length > 0 ? products[0].id : 0,
+        productName: products.length > 0 ? products[0].name : '',
+        packSize: 24,
+        cases: 1,
+        looseBottles: 0,
+        ratePerCase: 3500,
+        addedValuePercent: 220,
+        mrp: 0,
+        sellingPrice: 0,
+      },
+    ]);
+  };
+
+  const handleRemoveFormRow = (id: string) => {
+    if (formItems.length <= 1) return;
+    setFormItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleUpdateFormRow = (id: string, field: keyof TasmacFormItem, value: any) => {
+    setFormItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value };
+        if (field === 'productId') {
+          const prod = products.find((p) => p.id === Number(value));
+          if (prod) {
+            updated.productName = prod.name;
+            updated.packSize = prod.volume_ml === 180 ? 48 : prod.volume_ml === 375 ? 24 : 12;
+            updated.mrp = prod.mrp || 0;
+            updated.sellingPrice = prod.selling_price || 0;
+          }
+        }
+        return updated;
+      })
+    );
+  };
+
+  // TASMAC FORMULA CALCULATOR PER ROW
+  const calculateRowCosts = (item: TasmacFormItem) => {
+    const pack = item.packSize > 0 ? item.packSize : 24;
+    const totalBottles = item.cases * pack + item.looseBottles;
+    const baseAmount = (item.ratePerCase / pack) * totalBottles;
+    const addedValueAmt = baseAmount * (item.addedValuePercent / 100);
+    const tcsAmt = (baseAmount + addedValueAmt) * 0.02;
+    const totalLineCost = baseAmount + addedValueAmt + tcsAmt;
+    const perBottleBasic = totalBottles > 0 ? totalLineCost / totalBottles : 0;
+
+    return {
+      totalBottles,
+      baseAmount,
+      addedValueAmt,
+      tcsAmt,
+      totalLineCost,
+      perBottleBasic,
+    };
+  };
+
+  // SUBMIT FULL TASMAC BULK IMPORT TO BACKEND
+  const handleSubmitTasmacImport = async () => {
+    const validItems = formItems.filter((i) => i.productName.trim() !== '' && (i.cases > 0 || i.looseBottles > 0));
     if (validItems.length === 0) {
-      setMsg({ type: 'error', text: 'No matched products found in uploaded sheet' });
+      alert('Please add at least one valid item with cases or bottles.');
       return;
     }
 
-    setSubmitting(true);
-    setMsg(null);
+    setImportingSubmitting(true);
+    setImportMsg(null);
 
     try {
-      const payload = validItems.map((i) => ({
+      const payload = {
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        depot_name: depotName,
+        supplier_name: supplierName,
+        file_name: importFileName || 'TASMAC Direct Import',
+        items: validItems.map((item) => ({
+          product_id: item.productId > 0 ? item.productId : undefined,
+          product_name: item.productName,
+          pack_size: item.packSize,
+          cases: item.cases,
+          loose_bottles: item.looseBottles,
+          rate_per_case: item.ratePerCase,
+          added_value_percent: item.addedValuePercent,
+          mrp: item.mrp,
+          selling_price: item.sellingPrice,
+        })),
+      };
+
+      const res = await stockApi.importTasmacStock(payload);
+
+      setImportMsg({
+        type: 'success',
+        text: `Successfully recorded stock arrival for Invoice #${invoiceNumber}! Total: ${res.total_cases} Cases (${res.total_bottles} Bottles) — ₹${res.total_amount.toLocaleString()}`,
+      });
+
+      await loadStockData();
+      await loadReceiptsData();
+      if (activeTab === 'ledger') await loadLedgerData();
+
+      // Reset form
+      setFormItems([
+        {
+          id: Math.random().toString(),
+          productId: 0,
+          productName: '',
+          packSize: 24,
+          cases: 1,
+          looseBottles: 0,
+          ratePerCase: 3500,
+          addedValuePercent: 220,
+          mrp: 0,
+          sellingPrice: 0,
+        },
+      ]);
+    } catch (err: any) {
+      setImportMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to import TASMAC stock arrival.' });
+    } finally {
+      setImportingSubmitting(false);
+    }
+  };
+
+  // Download Sample Template for Bulk Import
+  const downloadSampleTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Product Name', 'Pack Size', 'Cases (C)', 'Loose Bottles (B)', 'Rate per Case (RS)', 'Added Value %'],
+      ['DIAMOND BRANDY 375ml', 24, 2, 0, 3515.85, 220],
+      ['OAK VAT MATURED RUM 180ml', 48, 11, 0, 4355.06, 220],
+      ['MGM ORANGE MEDIUM VODKA 180ml', 48, 1, 0, 4390.45, 220],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sample_TASMAC_Invoice');
+    XLSX.writeFile(wb, 'TASMAC_Stock_Import_Template.xlsx');
+  };
+
+  const handleBulkSubmit = async () => {
+    const matched = parsedItems.filter((i) => i.status === 'matched');
+    if (matched.length === 0) return;
+
+    setSubmitting(true);
+    try {
+      const payload = matched.map((i) => ({
         product_id: i.productId,
         quantity: i.qty,
       }));
 
       await stockApi.bulkReceiveStock(payload);
-
-      setMsg({
-        type: 'success',
-        text: `Successfully imported stock for ${validItems.length} items from Excel sheet!`,
-      });
-
-      setParsedItems([]);
-      setExcelFileName('');
+      setMsg({ type: 'success', text: `Bulk imported stock for ${matched.length} drinks!` });
       await loadStockData();
       if (activeTab === 'ledger') await loadLedgerData();
-      setTimeout(() => setShowReceiveModal(false), 1500);
+
+      setTimeout(() => {
+        setShowReceiveModal(false);
+        setParsedItems([]);
+        setExcelFileName('');
+        setMsg(null);
+      }, 1500);
     } catch (err: any) {
-      setMsg({ type: 'error', text: 'Failed to save bulk stock import' });
+      setMsg({ type: 'error', text: 'Failed to process bulk import.' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Download Sample Excel Import Template
-  const downloadSampleTemplate = () => {
-    const headers = ['Product Name', 'Quantity'];
-    const sampleRows = [
-      ['10000 VOLTS SUPER STRONG 750ml', 24],
-      ['1848 Premium Grain 180ml', 48],
-      ['AMSTEL PREMIUM BEER 650ml', 12],
-    ];
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...sampleRows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Stock_Import_Template.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Export Daily Opening / Purchase / Sale / Closing Ledger CSV
   const exportLedgerCSV = () => {
-    if (ledgerData.length === 0) {
-      alert('No ledger data available to export');
-      return;
-    }
-
+    if (ledgerData.length === 0) return;
     const headers = [
       'Product Name',
       'Category',
       'Volume (ml)',
-      'Pack Size (Btts/Case)',
-      'Sales Rate (INR)',
+      'Pack Size',
       'Basic Purchase Rate (INR)',
       'MRP Rate (INR)',
-      'OPENING (Cases + Bottles)',
-      'OPENING TOTAL BOTTLES',
-      'PURCHASES (Cases + Bottles)',
-      'PURCHASES TOTAL BOTTLES',
-      'SALES (Cases + Bottles)',
-      'SALES TOTAL BOTTLES',
-      'CLOSING (Cases + Bottles)',
-      'CLOSING TOTAL BOTTLES',
-      'CLOSING TOTAL SALES VALUE (INR)',
+      'Sales Rate (INR)',
+      'OB (Cases)',
+      'OB (Bottles)',
+      'OB Total Bottles',
+      'PUR (Cases)',
+      'PUR (Bottles)',
+      'PUR Total Bottles',
+      'SALE (Cases)',
+      'SALE (Bottles)',
+      'SALE Total Bottles',
+      'CB (Cases)',
+      'CB (Bottles)',
+      'CB Total Bottles',
       'CLOSING TOTAL BASIC COST VALUE (INR)',
       'CLOSING TOTAL MRP VALUE (INR)',
+      'CLOSING TOTAL SALES VALUE (INR)',
     ];
 
-    const rows = filteredLedgerItems.map((item) => [
+    const rows = ledgerData.map((item) => [
       `"${item.product_name}"`,
       `"${item.category}"`,
       item.volume_ml,
       item.pack_size,
-      item.selling_price,
       item.basic_rate,
       item.mrp,
-      `"${item.opening_str}"`,
+      item.selling_price,
+      item.opening_cases,
+      item.opening_bottles,
       item.opening_stock,
-      `"${item.purchase_str}"`,
+      item.purchase_cases,
+      item.purchase_bottles,
       item.purchase_qty,
-      `"${item.sale_str}"`,
+      item.sale_cases,
+      item.sale_bottles,
       item.sale_qty,
-      `"${item.closing_str}"`,
+      item.closing_cases,
+      item.closing_bottles,
       item.closing_stock,
-      item.closing_sales_value,
-      item.closing_cost_value,
+      item.closing_basic_value,
       item.closing_mrp_value,
+      item.closing_sales_value,
     ]);
 
     const csvContent =
-      '\uFEFF' +
-      [`Daily Opening-Purchase-Sale-Closing Stock Ledger - Date: ${ledgerDate}`, headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      '\uFEFF' + [`DAILY STOCK LEDGER REPORT - Date: ${ledgerDate}`, headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Stock_Ledger_Cases_Bottles_Rates_${ledgerDate}.csv`;
+    link.download = `Daily_Stock_Ledger_${ledgerDate}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Filtered Ledger Items
+  // Filter Ledger items
   const filteredLedgerItems = ledgerData.filter((item) => {
     const matchesSearch =
       item.product_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase());
-    const matchesPill =
-      selectedCategoryPill === 'ALL' ||
-      item.category.toLowerCase() === selectedCategoryPill.toLowerCase();
+      item.category.toLowerCase().includes(search.toLowerCase()) ||
+      `${item.volume_ml}ml`.toLowerCase().includes(search.toLowerCase());
+
+    const matchesPill = selectedCategoryPill === 'ALL' || item.category.toLowerCase() === selectedCategoryPill.toLowerCase();
     return matchesSearch && matchesPill;
   });
 
-  // Filtered Live Stock Items with Category support
-  const stockWithCategory = stockList.map((s) => {
-    const prod = products.find((p) => p.id === s.product_id);
-    return {
-      ...s,
-      category: prod ? prod.category : 'Other',
-    };
-  });
+  const ledgerCategoryPills = Array.from(new Set(ledgerData.map((i) => i.category)));
 
-  const filteredStockList = stockWithCategory.filter((item) => {
+  // Filter Grid List
+  const filteredStockList = stockList.filter((item) => {
     const matchesSearch = item.product_name.toLowerCase().includes(search.toLowerCase());
+    const prod = products.find((p) => p.id === item.product_id);
     const matchesPill =
-      selectedGridCategoryPill === 'ALL' ||
-      item.category.toLowerCase() === selectedGridCategoryPill.toLowerCase();
+      selectedGridCategoryPill === 'ALL' || (prod && prod.category.toLowerCase() === selectedGridCategoryPill.toLowerCase());
     return matchesSearch && matchesPill;
   });
 
-  const totalOpeningBottles = filteredLedgerItems.reduce((sum, item) => sum + item.opening_stock, 0);
-  const totalPurchaseBottles = filteredLedgerItems.reduce((sum, item) => sum + item.purchase_qty, 0);
-  const totalSaleBottles = filteredLedgerItems.reduce((sum, item) => sum + item.sale_qty, 0);
-  const totalClosingBottles = filteredLedgerItems.reduce((sum, item) => sum + item.closing_stock, 0);
-  const totalClosingCases = filteredLedgerItems.reduce((sum, item) => sum + item.closing_cases, 0);
+  const gridCategoryPills = Array.from(
+    new Set(
+      stockList
+        .map((i) => {
+          const prod = products.find((p) => p.id === i.product_id);
+          return prod?.category;
+        })
+        .filter(Boolean)
+    )
+  );
 
-  // Total Evening Valuations
+  const totalStockValuation = stockList.reduce((sum, item) => {
+    const prod = products.find((p) => p.id === item.product_id);
+    return sum + item.current_stock * (prod?.selling_price || 0);
+  }, 0);
+
   const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_sales_value, 0);
-  const totalClosingCostVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_cost_value, 0);
+  const totalClosingBasicVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_basic_value, 0);
   const totalClosingMrpVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_mrp_value, 0);
-
-  // Unique categories for pills
-  const allCategories = Array.from(new Set(products.map((p) => p.category)));
 
   return (
     <div className="space-y-6 w-full min-w-0">
-      {/* Header Bar */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-[#161b22] p-5 rounded-2xl border border-[#21262d]">
+      {/* Top Banner Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#161b22] p-5 rounded-2xl border border-[#21262d] shadow-lg">
         <div>
           <h2 className="text-xl font-extrabold text-slate-100 flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-amber-400" />
-            <span>Stock Inventory & Ledger (Cases & Bottles)</span>
+            <span>Stock Inventory & TASMAC Bulk Import</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cases (C) + Loose Bottles (B) • Sales Rate • Basic Rate • MRP • Evening Valuation
+          <p className="text-xs text-slate-400 mt-1">
+            Cases (C) + Loose Bottles (B) • Sales Rate • Basic Rate • TASMAC Cost Engine • Arrival History
           </p>
         </div>
 
-        {/* Action Buttons & Tab Switcher */}
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => {
+              setActiveTab('tasmac_import');
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-sky-500/20 transition-all"
+          >
+            <Upload className="w-4 h-4" />
+            <span>BULK STOCK IMPORT</span>
+          </button>
+
           <button
             onClick={() => setShowReceiveModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
           >
             <PackagePlus className="w-4 h-4" />
-            <span>+ RECEIVE STOCK</span>
+            <span>+ QUICK RECEIVE STOCK</span>
           </button>
 
           <button
@@ -389,41 +690,65 @@ export const Stock: React.FC = () => {
       </div>
 
       {/* Navigation View Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#21262d] pb-1">
+      <div className="flex items-center gap-2 border-b border-[#21262d] pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('ledger')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
             activeTab === 'ledger'
               ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b22]'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
-          <span>Opening / Purchase / Sale / Closing Ledger</span>
+          <span>Stock Ledger (C & B)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('grid')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
             activeTab === 'grid'
               ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b22]'
           }`}
         >
           <Wine className="w-4 h-4" />
-          <span>Live Available Stock Grid</span>
+          <span>Available Bottle Grid</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tasmac_import')}
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
+            activeTab === 'tasmac_import'
+              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b22]'
+          }`}
+        >
+          <Upload className="w-4 h-4 text-sky-400" />
+          <span>📦 Bulk Stock Import & TASMAC Calculator</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('receipts')}
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
+            activeTab === 'receipts'
+              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b22]'
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>📋 Arrival Audit Logs ({receipts.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('logs')}
-          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
             activeTab === 'logs'
               ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b22]'
           }`}
         >
           <History className="w-4 h-4" />
-          <span>Stock Entry Logs</span>
+          <span>Raw Tx Logs</span>
         </button>
       </div>
 
@@ -451,14 +776,14 @@ export const Stock: React.FC = () => {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Filter liquor drink name..."
+                  placeholder="Search drink name..."
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-1.5 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
 
             {/* Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-t border-[#21262d] pt-3">
               <button
                 type="button"
                 onClick={() => setSelectedCategoryPill('ALL')}
@@ -470,100 +795,56 @@ export const Stock: React.FC = () => {
               >
                 ALL ({ledgerData.length})
               </button>
-
-              {allCategories.map((cat) => {
-                const count = ledgerData.filter((i) => i.category.toLowerCase() === cat.toLowerCase()).length;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategoryPill(cat)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                      selectedCategoryPill === cat
-                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                        : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
-                    }`}
-                  >
-                    {cat} ({count})
-                  </button>
-                );
-              })}
+              {ledgerCategoryPills.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategoryPill(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                    selectedCategoryPill === cat
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                  }`}
+                >
+                  {cat} ({ledgerData.filter((i) => i.category === cat).length})
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Summary Metric Cards for Bottle Counts */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Valuation Summary Banner Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Opening Stock (Yesterday Closing):</span>
-              <h4 className="text-xl font-black text-slate-100 font-mono mt-1">{totalOpeningBottles.toLocaleString()} Bottles</h4>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value:</span>
+              <h3 className="text-xl font-black text-sky-400 font-mono mt-1">₹{totalClosingBasicVal.toLocaleString()}</h3>
             </div>
-            <div className="bg-[#161b22] border border-emerald-500/30 p-4 rounded-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Purchases (Stock IN Today):</span>
-              <h4 className="text-xl font-black text-emerald-400 font-mono mt-1">+{totalPurchaseBottles.toLocaleString()} Bottles</h4>
+            <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Total MRP Value:</span>
+              <h3 className="text-xl font-black text-emerald-400 font-mono mt-1">₹{totalClosingMrpVal.toLocaleString()}</h3>
             </div>
-            <div className="bg-[#161b22] border border-rose-500/30 p-4 rounded-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">Sales (POS OUT Today):</span>
-              <h4 className="text-xl font-black text-rose-400 font-mono mt-1">{totalSaleBottles.toLocaleString()} Bottles</h4>
-            </div>
-            <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl">
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Closing Stock Balance:</span>
-              <h4 className="text-xl font-black text-amber-400 font-mono mt-1">{totalClosingBottles.toLocaleString()} Bottles</h4>
+            <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl bg-amber-500/5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block">Total Closing Sales Value:</span>
+              <h3 className="text-xl font-black text-amber-400 font-mono mt-1">₹{totalClosingSalesVal.toLocaleString()}</h3>
             </div>
           </div>
 
-          {/* EVENING REMAINING STOCK TOTAL RATE & BOTTLES VALUATION BANNER */}
-          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                <Coins className="w-4 h-4" />
-                <span>Evening Total Stock & Valuation Summary ({ledgerDate})</span>
-              </h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Total remaining closing bottles and total monetary rates in stock
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full xl:w-auto">
-              <div className="bg-[#161b22] p-3 rounded-xl border border-amber-500/50">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Closing Total Bottles:</span>
-                <h3 className="text-lg font-black text-amber-400 font-mono mt-0.5">{totalClosingBottles.toLocaleString()} Btts</h3>
-                <span className="text-[10px] text-slate-400 font-mono block">({totalClosingCases.toLocaleString()} Cases)</span>
-              </div>
-
-              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">Total Sales Value (Bar Price):</span>
-                <h3 className="text-lg font-black text-amber-400 font-mono mt-0.5">₹{totalClosingSalesVal.toLocaleString()}</h3>
-              </div>
-
-              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value:</span>
-                <h3 className="text-lg font-black text-sky-400 font-mono mt-0.5">₹{totalClosingCostVal.toLocaleString()}</h3>
-              </div>
-
-              <div className="bg-[#161b22] p-3 rounded-xl border border-[#30363d]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Total MRP Value:</span>
-                <h3 className="text-lg font-black text-emerald-400 font-mono mt-0.5">₹{totalClosingMrpVal.toLocaleString()}</h3>
-              </div>
-            </div>
-          </div>
-
-          {/* Ledger Table with Cases (C) & Loose Bottles (B) */}
-          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg">
+          {/* Detailed Ledger Table */}
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-4 shadow-lg space-y-4">
             {ledgerLoading ? (
-              <div className="py-16 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                <span>Calculating daily opening, purchase, sale, closing cases & rates...</span>
+              <div className="py-12 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                <span>Loading stock ledger records...</span>
               </div>
             ) : filteredLedgerItems.length === 0 ? (
-              <div className="py-16 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-                No stock ledger items found for selected date or filter.
+              <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+                No stock ledger items found for date {ledgerDate}.
               </div>
             ) : (
               <div className="overflow-x-auto min-w-0">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#0d1117] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#21262d]">
-                      <th className="py-3 px-3">Product Name</th>
+                      <th className="py-3 px-3 min-w-[180px]">Product Name</th>
                       <th className="py-3 px-2">Cat</th>
                       <th className="py-3 px-2">Vol</th>
                       <th className="py-3 px-2 text-center">Pack</th>
@@ -572,9 +853,9 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-right text-amber-400">Sales</th>
                       
                       {/* Opening Stock C, B & Total */}
-                      <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-200 border-l border-[#30363d]">OB (C)</th>
-                      <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-200">OB (B)</th>
-                      <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-100 font-black">OB Total</th>
+                      <th className="py-3 px-2 text-center bg-[#0d1117]/80 text-slate-300 border-l border-[#30363d]">OB (C)</th>
+                      <th className="py-3 px-2 text-center bg-[#0d1117]/80 text-slate-300">OB (B)</th>
+                      <th className="py-3 px-2 text-center bg-[#0d1117]/90 text-slate-100 font-black">OB Total</th>
                       
                       {/* Purchases C, B & Total */}
                       <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-400 border-l border-[#30363d]">PUR (C)</th>
@@ -698,104 +979,455 @@ export const Stock: React.FC = () => {
                   : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
               }`}
             >
-              ALL ({stockWithCategory.length})
+              ALL ({stockList.length})
             </button>
+            {gridCategoryPills.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedGridCategoryPill(cat || 'Other')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                  selectedGridCategoryPill === cat
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                }`}
+              >
+                {cat} ({
+                  stockList.filter((i) => {
+                    const prod = products.find((p) => p.id === i.product_id);
+                    return prod?.category === cat;
+                  }).length
+                })
+              </button>
+            ))}
+          </div>
 
-            {allCategories.map((cat) => {
-              const count = stockWithCategory.filter((i) => i.category.toLowerCase() === cat.toLowerCase()).length;
+          {/* Stock Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredStockList.map((item) => {
+              const prod = products.find((p) => p.id === item.product_id);
+              const packSize = prod?.volume_ml === 180 ? 48 : prod?.volume_ml === 375 ? 24 : 12;
+              const cases = Math.floor(item.current_stock / packSize);
+              const loose = item.current_stock % packSize;
+
               return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedGridCategoryPill(cat)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                    selectedGridCategoryPill === cat
-                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                      : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
-                  }`}
+                <div
+                  key={item.product_id}
+                  className="bg-[#0d1117] border border-[#21262d] p-4 rounded-2xl space-y-3 hover:border-amber-500/40 transition-all shadow-sm"
                 >
-                  {cat} ({count})
-                </button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold uppercase text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                      {prod?.category || 'Liquor'} • {prod?.volume_ml}ml
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      item.current_stock > 12 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                    }`}>
+                      {item.current_stock > 12 ? 'In Stock' : 'Low Stock'}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-extrabold text-slate-100 line-clamp-1">{item.product_name}</h4>
+
+                  <div className="grid grid-cols-2 gap-2 text-center bg-[#161b22] p-2.5 rounded-xl border border-[#30363d]">
+                    <div>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Cases (C)</span>
+                      <span className="text-base font-black font-mono text-amber-400">{cases} Cases</span>
+                    </div>
+                    <div className="border-l border-[#30363d]">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Bottles (B)</span>
+                      <span className="text-base font-black font-mono text-slate-100">{loose} Bottles</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-[#21262d]">
+                    <span className="text-slate-400 text-[10px]">Total Available:</span>
+                    <span className="font-mono font-black text-amber-400 text-sm">{item.current_stock} Bottles</span>
+                  </div>
+                </div>
               );
             })}
           </div>
-
-          {loading ? (
-            <div className="py-12 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-              <span>Loading available stock inventory...</span>
-            </div>
-          ) : filteredStockList.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-              No stock inventory found for this filter.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {(selectedGridCategoryPill === 'ALL' ? allCategories : [selectedGridCategoryPill]).map((cat) => {
-                const catItems = filteredStockList.filter(
-                  (item) => item.category.toLowerCase() === cat.toLowerCase()
-                );
-                if (catItems.length === 0) return null;
-
-                return (
-                  <div key={cat} className="space-y-2.5">
-                    <div className="flex items-center justify-between border-b border-[#21262d]/80 pb-1.5">
-                      <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                        <GlassWater className="w-3.5 h-3.5" />
-                        <span>{cat} Category</span>
-                        <span className="text-slate-500 text-[10px]">({catItems.length} Products)</span>
-                      </h4>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {catItems.map((item) => (
-                        <div key={item.product_id} className="bg-[#0d1117] border border-[#21262d] p-3.5 rounded-xl flex items-center justify-between hover:border-[#30363d] transition-all">
-                          <div>
-                            <h4 className="text-xs font-extrabold text-slate-100">{item.product_name}</h4>
-                            <span className="text-[10px] text-slate-500 font-mono">Product #{item.product_id} • {item.category}</span>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-sm font-black text-amber-400 font-mono block">{item.current_stock} Bottles</span>
-                            <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">In Stock</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
-      {/* TAB 3: STOCK ENTRY LOGS */}
-      {activeTab === 'logs' && (
-        <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 space-y-4 shadow-lg">
-          <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <History className="w-4 h-4 text-amber-400" />
-            <span>Stock Entry Audit History ({transactions.length})</span>
-          </h3>
+      {/* TAB 3: DEDICATED TASMAC BULK STOCK IMPORT & COST CALCULATOR ENGINE */}
+      {activeTab === 'tasmac_import' && (
+        <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 space-y-6 shadow-xl">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#21262d] pb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-sky-400" />
+                <span>TASMAC Bulk Stock Import & Per-Bottle Cost Engine</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Upload TASMAC Excel/CSV invoices or paste line items to calculate exact per-bottle basic costs and update inventory.
+              </p>
+            </div>
 
-          {transactions.length === 0 ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPasteModal(true)}
+                className="px-3.5 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
+              >
+                <FileText className="w-4 h-4 text-sky-400" />
+                <span>Quick Bulk Paste</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={downloadSampleTemplate}
+                className="px-3.5 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
+              >
+                <Download className="w-4 h-4 text-amber-400" />
+                <span>Sample Template</span>
+              </button>
+            </div>
+          </div>
+
+          {importMsg && (
+            <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
+              importMsg.type === 'success' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+            }`}>
+              {importMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />}
+              <span>{importMsg.text}</span>
+            </div>
+          )}
+
+          {/* Invoice Metadata Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Invoice Date</label>
+              <input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+                className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">TASMAC Invoice #</label>
+              <input
+                type="text"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                placeholder="e.g. S040172371"
+                className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">TASMAC Depot Name</label>
+              <input
+                type="text"
+                value={depotName}
+                onChange={(e) => setDepotName(e.target.value)}
+                className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-bold focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Supplier Name</label>
+              <input
+                type="text"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-bold focus:outline-none focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          {/* Multi-Format Drag & Drop Upload Zone */}
+          <div className="border-2 border-dashed border-sky-500/40 hover:border-sky-400 bg-[#0d1117] rounded-2xl p-6 text-center space-y-2 transition-all">
+            <Upload className="w-10 h-10 text-sky-400 mx-auto" />
+            <div>
+              <label className="cursor-pointer">
+                <span className="text-sm font-extrabold text-slate-100 block">
+                  Click or Drag & Drop TASMAC Invoice File (.xlsx, .xls, .csv, .txt)
+                </span>
+                <span className="text-xs text-slate-400 mt-1 block">
+                  Supports all Excel formats, CSV files, and copied line sheets
+                </span>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.txt"
+                  onChange={handleTasmacFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {importFileName && (
+              <span className="inline-block bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono font-bold px-3 py-1 rounded-lg">
+                Uploaded: {importFileName}
+              </span>
+            )}
+          </div>
+
+          {/* Interactive Live Invoice Items Grid */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Coins className="w-4 h-4 text-amber-400" />
+                <span>Invoice Line Items ({formItems.length}) — Real-Time Per-Bottle Basic Cost Calculation</span>
+              </h4>
+
+              <button
+                type="button"
+                onClick={handleAddFormRow}
+                className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-amber-400 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Row</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto border border-[#30363d] rounded-2xl bg-[#0d1117]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
+                    <th className="py-3 px-3 min-w-[220px]">Liquor Item Name</th>
+                    <th className="py-3 px-2 text-center w-24">Pack Size</th>
+                    <th className="py-3 px-2 text-center w-24">Cases (C)</th>
+                    <th className="py-3 px-2 text-center w-24">Loose (B)</th>
+                    <th className="py-3 px-2 text-center w-28">Total Bottles</th>
+                    <th className="py-3 px-2 text-right min-w-[120px]">Rate per Case (₹)</th>
+                    <th className="py-3 px-2 text-center w-28">Added Val %</th>
+                    <th className="py-3 px-2 text-right min-w-[110px]">TCS (2%)</th>
+                    <th className="py-3 px-2 text-right min-w-[120px]">Line Total (₹)</th>
+                    <th className="py-3 px-2 text-right min-w-[130px] text-sky-400 font-black">Basic Cost / Bottle</th>
+                    <th className="py-3 px-2 text-center w-12">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
+                  {formItems.map((item) => {
+                    const costs = calculateRowCosts(item);
+
+                    return (
+                      <tr key={item.id} className="hover:bg-[#161b22]/50 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <input
+                            type="text"
+                            value={item.productName}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'productName', e.target.value)}
+                            placeholder="e.g. DIAMOND BRANDY 375ml"
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-xs font-bold text-slate-100 focus:outline-none focus:border-sky-500"
+                          />
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <select
+                            value={item.packSize}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'packSize', parseInt(e.target.value))}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
+                          >
+                            <option value={48}>48 (180ml)</option>
+                            <option value={24}>24 (375ml)</option>
+                            <option value={12}>12 (750ml/1L)</option>
+                          </select>
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.cases || ''}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'cases', parseInt(e.target.value) || 0)}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.looseBottles || ''}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'looseBottles', parseInt(e.target.value) || 0)}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-100 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-bold text-slate-100">{costs.totalBottles}</td>
+                        <td className="py-2.5 px-2 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.ratePerCase || ''}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'ratePerCase', parseFloat(e.target.value) || 0)}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-right text-xs font-bold text-emerald-400 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.addedValuePercent || ''}
+                            onChange={(e) => handleUpdateFormRow(item.id, 'addedValuePercent', parseFloat(e.target.value) || 0)}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-purple-400 focus:outline-none"
+                          />
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-mono text-slate-400">₹{costs.tcsAmt.toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.totalLineCost.toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono font-black text-sky-400 bg-sky-500/10 rounded-lg">
+                          ₹{costs.perBottleBasic.toFixed(2)}
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFormRow(item.id)}
+                            className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Grand Calculated Total Banner */}
+          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 w-full xl:w-auto">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Cases Received:</span>
+                <h4 className="text-xl font-black text-amber-400 font-mono mt-0.5">
+                  {formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases
+                </h4>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Bottles Received:</span>
+                <h4 className="text-xl font-black text-slate-100 font-mono mt-0.5">
+                  {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Bottles
+                </h4>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">TCS (2%) Tax:</span>
+                <h4 className="text-xl font-black text-purple-400 font-mono mt-0.5">
+                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0).toFixed(2)}
+                </h4>
+              </div>
+              <div className="border-l border-[#30363d] pl-4 sm:pl-6">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">Total Invoice Landed Cost:</span>
+                <h3 className="text-2xl font-black text-emerald-400 font-mono mt-0.5">
+                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSubmitTasmacImport}
+              disabled={importingSubmitting}
+              className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all shrink-0"
+            >
+              {importingSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Processing & Saving Stock Arrival...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>IMPORT & RECORD TASMAC STOCK ARRIVAL</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: STOCK ARRIVAL HISTORY & AUDIT LOGS VIEW */}
+      {activeTab === 'receipts' && (
+        <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 space-y-4 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-emerald-400" />
+                <span>Stock Arrival Audit Logs & Invoices ({receipts.length})</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Historical log of all imported TASMAC deliveries & stock arrivals</p>
+            </div>
+          </div>
+
+          {receipts.length === 0 ? (
             <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-              No stock entries recorded yet.
+              No stock arrival receipts logged yet. Click "Bulk Stock Import" to add incoming stock.
             </div>
           ) : (
             <div className="overflow-x-auto min-w-0">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-[#0d1117] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#21262d]">
+                    <th className="py-3 px-3">Arrival Date</th>
+                    <th className="py-3 px-3">Invoice #</th>
+                    <th className="py-3 px-3">Depot / Supplier</th>
+                    <th className="py-3 px-3 text-center">Cases (C)</th>
+                    <th className="py-3 px-3 text-center">Bottles (B)</th>
+                    <th className="py-3 px-3 text-right">Total Amount (₹)</th>
+                    <th className="py-3 px-3">Received By</th>
+                    <th className="py-3 px-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
+                  {receipts.map((rc) => (
+                    <tr key={rc.id} className="hover:bg-[#0d1117]/60 transition-colors">
+                      <td className="py-3 px-3 font-bold text-amber-400">{rc.invoice_date}</td>
+                      <td className="py-3 px-3 font-bold text-slate-100">{rc.invoice_number || 'N/A'}</td>
+                      <td className="py-3 px-3 text-slate-400">{rc.depot_name || rc.supplier_name}</td>
+                      <td className="py-3 px-3 text-center font-bold text-amber-400">{rc.total_cases} Cases</td>
+                      <td className="py-3 px-3 text-center font-bold text-slate-100">{rc.total_bottles} Bottles</td>
+                      <td className="py-3 px-3 text-right font-black text-emerald-400">
+                        ₹{Number(rc.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-3 text-slate-400">{rc.received_by || 'Staff'}</td>
+                      <td className="py-3 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setViewingReceipt(rc)}
+                          className="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-sky-400 font-bold rounded-lg text-xs flex items-center gap-1 mx-auto transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Log</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 5: RAW TRANSACTION LOGS */}
+      {activeTab === 'logs' && (
+        <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 space-y-4 shadow-lg">
+          <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+            <History className="w-4 h-4 text-amber-400" />
+            <span>Raw Stock Transaction Audit Trail ({transactions.length})</span>
+          </h3>
+
+          {transactions.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+              No stock transaction records logged yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#0d1117] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#21262d]">
+                    <th className="py-3 px-3">Tx ID</th>
                     <th className="py-3 px-3">Date & Time</th>
-                    <th className="py-3 px-3">Transaction Type</th>
+                    <th className="py-3 px-3">Type</th>
                     <th className="py-3 px-3">Product ID</th>
                     <th className="py-3 px-3 text-right">Quantity (Bottles)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#21262d] text-slate-200">
+                <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
                   {transactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-[#0d1117]/60 transition-colors">
-                      <td className="py-3 px-3 font-mono text-slate-400">{new Date(tx.transaction_date).toLocaleString()}</td>
+                      <td className="py-3 px-3 font-bold text-amber-400">#{tx.id}</td>
+                      <td className="py-3 px-3 text-slate-400">{new Date(tx.transaction_date).toLocaleString()}</td>
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
                           tx.transaction_type === 'IN' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'
@@ -811,6 +1443,134 @@ export const Stock: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* QUICK BULK PASTE MODAL */}
+      {showPasteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-xl w-full relative shadow-2xl space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowPasteModal(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <h3 className="text-base font-black text-slate-100 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-sky-400" />
+                <span>Quick Bulk Copy-Paste Stock Import</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Paste raw lines directly from Excel or text file (e.g. `Item Name, Cases, RatePerCase`)
+              </p>
+            </div>
+
+            <textarea
+              rows={8}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder="Paste line items here, e.g.:&#10;DIAMOND BRANDY 375ml, 2, 3515.85&#10;OAK VAT MATURED RUM 180ml, 11, 4355.06&#10;MGM ORANGE VODKA 180ml, 1, 4390.45"
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500"
+            />
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPasteModal(false)}
+                className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleParsePastedText}
+                className="px-5 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-sky-500/20"
+              >
+                <Check className="w-4 h-4" />
+                <span>PARSE & PRE-FILL GRID</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECEIPT DETAIL VIEW MODAL */}
+      {viewingReceipt && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-6 max-w-4xl w-full relative shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setViewingReceipt(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="border-b border-[#21262d] pb-3">
+              <span className="text-[10px] font-extrabold uppercase text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 font-mono">
+                TASMAC STOCK ARRIVAL RECEIPT LOG
+              </span>
+              <h3 className="text-lg font-black text-slate-100 mt-1">
+                Invoice #{viewingReceipt.invoice_number} — {viewingReceipt.invoice_date}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Depot: {viewingReceipt.depot_name} • Supplier: {viewingReceipt.supplier_name} • Received By: {viewingReceipt.received_by}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+              <div>
+                <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Cases</span>
+                <span className="text-base font-black font-mono text-amber-400">{viewingReceipt.total_cases} Cases</span>
+              </div>
+              <div className="border-l border-[#30363d]">
+                <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Bottles</span>
+                <span className="text-base font-black font-mono text-slate-100">{viewingReceipt.total_bottles} Bottles</span>
+              </div>
+              <div className="border-l border-[#30363d]">
+                <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Invoice Cost</span>
+                <span className="text-base font-black font-mono text-emerald-400">
+                  ₹{Number(viewingReceipt.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto border border-[#30363d] rounded-xl bg-[#0d1117]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
+                    <th className="py-2.5 px-3">Item Name</th>
+                    <th className="py-2.5 px-2 text-center">Pack</th>
+                    <th className="py-2.5 px-2 text-center">Cases</th>
+                    <th className="py-2.5 px-2 text-center">Loose</th>
+                    <th className="py-2.5 px-2 text-center">Total</th>
+                    <th className="py-2.5 px-2 text-right">Rate/Case</th>
+                    <th className="py-2.5 px-2 text-center">Added Val</th>
+                    <th className="py-2.5 px-2 text-right">Line Total</th>
+                    <th className="py-2.5 px-2 text-right text-sky-400 font-black">Basic Cost/Bottle</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
+                  {viewingReceipt.items?.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-[#161b22]/50">
+                      <td className="py-2 px-3 font-bold text-slate-100">{item.product_name}</td>
+                      <td className="py-2 px-2 text-center text-slate-400">{item.pack_size}</td>
+                      <td className="py-2 px-2 text-center text-amber-400 font-bold">{item.cases}</td>
+                      <td className="py-2 px-2 text-center text-slate-300">{item.loose_bottles}</td>
+                      <td className="py-2 px-2 text-center font-bold">{item.total_bottles}</td>
+                      <td className="py-2 px-2 text-right text-slate-300">₹{Number(item.rate_per_case).toFixed(2)}</td>
+                      <td className="py-2 px-2 text-center text-purple-400">{item.added_value_percent}%</td>
+                      <td className="py-2 px-2 text-right text-slate-100 font-bold">₹{Number(item.total_line_cost).toFixed(2)}</td>
+                      <td className="py-2 px-2 text-right font-black text-sky-400 bg-sky-500/10">₹{Number(item.calculated_basic_cost).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
