@@ -318,13 +318,28 @@ export const Customers: React.FC = () => {
     }
   };
 
-  const filteredCustomers = createdCustomers.filter(
-    (c) =>
-      c.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search) ||
-      c.customer_code.toLowerCase().includes(search.toLowerCase()) ||
-      (c.address && c.address.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredCustomers = createdCustomers.filter((c) => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+
+    const cleanQuery = query.startsWith('#') ? query.slice(1) : query;
+    const isPureNumber = /^\d+$/.test(cleanQuery);
+
+    // If user typed a short card number (e.g., 1, 10, 55, 100), filter strictly by Card No!
+    if (isPureNumber && cleanQuery.length <= 5) {
+      const isExactCard = c.customer_code.toLowerCase() === cleanQuery;
+      const isPrefixCard = c.customer_code.toLowerCase().startsWith(cleanQuery);
+      return isExactCard || isPrefixCard;
+    }
+
+    // General search across Card #, Name, Phone (for 6+ digit numbers), Address
+    const matchesCode = c.customer_code.toLowerCase().includes(cleanQuery);
+    const matchesName = c.full_name.toLowerCase().includes(query);
+    const matchesPhone = cleanQuery.length >= 6 ? c.phone.includes(cleanQuery) : false;
+    const matchesAddr = c.address ? c.address.toLowerCase().includes(query) : false;
+
+    return matchesCode || matchesName || matchesPhone || matchesAddr;
+  });
 
   // Total liquor spend calculation for modal
   const totalMemberLiquorSpend = customerSales.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
@@ -352,17 +367,6 @@ export const Customers: React.FC = () => {
             <FileSpreadsheet className="w-4 h-4" />
             <span>Import Excel Sheet (.xlsx)</span>
           </button>
-
-          {createdCustomers.length > 0 && (
-            <button
-              onClick={handleDeleteAllCustomers}
-              className="px-3 py-2 bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
-              title="Delete all customers & reset sequence"
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Wipe DB</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -557,17 +561,11 @@ export const Customers: React.FC = () => {
                           </button>
                           <button
                             onClick={() => openEditModal(c)}
-                            className="p-1.5 rounded-lg bg-[#21262d] hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 transition-colors"
+                            className="px-2.5 py-1 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-[11px] font-bold transition-all flex items-center gap-1"
                             title="Edit Member Details"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCustomer(c.id, c.full_name, c.customer_code)}
-                            className="p-1.5 rounded-lg bg-[#21262d] hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 transition-colors"
-                            title="Delete Member"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Edit</span>
                           </button>
                         </div>
                       </td>
@@ -756,28 +754,45 @@ export const Customers: React.FC = () => {
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-[#21262d] flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => setEditingCustomer(null)}
-                  className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+                  onClick={() => {
+                    const custId = editingCustomer.id;
+                    const custName = editingCustomer.full_name;
+                    const custCode = editingCustomer.customer_code;
+                    setEditingCustomer(null);
+                    handleDeleteCustomer(custId, custName, custCode);
+                  }}
+                  className="px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors"
                 >
-                  Cancel
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Member</span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={editSubmitting}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
-                >
-                  {editSubmitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>SAVE CHANGES</span>
-                  )}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingCustomer(null)}
+                    className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editSubmitting}
+                    className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 disabled:opacity-50"
+                  >
+                    {editSubmitting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <span>SAVE CHANGES</span>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
