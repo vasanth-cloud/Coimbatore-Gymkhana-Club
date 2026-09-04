@@ -323,19 +323,10 @@ export const Customers: React.FC = () => {
     if (!query) return true;
 
     const cleanQuery = query.startsWith('#') ? query.slice(1) : query;
-    const isPureNumber = /^\d+$/.test(cleanQuery);
 
-    // If user typed a short card number (e.g., 1, 10, 55, 100), filter strictly by Card No!
-    if (isPureNumber && cleanQuery.length <= 5) {
-      const isExactCard = c.customer_code.toLowerCase() === cleanQuery;
-      const isPrefixCard = c.customer_code.toLowerCase().startsWith(cleanQuery);
-      return isExactCard || isPrefixCard;
-    }
-
-    // General search across Card #, Name, Phone (for 6+ digit numbers), Address
     const matchesCode = c.customer_code.toLowerCase().includes(cleanQuery);
     const matchesName = c.full_name.toLowerCase().includes(query);
-    const matchesPhone = cleanQuery.length >= 6 ? c.phone.includes(cleanQuery) : false;
+    const matchesPhone = c.phone.includes(cleanQuery);
     const matchesAddr = c.address ? c.address.toLowerCase().includes(query) : false;
 
     return matchesCode || matchesName || matchesPhone || matchesAddr;
