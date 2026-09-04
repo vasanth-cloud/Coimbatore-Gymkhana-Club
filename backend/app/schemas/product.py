@@ -7,7 +7,9 @@ class ProductCreateRequest(BaseModel):
     category: str
     volume_ml: int
     unit: str
-    selling_price: int
+    selling_price: float
+    mrp: float | None = 0.0
+    basic_rate: float | None = 0.0
 
 
 class ProductUpdateRequest(BaseModel):
@@ -16,7 +18,9 @@ class ProductUpdateRequest(BaseModel):
     category: str | None = None
     volume_ml: int | None = None
     unit: str | None = None
-    selling_price: int | None = None
+    selling_price: float | None = None
+    mrp: float | None = None
+    basic_rate: float | None = None
     is_active: bool | None = None
 
 
@@ -27,7 +31,9 @@ class ProductResponse(BaseModel):
     category: str
     volume_ml: int
     unit: str
-    selling_price: int
+    selling_price: float
+    mrp: float = 0.0
+    basic_rate: float = 0.0
     is_active: bool
 
     model_config = ConfigDict(

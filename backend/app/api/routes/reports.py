@@ -41,7 +41,7 @@ def save_daily_tally(
         + request.cash_20 * 20
         + request.cash_10 * 10
     )
-    grand_total = total_cash + request.upi_paytm_total
+    grand_total = total_cash + request.upi_paytm_total + int(request.card_total) + int(request.expense_amount)
 
     # Upsert daily tally record for the date
     existing = db.query(DailyTally).filter(DailyTally.tally_date == request.tally_date, DailyTally.is_deleted == False).first()
@@ -54,6 +54,9 @@ def save_daily_tally(
         existing.cash_10 = request.cash_10
         existing.total_cash = total_cash
         existing.upi_paytm_total = request.upi_paytm_total
+        existing.card_total = request.card_total
+        existing.expense_amount = request.expense_amount
+        existing.expense_reason = request.expense_reason
         existing.grand_total = grand_total
         existing.notes = request.notes
         db.commit()
@@ -70,6 +73,9 @@ def save_daily_tally(
             cash_10=request.cash_10,
             total_cash=total_cash,
             upi_paytm_total=request.upi_paytm_total,
+            card_total=request.card_total,
+            expense_amount=request.expense_amount,
+            expense_reason=request.expense_reason,
             grand_total=grand_total,
             notes=request.notes,
         )

@@ -56,6 +56,9 @@ export const Reports: React.FC = () => {
   const [cash20, setCash20] = useState<number>(0);
   const [cash10, setCash10] = useState<number>(0);
   const [upiPaytmTotal, setUpiPaytmTotal] = useState<number>(0);
+  const [cardTotal, setCardTotal] = useState<number>(0);
+  const [expenseAmount, setExpenseAmount] = useState<number>(0);
+  const [expenseReason, setExpenseReason] = useState<string>('');
 
   const [monthlyTallies, setMonthlyTallies] = useState<any[]>([]);
   const [tallySaving, setTallySaving] = useState(false);
@@ -69,7 +72,7 @@ export const Reports: React.FC = () => {
     cash20 * 20 +
     cash10 * 10;
 
-  const grandTotalDayCollection = totalCalculatedCash + upiPaytmTotal;
+  const grandTotalDayCollection = totalCalculatedCash + upiPaytmTotal + cardTotal + expenseAmount;
 
   // Load Daily or Monthly Tally Records from Backend
   const fetchTallyData = async () => {
@@ -88,6 +91,9 @@ export const Reports: React.FC = () => {
           setCash20(t.cash_20 || 0);
           setCash10(t.cash_10 || 0);
           setUpiPaytmTotal(t.upi_paytm_total || 0);
+          setCardTotal(t.card_total || 0);
+          setExpenseAmount(t.expense_amount || 0);
+          setExpenseReason(t.expense_reason || '');
         } else {
           // Reset fields for unsaved date
           setCash500(0);
@@ -97,6 +103,9 @@ export const Reports: React.FC = () => {
           setCash20(0);
           setCash10(0);
           setUpiPaytmTotal(0);
+          setCardTotal(0);
+          setExpenseAmount(0);
+          setExpenseReason('');
         }
       } else {
         params.year = selectedYear;
@@ -161,10 +170,13 @@ export const Reports: React.FC = () => {
         cash_20: cash20,
         cash_10: cash10,
         upi_paytm_total: upiPaytmTotal,
+        card_total: cardTotal,
+        expense_amount: expenseAmount,
+        expense_reason: expenseReason,
       });
 
       setTallySavedMsg(
-        `End-of-Day Tally for ${selectedDate} saved to PostgreSQL! Cash: ₹${totalCalculatedCash.toLocaleString()} | UPI: ₹${upiPaytmTotal.toLocaleString()} | Total: ₹${grandTotalDayCollection.toLocaleString()}`
+        `End-of-Day Tally for ${selectedDate} saved to PostgreSQL! Cash: ₹${totalCalculatedCash.toLocaleString()} | UPI: ₹${upiPaytmTotal.toLocaleString()} | Expenses: ₹${expenseAmount.toLocaleString()} | Total: ₹${grandTotalDayCollection.toLocaleString()}`
       );
       setTimeout(() => setTallySavedMsg(''), 6000);
       await fetchTallyData();
@@ -188,7 +200,9 @@ export const Reports: React.FC = () => {
       ['₹10 Notes', cash10, cash10 * 10],
       ['TOTAL CASH IN DRAWER', 'Cash Notes', totalCalculatedCash],
       ['ONLINE PAYTM / PHONEPE / UPI', 'QR Collection', upiPaytmTotal],
-      ['GRAND TOTAL DAY REVENUE', 'Cash + Online', grandTotalDayCollection],
+      ['CARD PAYMENTS', 'POS Terminal', cardTotal],
+      ['BAR EXPENSES PAID FROM SALES CASH', expenseReason ? `"${expenseReason.replace(/"/g, '""')}"` : 'Expenses', expenseAmount],
+      ['GRAND TOTAL DAY REVENUE', 'Cash + Online + Card + Expenses', grandTotalDayCollection],
     ];
 
     const csvContent =
@@ -223,17 +237,24 @@ export const Reports: React.FC = () => {
       '₹10 Count',
       'Total Cash Notes (INR)',
       'Online Paytm/UPI (INR)',
+      'Card Payments (INR)',
+      'Bar Expenses Paid (INR)',
+      'Expense Details / Reason',
       'Grand Total Revenue (INR)',
     ];
 
     let monthlyCashSum = 0;
     let monthlyUpiSum = 0;
+    let monthlyCardSum = 0;
+    let monthlyExpenseSum = 0;
     let monthlyGrandSum = 0;
 
     const rows = monthlyTallies.map((t) => {
-      monthlyCashSum += t.total_cash;
-      monthlyUpiSum += t.upi_paytm_total;
-      monthlyGrandSum += t.grand_total;
+      monthlyCashSum += t.total_cash || 0;
+      monthlyUpiSum += t.upi_paytm_total || 0;
+      monthlyCardSum += t.card_total || 0;
+      monthlyExpenseSum += t.expense_amount || 0;
+      monthlyGrandSum += t.grand_total || 0;
 
       return [
         `"${t.tally_date}"`,
@@ -243,9 +264,12 @@ export const Reports: React.FC = () => {
         t.cash_50,
         t.cash_20,
         t.cash_10,
-        t.total_cash,
-        t.upi_paytm_total,
-        t.grand_total,
+        t.total_cash || 0,
+        t.upi_paytm_total || 0,
+        t.card_total || 0,
+        t.expense_amount || 0,
+        `"${(t.expense_reason || '').replace(/"/g, '""')}"`,
+        t.grand_total || 0,
       ];
     });
 
@@ -260,6 +284,9 @@ export const Reports: React.FC = () => {
       '-',
       monthlyCashSum,
       monthlyUpiSum,
+      monthlyCardSum,
+      monthlyExpenseSum,
+      '""',
       monthlyGrandSum,
     ]);
 
@@ -593,38 +620,91 @@ export const Reports: React.FC = () => {
                 </div>
 
                 {/* Online Paytm / UPI Total Card */}
-                <div className="bg-[#0d1117] border border-sky-500/50 p-4 rounded-xl text-center space-y-2 sm:col-span-2 xl:col-span-6">
+                <div className="bg-[#0d1117] border border-sky-500/50 p-4 rounded-xl text-center space-y-2 sm:col-span-2 xl:col-span-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono font-black text-sky-400 uppercase tracking-wider">
-                      ⚡ Online Paytm / PhonePe / UPI Day Collection (INR)
+                      ⚡ Online Paytm / UPI
                     </span>
-                    <span className="text-[10px] font-mono text-slate-400">QR UPI ID: paytm.s22ambe@pty</span>
+                    <span className="text-[10px] font-mono text-slate-400">QR Collection</span>
                   </div>
                   <input
                     type="number"
                     min="0"
                     value={upiPaytmTotal || ''}
-                    onChange={(e) => setUpiPaytmTotal(parseInt(e.target.value) || 0)}
-                    placeholder="Enter Paytm / UPI Machine Total Amount (e.g. 15000)"
-                    className="w-full bg-[#161b22] border border-sky-500/40 rounded-xl py-2.5 px-4 text-center text-base font-mono font-black text-sky-300 placeholder-slate-600 focus:outline-none focus:border-sky-400"
+                    onChange={(e) => setUpiPaytmTotal(parseFloat(e.target.value) || 0)}
+                    placeholder="UPI Amount (₹)"
+                    className="w-full bg-[#161b22] border border-sky-500/40 rounded-xl py-2 px-3 text-center text-sm font-mono font-black text-sky-300 placeholder-slate-600 focus:outline-none focus:border-sky-400"
                   />
+                </div>
+
+                {/* Card Payments Total Card */}
+                <div className="bg-[#0d1117] border border-purple-500/50 p-4 rounded-xl text-center space-y-2 sm:col-span-2 xl:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-black text-purple-400 uppercase tracking-wider">
+                      💳 Card / POS Terminal
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">Card Swipes</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={cardTotal || ''}
+                    onChange={(e) => setCardTotal(parseFloat(e.target.value) || 0)}
+                    placeholder="Card Amount (₹)"
+                    className="w-full bg-[#161b22] border border-purple-500/40 rounded-xl py-2 px-3 text-center text-sm font-mono font-black text-purple-300 placeholder-slate-600 focus:outline-none focus:border-purple-400"
+                  />
+                </div>
+
+                {/* Bar Expenses Paid Card */}
+                <div className="bg-[#0d1117] border border-rose-500/50 p-4 rounded-xl space-y-2 sm:col-span-2 xl:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-black text-rose-400 uppercase tracking-wider">
+                      💸 Bar Expenses Paid
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">From Cash Collection</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={expenseAmount || ''}
+                      onChange={(e) => setExpenseAmount(parseFloat(e.target.value) || 0)}
+                      placeholder="Expense ₹"
+                      className="w-full bg-[#161b22] border border-rose-500/40 rounded-xl py-1.5 px-3 text-xs font-mono font-bold text-rose-300 placeholder-slate-600 focus:outline-none focus:border-rose-400"
+                    />
+                    <input
+                      type="text"
+                      value={expenseReason}
+                      onChange={(e) => setExpenseReason(e.target.value)}
+                      placeholder="Reason / Details"
+                      className="w-full bg-[#161b22] border border-rose-500/40 rounded-xl py-1.5 px-3 text-xs font-bold text-slate-200 placeholder-slate-600 focus:outline-none focus:border-rose-400"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Grand Calculated Total Banner */}
               <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full xl:w-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 w-full xl:w-auto">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Cash Notes Counted:</span>
-                    <h4 className="text-xl font-black text-slate-100 font-mono mt-0.5">₹{totalCalculatedCash.toLocaleString()}</h4>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Cash Notes:</span>
+                    <h4 className="text-lg font-black text-slate-100 font-mono mt-0.5">₹{totalCalculatedCash.toLocaleString()}</h4>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Online Paytm / UPI Total:</span>
-                    <h4 className="text-xl font-black text-sky-400 font-mono mt-0.5">₹{upiPaytmTotal.toLocaleString()}</h4>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Paytm/UPI:</span>
+                    <h4 className="text-lg font-black text-sky-400 font-mono mt-0.5">₹{upiPaytmTotal.toLocaleString()}</h4>
                   </div>
-                  <div className="border-l border-[#30363d] pl-4 sm:pl-6">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Grand Total Day Revenue:</span>
-                    <h3 className="text-2xl font-black text-amber-400 font-mono mt-0.5">₹{grandTotalDayCollection.toLocaleString()}</h3>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Card Total:</span>
+                    <h4 className="text-lg font-black text-purple-400 font-mono mt-0.5">₹{cardTotal.toLocaleString()}</h4>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Expenses Paid:</span>
+                    <h4 className="text-lg font-black text-rose-400 font-mono mt-0.5">₹{expenseAmount.toLocaleString()}</h4>
+                  </div>
+                  <div className="border-l border-[#30363d] pl-4 sm:pl-6 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">Grand Total Revenue:</span>
+                    <h3 className="text-xl font-black text-amber-400 font-mono mt-0.5">₹{grandTotalDayCollection.toLocaleString()}</h3>
                   </div>
                 </div>
 
@@ -701,7 +781,10 @@ export const Reports: React.FC = () => {
                         <th className="py-3 px-3 text-center">₹20</th>
                         <th className="py-3 px-3 text-center">₹10</th>
                         <th className="py-3 px-3 text-right">Cash Notes</th>
-                        <th className="py-3 px-3 text-right">Paytm / UPI</th>
+                        <th className="py-3 px-3 text-right">Paytm/UPI</th>
+                        <th className="py-3 px-3 text-right">Card</th>
+                        <th className="py-3 px-3 text-right">Expenses</th>
+                        <th className="py-3 px-3 text-left">Expense Details</th>
                         <th className="py-3 px-3 text-right">Grand Revenue</th>
                       </tr>
                     </thead>
@@ -715,9 +798,12 @@ export const Reports: React.FC = () => {
                           <td className="py-3 px-3 text-center text-slate-400">{t.cash_50}</td>
                           <td className="py-3 px-3 text-center text-slate-400">{t.cash_20}</td>
                           <td className="py-3 px-3 text-center text-slate-400">{t.cash_10}</td>
-                          <td className="py-3 px-3 text-right font-bold text-slate-100">₹{t.total_cash.toLocaleString()}</td>
-                          <td className="py-3 px-3 text-right font-bold text-sky-400">₹{t.upi_paytm_total.toLocaleString()}</td>
-                          <td className="py-3 px-3 text-right font-black text-amber-400">₹{t.grand_total.toLocaleString()}</td>
+                          <td className="py-3 px-3 text-right font-bold text-slate-100">₹{(t.total_cash || 0).toLocaleString()}</td>
+                          <td className="py-3 px-3 text-right font-bold text-sky-400">₹{(t.upi_paytm_total || 0).toLocaleString()}</td>
+                          <td className="py-3 px-3 text-right font-bold text-purple-400">₹{(t.card_total || 0).toLocaleString()}</td>
+                          <td className="py-3 px-3 text-right font-bold text-rose-400">₹{(t.expense_amount || 0).toLocaleString()}</td>
+                          <td className="py-3 px-3 text-left text-slate-400 text-[11px] truncate max-w-[150px]">{t.expense_reason || '-'}</td>
+                          <td className="py-3 px-3 text-right font-black text-amber-400">₹{(t.grand_total || 0).toLocaleString()}</td>
                         </tr>
                       ))}
                       {/* Monthly Totals Footer Row */}
@@ -726,13 +812,20 @@ export const Reports: React.FC = () => {
                           Monthly Grand Totals ({MONTHS.find((m) => m.value === selectedMonth)?.label})
                         </td>
                         <td className="py-3.5 px-3 text-right text-slate-100">
-                          ₹{monthlyTallies.reduce((sum, t) => sum + t.total_cash, 0).toLocaleString()}
+                          ₹{monthlyTallies.reduce((sum, t) => sum + (t.total_cash || 0), 0).toLocaleString()}
                         </td>
                         <td className="py-3.5 px-3 text-right text-sky-400">
-                          ₹{monthlyTallies.reduce((sum, t) => sum + t.upi_paytm_total, 0).toLocaleString()}
+                          ₹{monthlyTallies.reduce((sum, t) => sum + (t.upi_paytm_total || 0), 0).toLocaleString()}
                         </td>
+                        <td className="py-3.5 px-3 text-right text-purple-400">
+                          ₹{monthlyTallies.reduce((sum, t) => sum + (t.card_total || 0), 0).toLocaleString()}
+                        </td>
+                        <td className="py-3.5 px-3 text-right text-rose-400">
+                          ₹{monthlyTallies.reduce((sum, t) => sum + (t.expense_amount || 0), 0).toLocaleString()}
+                        </td>
+                        <td className="py-3.5 px-3 text-left text-slate-500">-</td>
                         <td className="py-3.5 px-3 text-right text-amber-400">
-                          ₹{monthlyTallies.reduce((sum, t) => sum + t.grand_total, 0).toLocaleString()}
+                          ₹{monthlyTallies.reduce((sum, t) => sum + (t.grand_total || 0), 0).toLocaleString()}
                         </td>
                       </tr>
                     </tbody>

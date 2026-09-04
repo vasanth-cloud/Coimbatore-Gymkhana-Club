@@ -4,6 +4,7 @@ from sqlalchemy import (
     String,
     Boolean,
     ForeignKey,
+    Numeric,
 )
 from sqlalchemy.orm import relationship
 
@@ -43,18 +44,18 @@ class Product(BaseModel):
     )
 
     selling_price = Column(
-        Integer,
+        Numeric(10, 2),
         nullable=False,
     )
 
     mrp = Column(
-        Integer,
+        Numeric(10, 2),
         default=0,
         nullable=False,
     )
 
     basic_rate = Column(
-        Integer,
+        Numeric(10, 2),
         default=0,
         nullable=False,
     )

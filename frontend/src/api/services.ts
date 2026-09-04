@@ -245,6 +245,9 @@ export const reportApi = {
     cash_20: number;
     cash_10: number;
     upi_paytm_total: number;
+    card_total?: number;
+    expense_amount?: number;
+    expense_reason?: string;
     notes?: string;
   }): Promise<any> => {
     const response = await api.post('/reports/tally', data);

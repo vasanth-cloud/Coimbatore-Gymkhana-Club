@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Date, String
+from sqlalchemy import Column, Integer, Float, Date, String
 from app.models.base import BaseModel
 
 
@@ -14,5 +14,8 @@ class DailyTally(BaseModel):
     cash_10 = Column(Integer, default=0, nullable=False)
     total_cash = Column(Integer, default=0, nullable=False)
     upi_paytm_total = Column(Integer, default=0, nullable=False)
+    card_total = Column(Float, default=0.0, nullable=True)
+    expense_amount = Column(Float, default=0.0, nullable=True)
+    expense_reason = Column(String(255), nullable=True)
     grand_total = Column(Integer, default=0, nullable=False)
     notes = Column(String(255), nullable=True)

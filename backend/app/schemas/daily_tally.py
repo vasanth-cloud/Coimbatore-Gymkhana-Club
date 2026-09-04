@@ -11,6 +11,9 @@ class DailyTallySaveRequest(BaseModel):
     cash_20: int = 0
     cash_10: int = 0
     upi_paytm_total: int = 0
+    card_total: float = 0.0
+    expense_amount: float = 0.0
+    expense_reason: str | None = None
     notes: str | None = None
 
 
@@ -25,6 +28,9 @@ class DailyTallyResponse(BaseModel):
     cash_10: int
     total_cash: int
     upi_paytm_total: int
+    card_total: float | None = 0.0
+    expense_amount: float | None = 0.0
+    expense_reason: str | None = None
     grand_total: int
     notes: str | None = None
 

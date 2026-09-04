@@ -76,6 +76,8 @@ export const Sales: React.FC = () => {
   const [cash1, setCash1] = useState<number>(0);
   const [upiAmount, setUpiAmount] = useState<number>(0);
   const [cardAmount, setCardAmount] = useState<number>(0);
+  const [expenseAmount, setExpenseAmount] = useState<number>(0);
+  const [expenseReason, setExpenseReason] = useState<string>('');
   const [showDenomModal, setShowDenomModal] = useState<boolean>(false);
 
   const totalSalesLogAmount = detailedSales.reduce((sum, s) => sum + s.total_price, 0);
@@ -91,7 +93,7 @@ export const Sales: React.FC = () => {
     cash2 * 2 +
     cash1 * 1;
 
-  const totalDenominationsReceived = totalCalculatedCashNotes + upiAmount + cardAmount;
+  const totalDenominationsReceived = totalCalculatedCashNotes + upiAmount + cardAmount + expenseAmount;
   const denominationDiff = totalDenominationsReceived - totalSalesLogAmount;
 
   const loadData = async () => {
@@ -447,7 +449,7 @@ export const Sales: React.FC = () => {
       [''],
       ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', '', '', '', totalSalesLogAmount],
       [''],
-      ['--- DENOMINATIONS RECEIVED & CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', '', '', '', ''],
+      ['--- DENOMINATIONS RECEIVED & EXPENSES CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', '', '', '', ''],
       ['Category / Denomination Note', 'Count / Payment Source', 'Calculated Total Amount (INR)'],
       ['₹500 Notes', cash500, cash500 * 500],
       ['₹200 Notes', cash200, cash200 * 200],
@@ -461,8 +463,9 @@ export const Sales: React.FC = () => {
       ['Total Cash Notes Collection', 'Cash Drawer', totalCalculatedCashNotes],
       ['Online Paytm / PhonePe / UPI Total', 'QR Collection', upiAmount],
       ['POS Card Machine Collection Total', 'Card Terminal', cardAmount],
-      ['TOTAL DENOMINATIONS RECEIVED (INR)', 'All Payment Modes', totalDenominationsReceived],
-      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Denominations', statusText],
+      ['BAR EXPENSES PAID FROM SALES CASH', `"${expenseReason ? expenseReason : 'Bar Expenses / Purchases'}"`, expenseAmount],
+      ['TOTAL ACCOUNTED COLLECTION (INR)', 'Cash + Online + Card + Expenses', totalDenominationsReceived],
+      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Accounted Collection', statusText],
     ];
 
     const csvContent =
@@ -527,7 +530,7 @@ export const Sales: React.FC = () => {
       [''],
       ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', totalSalesLogAmount],
       [''],
-      ['--- DENOMINATIONS RECEIVED & CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', ''],
+      ['--- DENOMINATIONS RECEIVED & EXPENSES CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', ''],
       ['Category / Denomination Note', 'Count / Payment Source', 'Calculated Total Amount (INR)'],
       ['₹500 Notes', cash500, cash500 * 500],
       ['₹200 Notes', cash200, cash200 * 200],
@@ -541,8 +544,9 @@ export const Sales: React.FC = () => {
       ['Total Cash Notes Collection', 'Cash Drawer', totalCalculatedCashNotes],
       ['Online Paytm / PhonePe / UPI Total', 'QR Collection', upiAmount],
       ['POS Card Machine Collection Total', 'Card Terminal', cardAmount],
-      ['TOTAL DENOMINATIONS RECEIVED (INR)', 'All Payment Modes', totalDenominationsReceived],
-      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Denominations', statusText],
+      ['BAR EXPENSES PAID FROM SALES CASH', `"${expenseReason ? expenseReason : 'Bar Expenses / Purchases'}"`, expenseAmount],
+      ['TOTAL ACCOUNTED COLLECTION (INR)', 'Cash + Online + Card + Expenses', totalDenominationsReceived],
+      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Accounted Collection', statusText],
     ];
 
     const csvContent =
@@ -1331,12 +1335,14 @@ export const Sales: React.FC = () => {
 
               <div className="bg-[#161b22] p-3 rounded-xl border border-[#21262d]">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Total Denominations Entered:
+                  Total Accounted & Entered:
                 </span>
                 <span className="text-xl font-black text-sky-400 font-mono">
                   ₹{totalDenominationsReceived.toLocaleString()}
                 </span>
-                <span className="block text-[10px] text-slate-500 mt-0.5">Cash (₹{totalCalculatedCashNotes.toLocaleString()}) + Online + Card</span>
+                <span className="block text-[10px] text-slate-500 mt-0.5">
+                  Cash (₹{totalCalculatedCashNotes.toLocaleString()}) + Online + Card + Expenses (₹{expenseAmount.toLocaleString()})
+                </span>
               </div>
 
               <div className={`p-3 rounded-xl border flex flex-col justify-between ${
@@ -1421,6 +1427,48 @@ export const Sales: React.FC = () => {
                   placeholder="e.g. 8000"
                   className="w-full bg-[#161b22] border border-purple-500/30 rounded-lg py-2 px-3 text-sm font-mono font-bold text-purple-300 focus:outline-none focus:border-purple-400"
                 />
+              </div>
+            </div>
+
+            {/* Bar Expenses Paid Section */}
+            <div className="bg-[#0d1117] border border-amber-500/40 p-4 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1.5">
+                  <ShoppingCart className="w-4 h-4 text-amber-400" />
+                  <span>Bar Expenses Paid from Sales Cash / Collection (INR)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  e.g. Card printer machine, supplies, ice, lemons
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                    Expense Amount (INR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={expenseAmount || ''}
+                    onChange={(e) => setExpenseAmount(parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 10"
+                    className="w-full bg-[#161b22] border border-amber-500/30 rounded-xl py-2 px-3 text-sm font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                    Expense Description / Reason
+                  </label>
+                  <input
+                    type="text"
+                    value={expenseReason}
+                    onChange={(e) => setExpenseReason(e.target.value)}
+                    placeholder="e.g. Bought card printer machine, ribbon, lemons, ice..."
+                    className="w-full bg-[#161b22] border border-amber-500/30 rounded-xl py-2 px-3 text-xs font-semibold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
               </div>
             </div>
 
