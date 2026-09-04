@@ -29,7 +29,6 @@ export const App: React.FC = () => {
               <Route path="/products" element={<Products />} />
               <Route path="/stock" element={<Stock />} />
               <Route path="/attendance" element={<Attendance />} />
-              <Route path="/reports" element={<Reports />} />
               <Route path="/staff" element={<Staff />} />
             </Route>
 
@@ -38,6 +37,7 @@ export const App: React.FC = () => {
               <Route path="/customers" element={<Customers />} />
               <Route path="/entries" element={<EntryScanner />} />
               <Route path="/sales" element={<Sales />} />
+              <Route path="/reports" element={<Reports />} />
             </Route>
 
             {/* Catch-all redirect */}

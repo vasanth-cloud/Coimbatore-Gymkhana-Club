@@ -21,6 +21,8 @@ import {
   FileSpreadsheet,
   QrCode,
   AlertCircle,
+  IndianRupee,
+  Calculator,
 } from 'lucide-react';
 
 interface CartItem {
@@ -61,6 +63,36 @@ export const Sales: React.FC = () => {
 
   // 3 QR Payment Display Modal State
   const [showQRModal, setShowQRModal] = useState<boolean>(false);
+
+  // Denominations Counter & Sales Cross-Verification States
+  const [cash500, setCash500] = useState<number>(0);
+  const [cash200, setCash200] = useState<number>(0);
+  const [cash100, setCash100] = useState<number>(0);
+  const [cash50, setCash50] = useState<number>(0);
+  const [cash20, setCash20] = useState<number>(0);
+  const [cash10, setCash10] = useState<number>(0);
+  const [cash5, setCash5] = useState<number>(0);
+  const [cash2, setCash2] = useState<number>(0);
+  const [cash1, setCash1] = useState<number>(0);
+  const [upiAmount, setUpiAmount] = useState<number>(0);
+  const [cardAmount, setCardAmount] = useState<number>(0);
+  const [showDenomModal, setShowDenomModal] = useState<boolean>(false);
+
+  const totalSalesLogAmount = detailedSales.reduce((sum, s) => sum + s.total_price, 0);
+
+  const totalCalculatedCashNotes =
+    cash500 * 500 +
+    cash200 * 200 +
+    cash100 * 100 +
+    cash50 * 50 +
+    cash20 * 20 +
+    cash10 * 10 +
+    cash5 * 5 +
+    cash2 * 2 +
+    cash1 * 1;
+
+  const totalDenominationsReceived = totalCalculatedCashNotes + upiAmount + cardAmount;
+  const denominationDiff = totalDenominationsReceived - totalSalesLogAmount;
 
   const loadData = async () => {
     try {
@@ -404,12 +436,49 @@ export const Sales: React.FC = () => {
     ]);
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const statusText =
+      denominationDiff === 0
+        ? '"VERIFIED & MATCHED (BALANCED - ₹0 Difference)"'
+        : denominationDiff > 0
+        ? `"${'DISCREPANCY: EXCESS CASH/ONLINE BY ₹' + denominationDiff}"`
+        : `"${'DISCREPANCY: SHORTAGE BY ₹' + Math.abs(denominationDiff)}"`;
+
+    const summaryRows = [
+      [''],
+      ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', '', '', '', totalSalesLogAmount],
+      [''],
+      ['--- DENOMINATIONS RECEIVED & CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', '', '', '', ''],
+      ['Category / Denomination Note', 'Count / Payment Source', 'Calculated Total Amount (INR)'],
+      ['₹500 Notes', cash500, cash500 * 500],
+      ['₹200 Notes', cash200, cash200 * 200],
+      ['₹100 Notes', cash100, cash100 * 100],
+      ['₹50 Notes', cash50, cash50 * 50],
+      ['₹20 Notes', cash20, cash20 * 20],
+      ['₹10 Notes', cash10, cash10 * 10],
+      ['₹5 Notes/Coins', cash5, cash5 * 5],
+      ['₹2 Notes/Coins', cash2, cash2 * 2],
+      ['₹1 Notes/Coins', cash1, cash1 * 1],
+      ['Total Cash Notes Collection', 'Cash Drawer', totalCalculatedCashNotes],
+      ['Online Paytm / PhonePe / UPI Total', 'QR Collection', upiAmount],
+      ['POS Card Machine Collection Total', 'Card Terminal', cardAmount],
+      ['TOTAL DENOMINATIONS RECEIVED (INR)', 'All Payment Modes', totalDenominationsReceived],
+      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Denominations', statusText],
+    ];
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        `"COIMBATORE GYMKHANA CLUB - MEMBER SALES & DENOMINATION AUDIT REPORT (${dateStr})"`,
+        headers.join(','),
+        ...rows.map((r) => r.join(',')),
+        ...summaryRows.map((r) => r.join(',')),
+      ].join('\n');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Member_Liquor_Purchases_Report_${dateStr}.csv`;
+    link.download = `Member_Liquor_Sales_And_Denominations_${dateStr}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -447,12 +516,49 @@ export const Sales: React.FC = () => {
     ]);
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const statusText =
+      denominationDiff === 0
+        ? '"VERIFIED & MATCHED (BALANCED - ₹0 Difference)"'
+        : denominationDiff > 0
+        ? `"${'DISCREPANCY: EXCESS CASH/ONLINE BY ₹' + denominationDiff}"`
+        : `"${'DISCREPANCY: SHORTAGE BY ₹' + Math.abs(denominationDiff)}"`;
+
+    const summaryRows = [
+      [''],
+      ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', totalSalesLogAmount],
+      [''],
+      ['--- DENOMINATIONS RECEIVED & CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', ''],
+      ['Category / Denomination Note', 'Count / Payment Source', 'Calculated Total Amount (INR)'],
+      ['₹500 Notes', cash500, cash500 * 500],
+      ['₹200 Notes', cash200, cash200 * 200],
+      ['₹100 Notes', cash100, cash100 * 100],
+      ['₹50 Notes', cash50, cash50 * 50],
+      ['₹20 Notes', cash20, cash20 * 20],
+      ['₹10 Notes', cash10, cash10 * 10],
+      ['₹5 Notes/Coins', cash5, cash5 * 5],
+      ['₹2 Notes/Coins', cash2, cash2 * 2],
+      ['₹1 Notes/Coins', cash1, cash1 * 1],
+      ['Total Cash Notes Collection', 'Cash Drawer', totalCalculatedCashNotes],
+      ['Online Paytm / PhonePe / UPI Total', 'QR Collection', upiAmount],
+      ['POS Card Machine Collection Total', 'Card Terminal', cardAmount],
+      ['TOTAL DENOMINATIONS RECEIVED (INR)', 'All Payment Modes', totalDenominationsReceived],
+      ['CROSS-VERIFICATION MATCH STATUS', 'Sales Log vs Denominations', statusText],
+    ];
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        `"COIMBATORE GYMKHANA CLUB - BOTTLE SALES & DENOMINATION AUDIT REPORT (${dateStr})"`,
+        headers.join(','),
+        ...rows.map((r) => r.join(',')),
+        ...summaryRows.map((r) => r.join(',')),
+      ].join('\n');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `General_Bottle_Sales_Summary_${dateStr}.csv`;
+    link.download = `General_Bottle_Sales_And_Denominations_${dateStr}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -476,6 +582,15 @@ export const Sales: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            onClick={() => setShowDenomModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all"
+            title="Open Cash Denominations & Sales Cross-Verification Tool"
+          >
+            <Calculator className="w-4 h-4 stroke-[2.5]" />
+            <span>CASH DENOMINATIONS & VERIFY</span>
+          </button>
+
           {/* Prominent Sales Log View Button */}
           <button
             onClick={() => setShowSalesLogModal(true)}
@@ -1008,7 +1123,16 @@ export const Sales: React.FC = () => {
                 <p className="text-xs text-slate-400 mt-0.5">Live itemized liquor sales linked to member cards</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowDenomModal(true)}
+                  className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                  title="Open Cash Denominations & Sales Verification Modal"
+                >
+                  <Calculator className="w-4 h-4 stroke-[2.5]" />
+                  <span>Denominations & Verify</span>
+                </button>
+
                 <button
                   onClick={exportMemberLiquorSalesCSV}
                   disabled={detailedSales.length === 0}
@@ -1163,6 +1287,172 @@ export const Sales: React.FC = () => {
                 className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CASH DENOMINATIONS & CROSS-VERIFICATION MODAL */}
+      {showDenomModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-amber-500/40 rounded-2xl p-6 max-w-3xl w-full relative shadow-2xl animate-in fade-in zoom-in duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowDenomModal(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                Closing Audit Tool
+              </span>
+              <h3 className="text-xl font-black text-slate-100 mt-1 flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-amber-400" />
+                <span>Cash Denomination & Sales Cross-Verification</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Enter currency note counts & received payments to verify against today's total sales log
+              </p>
+            </div>
+
+            {/* Verification Comparison Banner */}
+            <div className="bg-[#0d1117] border border-[#30363d] p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-[#161b22] p-3 rounded-xl border border-[#21262d]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Total Sales Log Today:
+                </span>
+                <span className="text-xl font-black text-amber-400 font-mono">
+                  ₹{totalSalesLogAmount.toLocaleString()}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-0.5">{detailedSales.length} Transactions Recorded</span>
+              </div>
+
+              <div className="bg-[#161b22] p-3 rounded-xl border border-[#21262d]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Total Denominations Entered:
+                </span>
+                <span className="text-xl font-black text-sky-400 font-mono">
+                  ₹{totalDenominationsReceived.toLocaleString()}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-0.5">Cash (₹{totalCalculatedCashNotes.toLocaleString()}) + Online + Card</span>
+              </div>
+
+              <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                denominationDiff === 0
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                  : denominationDiff > 0
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                  : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
+              }`}>
+                <span className="text-[10px] font-black uppercase tracking-wider block">
+                  Cross-Verification Status:
+                </span>
+                <span className="text-xs font-black font-mono mt-1">
+                  {denominationDiff === 0
+                    ? '✅ PERFECT MATCH (₹0 Diff)'
+                    : denominationDiff > 0
+                    ? `⚠️ EXCESS: +₹${denominationDiff.toLocaleString()}`
+                    : `❌ SHORTAGE: -₹${Math.abs(denominationDiff).toLocaleString()}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Note Denomination Inputs */}
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-1.5">
+                <IndianRupee className="w-4 h-4 text-emerald-400" />
+                <span>Cash Note Denomination Breakdown (Note Counts)</span>
+              </h4>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                {[
+                  { label: '₹500 Note', val: cash500, setVal: setCash500, mult: 500, color: 'text-emerald-400' },
+                  { label: '₹200 Note', val: cash200, setVal: setCash200, mult: 200, color: 'text-amber-400' },
+                  { label: '₹100 Note', val: cash100, setVal: setCash100, mult: 100, color: 'text-sky-400' },
+                  { label: '₹50 Note', val: cash50, setVal: setCash50, mult: 50, color: 'text-purple-400' },
+                  { label: '₹20 Note', val: cash20, setVal: setCash20, mult: 20, color: 'text-pink-400' },
+                  { label: '₹10 Note', val: cash10, setVal: setCash10, mult: 10, color: 'text-slate-300' },
+                  { label: '₹5 Note/Coin', val: cash5, setVal: setCash5, mult: 5, color: 'text-slate-400' },
+                  { label: '₹2 Note/Coin', val: cash2, setVal: setCash2, mult: 2, color: 'text-slate-400' },
+                  { label: '₹1 Note/Coin', val: cash1, setVal: setCash1, mult: 1, color: 'text-slate-400' },
+                ].map((item) => (
+                  <div key={item.label} className="bg-[#0d1117] border border-[#30363d] p-3 rounded-xl text-center space-y-1">
+                    <span className={`text-[11px] font-mono font-bold block ${item.color}`}>{item.label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={item.val || ''}
+                      onChange={(e) => item.setVal(parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1.5 text-center text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                    />
+                    <span className="text-[10px] text-slate-500 font-mono block">₹{item.val * item.mult}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Online & Card Payment Totals */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-[#0d1117] border border-sky-500/40 p-3.5 rounded-xl space-y-1.5">
+                <label className="text-xs font-bold text-sky-400 uppercase tracking-wider block">
+                  Online UPI (Paytm / GPay / PhonePe) Total (INR)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={upiAmount || ''}
+                  onChange={(e) => setUpiAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 15000"
+                  className="w-full bg-[#161b22] border border-sky-500/30 rounded-lg py-2 px-3 text-sm font-mono font-bold text-sky-300 focus:outline-none focus:border-sky-400"
+                />
+              </div>
+
+              <div className="bg-[#0d1117] border border-purple-500/40 p-3.5 rounded-xl space-y-1.5">
+                <label className="text-xs font-bold text-purple-400 uppercase tracking-wider block">
+                  POS Card Machine Collection Total (INR)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={cardAmount || ''}
+                  onChange={(e) => setCardAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 8000"
+                  className="w-full bg-[#161b22] border border-purple-500/30 rounded-lg py-2 px-3 text-sm font-mono font-bold text-purple-300 focus:outline-none focus:border-purple-400"
+                />
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="pt-3 border-t border-[#21262d] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={exportMemberLiquorSalesCSV}
+                  disabled={detailedSales.length === 0}
+                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>EXPORT MEMBER EXCEL (WITH DENOMINATIONS)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={exportGeneralBottleSalesCSV}
+                  disabled={detailedSales.length === 0}
+                  className="px-4 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4 text-amber-400" />
+                  <span>EXPORT BOTTLE EXCEL</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowDenomModal(false)}
+                className="px-5 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Close Window
               </button>
             </div>
           </div>
