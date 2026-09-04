@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats, Html5Qrcode } from 'html5-qrcode';
 import { productApi, saleApi, customerApi, stockApi } from '../api/services';
 import { DailyProductSale, Product, DetailedSale, Customer } from '../types';
 import {
@@ -20,6 +20,7 @@ import {
   Camera,
   FileSpreadsheet,
   QrCode,
+  AlertCircle,
 } from 'lucide-react';
 
 interface CartItem {
@@ -39,6 +40,7 @@ export const Sales: React.FC = () => {
   const [cardEntryMethod, setCardEntryMethod] = useState<'camera' | 'search'>('search');
   const [scannerActive, setScannerActive] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Form Filter & Search States (Touch POS Grid)
   const [posCategoryPill, setPosCategoryPill] = useState<string>('ALL');
@@ -174,6 +176,26 @@ export const Sales: React.FC = () => {
         type: 'error',
         text: `No active member card found for "${tokenOrCode}". Try searching Card # or Name.`,
       });
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMsg(null);
+
+    try {
+      const html5QrCode = new Html5Qrcode('sales-qr-file-temp-element');
+      const decodedText = await html5QrCode.scanFile(file, false);
+      handleScanOrFindCustomer(decodedText);
+    } catch (err: any) {
+      console.error('File QR Scan error:', err);
+      setMsg({
+        type: 'error',
+        text: 'Could not detect a valid QR code in the captured photo. Please try again.',
+      });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -543,29 +565,67 @@ export const Sales: React.FC = () => {
             <div>
               {cardEntryMethod === 'camera' ? (
                 <div className="space-y-3">
-                  {!scannerActive ? (
-                    <button
-                      type="button"
-                      onClick={startCameraScanner}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition-all"
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span>START CAMERA SCANNER FOR MEMBER QR CARD</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={stopCameraScanner}
-                      className="w-full py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>STOP CAMERA SCANNER</span>
-                    </button>
-                  )}
-                  <div
-                    id="reader-sales"
-                    className="overflow-hidden rounded-xl bg-black border border-[#30363d] min-h-[160px] flex items-center justify-center text-slate-500 text-xs"
+                  {/* Hidden HTML5QR element for scanning snapshots */}
+                  <div id="sales-qr-file-temp-element" className="hidden" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileUpload}
+                    className="hidden"
                   />
+
+                  {/* Mobile Camera Snapshot Button - Works over HTTP without browser blocking */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition-all"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>SNAP & SCAN MEMBER QR WITH PHONE CAMERA</span>
+                  </button>
+
+                  <div className="border-t border-[#21262d] pt-3 text-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                      Or Live Stream Video Scanner:
+                    </span>
+                    {!scannerActive ? (
+                      <button
+                        type="button"
+                        onClick={startCameraScanner}
+                        className="w-full py-2.5 bg-[#21262d] hover:bg-[#30363d] text-amber-400 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-[#30363d] transition-all"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>START LIVE VIDEO SCANNER</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={stopCameraScanner}
+                        className="w-full py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all mb-2"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>STOP LIVE SCANNER</span>
+                      </button>
+                    )}
+                    <div
+                      id="pos-qr-reader"
+                      className="overflow-hidden rounded-xl bg-black border border-[#30363d] min-h-[160px] flex items-center justify-center text-slate-500 text-xs mt-2"
+                    />
+                  </div>
+
+                  {!window.isSecureContext && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 text-xs space-y-1 text-left">
+                      <span className="font-bold flex items-center gap-1.5 text-amber-300">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                        Mobile HTTP Security Policy
+                      </span>
+                      <p className="text-[10px] text-slate-300 leading-relaxed">
+                        Mobile browsers block live video streams over plain HTTP links. Use the <b>"SNAP & SCAN MEMBER QR WITH PHONE CAMERA"</b> button above to scan instantly without restrictions!
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* Search Input & Dropdown */
