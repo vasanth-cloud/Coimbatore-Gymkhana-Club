@@ -422,20 +422,20 @@ export const Stock: React.FC = () => {
     );
   };
 
-  // TASMAC FORMULA CALCULATOR PER ROW
+  // TASMAC EXACT INVOICE COST CALCULATOR PER ROW (MATCHES PRINTED BILL)
   const calculateRowCosts = (item: TasmacFormItem) => {
     const pack = item.packSize > 0 ? item.packSize : 24;
     const totalBottles = item.cases * pack + item.looseBottles;
-    const baseAmount = (item.ratePerCase / pack) * totalBottles;
-    const addedValueAmt = baseAmount * (item.addedValuePercent / 100);
-    const tcsAmt = (baseAmount + addedValueAmt) * 0.02;
-    const totalLineCost = baseAmount + addedValueAmt + tcsAmt;
-    const perBottleBasic = totalBottles > 0 ? totalLineCost / totalBottles : 0;
+    const lineAmount = item.cases * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * item.looseBottles : 0);
+    const tcsAmt = lineAmount * 0.02;
+    const totalLineCost = lineAmount;
+    const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
 
     return {
       totalBottles,
-      baseAmount,
-      addedValueAmt,
+      baseAmount: lineAmount,
+      lineAmount,
+      addedValueAmt: 0,
       tcsAmt,
       totalLineCost,
       perBottleBasic,
@@ -1215,9 +1215,7 @@ export const Stock: React.FC = () => {
                     <th className="py-3 px-2 text-center w-24">Loose (B)</th>
                     <th className="py-3 px-2 text-center w-28">Total Bottles</th>
                     <th className="py-3 px-2 text-right min-w-[120px]">Rate per Case (₹)</th>
-                    <th className="py-3 px-2 text-center w-28">Added Val %</th>
-                    <th className="py-3 px-2 text-right min-w-[110px]">TCS (2%)</th>
-                    <th className="py-3 px-2 text-right min-w-[120px]">Line Total (₹)</th>
+                    <th className="py-3 px-2 text-right min-w-[120px]">Amount (₹)</th>
                     <th className="py-3 px-2 text-right min-w-[130px] text-sky-400 font-black">Basic Cost / Bottle</th>
                     <th className="py-3 px-2 text-center w-12">Action</th>
                   </tr>
@@ -1290,17 +1288,7 @@ export const Stock: React.FC = () => {
                             className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-right text-xs font-bold text-emerald-400 focus:outline-none"
                           />
                         </td>
-                        <td className="py-2.5 px-2 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={item.addedValuePercent || ''}
-                            onChange={(e) => handleUpdateFormRow(item.id, 'addedValuePercent', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-purple-400 focus:outline-none"
-                          />
-                        </td>
-                        <td className="py-2.5 px-2 text-right font-mono text-slate-400">₹{costs.tcsAmt.toFixed(2)}</td>
-                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.totalLineCost.toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.lineAmount.toFixed(2)}</td>
                         <td className="py-2.5 px-2 text-right font-mono font-black text-sky-400 bg-sky-500/10 rounded-lg">
                           ₹{costs.perBottleBasic.toFixed(2)}
                         </td>
@@ -1584,8 +1572,7 @@ export const Stock: React.FC = () => {
                     <th className="py-2.5 px-2 text-center">Loose</th>
                     <th className="py-2.5 px-2 text-center">Total</th>
                     <th className="py-2.5 px-2 text-right">Rate/Case</th>
-                    <th className="py-2.5 px-2 text-center">Added Val</th>
-                    <th className="py-2.5 px-2 text-right">Line Total</th>
+                    <th className="py-2.5 px-2 text-right">Amount (₹)</th>
                     <th className="py-2.5 px-2 text-right text-sky-400 font-black">Basic Cost/Bottle</th>
                   </tr>
                 </thead>
@@ -1598,7 +1585,6 @@ export const Stock: React.FC = () => {
                       <td className="py-2 px-2 text-center text-slate-300">{item.loose_bottles}</td>
                       <td className="py-2 px-2 text-center font-bold">{item.total_bottles}</td>
                       <td className="py-2 px-2 text-right text-slate-300">₹{Number(item.rate_per_case).toFixed(2)}</td>
-                      <td className="py-2 px-2 text-center text-purple-400">{item.added_value_percent}%</td>
                       <td className="py-2 px-2 text-right text-slate-100 font-bold">₹{Number(item.total_line_cost).toFixed(2)}</td>
                       <td className="py-2 px-2 text-right font-black text-sky-400 bg-sky-500/10">₹{Number(item.calculated_basic_cost).toFixed(2)}</td>
                     </tr>

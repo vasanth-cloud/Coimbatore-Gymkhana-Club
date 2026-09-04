@@ -131,12 +131,11 @@ def import_tasmac_stock(
         rate_case = max(0.0, item.rate_per_case)
         added_val_pct = max(0.0, item.added_value_percent)
 
-        # TASMAC Formula Calculations
-        base_amt = (rate_case / pack) * t_bottles if pack > 0 else rate_case * c_qty
-        added_val_amt = base_amt * (added_val_pct / 100.0)
-        tcs_amt = (base_amt + added_val_amt) * 0.02
-        total_line_cost = base_amt + added_val_amt + tcs_amt
-        calc_basic_cost = round(total_line_cost / t_bottles, 2) if t_bottles > 0 else 0.0
+        # TASMAC Invoice Exact Calculations (Matches Printed Bill)
+        line_amount = (rate_case * c_qty) + ((rate_case / pack) * b_loose if pack > 0 else 0.0)
+        calc_basic_cost = round(rate_case / pack, 2) if pack > 0 else 0.0
+        tcs_amt = line_amount * 0.02
+        total_line_cost = round(line_amount, 2)
 
         grand_total_amount += total_line_cost
 
