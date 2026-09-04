@@ -5,7 +5,7 @@ import { authApi, LoginRequestPayload } from '../api/services';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: LoginRequestPayload) => Promise<void>;
+  login: (credentials: LoginRequestPayload) => Promise<User>;
   logout: () => void;
   isAdmin: boolean;
   isStaff: boolean;
@@ -40,11 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchCurrentUser();
   }, []);
 
-  const login = async (credentials: LoginRequestPayload) => {
+  const login = async (credentials: LoginRequestPayload): Promise<User> => {
     const response = await authApi.login(credentials);
     localStorage.setItem('token', response.access_token);
     const userData = await authApi.getMe();
     setUser(userData);
+    return userData;
   };
 
   const logout = () => {

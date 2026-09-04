@@ -18,8 +18,12 @@ export const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await login({ email, password });
-      navigate('/dashboard');
+      const loggedInUser = await login({ email, password });
+      if (loggedInUser.role === 'STAFF') {
+        navigate('/entries');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error(err);
       setError(
