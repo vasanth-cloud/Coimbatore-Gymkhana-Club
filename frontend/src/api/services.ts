@@ -47,6 +47,13 @@ export const usersApi = {
     const response = await api.post<User>('/users/staff', data);
     return response.data;
   },
+  updateStaff: async (userId: number, data: { full_name?: string; email?: string; phone?: string; password?: string; role?: string; is_active?: boolean }): Promise<User> => {
+    const response = await api.put<User>(`/users/staff/${userId}`, data);
+    return response.data;
+  },
+  deleteStaff: async (userId: number): Promise<void> => {
+    await api.delete(`/users/staff/${userId}`);
+  },
   getStaff: async (): Promise<User[]> => {
     const response = await api.get<User[]>('/users/staff');
     return response.data;
