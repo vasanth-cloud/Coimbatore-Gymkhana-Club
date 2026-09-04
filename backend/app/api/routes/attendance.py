@@ -21,7 +21,7 @@ router = APIRouter(prefix="/attendance", tags=["Attendance & Payroll"])
 class MarkAttendanceRequest(PyBaseModel):
     employee_id: int
     date: str  # YYYY-MM-DD
-    status: str  # 'P', 'A', 'L'
+    status: str  # 'P', 'A', '-'
 
 
 class EmployeeCreateRequest(PyBaseModel):
@@ -67,17 +67,15 @@ def get_attendance_summary(
         daily_status = {}
         present_days = 0
         absent_days = 0
-        leave_days = 0
 
         for att in attendances:
             day_str = f"{att.date.day:02d}"
-            daily_status[day_str] = att.status
-            if att.status == "P":
+            st = att.status.upper()
+            daily_status[day_str] = st
+            if st == "P":
                 present_days += 1
-            elif att.status == "A":
+            elif st in ["A", "L"]:
                 absent_days += 1
-            elif att.status == "L":
-                leave_days += 1
 
         # Fetch total advance
         advances = (
@@ -101,7 +99,6 @@ def get_attendance_summary(
             "daily_wage": emp.daily_wage,
             "present_days": present_days,
             "absent_days": absent_days,
-            "leave_days": leave_days,
             "earned_salary": earned_salary,
             "advance_amount": advance_total,
             "net_payable": net_payable,
@@ -140,19 +137,21 @@ def mark_attendance(
         .first()
     )
 
+    new_st = req.status.upper() if req.status.upper() in ["P", "A"] else "-"
+
     if not att:
         att = Attendance(
             employee_id=req.employee_id,
             date=att_date,
-            status=req.status.upper(),
+            status=new_st,
         )
         db.add(att)
     else:
-        att.status = req.status.upper()
+        att.status = new_st
         att.is_deleted = False
 
     db.commit()
-    return {"status": "success", "message": f"Marked {emp.name} as {req.status} on {req.date}"}
+    return {"status": "success", "message": f"Updated {emp.name} attendance to {new_st} on {req.date}"}
 
 
 @router.post("/employee")
@@ -220,7 +219,7 @@ def export_attendance_excel(
     headers = ["Emp ID", "Employee Name", "Designation", "Daily Wage"]
     for day in range(1, summary_data["total_days"] + 1):
         headers.append(f"{day:02d}")
-    headers.extend(["Present Days", "Total Earned Salary", "Advance Taken", "Net Payable Salary"])
+    headers.extend(["Present Days", "Absent Days", "Total Earned Salary", "Advance Taken", "Net Payable Salary"])
 
     ws.append(headers)
 
@@ -233,10 +232,11 @@ def export_attendance_excel(
         ]
         for day in range(1, summary_data["total_days"] + 1):
             day_str = f"{day:02d}"
-            row.append(emp["daily_status"].get(day_str, "P"))
+            row.append(emp["daily_status"].get(day_str, "-"))
         
         row.extend([
             emp["present_days"],
+            emp["absent_days"],
             emp["earned_salary"],
             emp["advance_amount"],
             emp["net_payable"],

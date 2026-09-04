@@ -57,7 +57,8 @@ export const Attendance: React.FC = () => {
   }, [selectedMonth, selectedYear]);
 
   const handleToggleStatus = async (empId: number, day: number, currentStatus: string) => {
-    const nextStatus = currentStatus === 'P' ? 'A' : currentStatus === 'A' ? 'L' : 'P';
+    // Cycle: P (Present) -> A (Absent) -> - (NIL) -> P
+    const nextStatus = currentStatus === 'P' ? 'A' : currentStatus === 'A' ? '-' : 'P';
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     try {
@@ -67,17 +68,47 @@ export const Attendance: React.FC = () => {
         status: nextStatus,
       });
 
-      // Optimistic local update
+      // Optimistic local update & instant recalculation
       if (summary) {
+        let newTotalPayroll = 0;
+
         const updatedEmployees = summary.employees.map((emp) => {
           if (emp.employee_id === empId) {
             const dayStr = String(day).padStart(2, '0');
             const newDaily = { ...emp.daily_status, [dayStr]: nextStatus };
-            return { ...emp, daily_status: newDaily };
+            
+            // Recalculate P and A counts
+            let pCount = 0;
+            let aCount = 0;
+            Object.values(newDaily).forEach((val) => {
+              if (val === 'P') pCount++;
+              else if (val === 'A') aCount++;
+            });
+
+            const newEarned = pCount * emp.daily_wage;
+            const newNet = Math.max(0, newEarned - emp.advance_amount);
+
+            newTotalPayroll += newEarned;
+
+            return {
+              ...emp,
+              daily_status: newDaily,
+              present_days: pCount,
+              absent_days: aCount,
+              earned_salary: newEarned,
+              net_payable: newNet,
+            };
           }
+
+          newTotalPayroll += emp.earned_salary;
           return emp;
         });
-        setSummary({ ...summary, employees: updatedEmployees });
+
+        setSummary({
+          ...summary,
+          total_payroll: newTotalPayroll,
+          employees: updatedEmployees,
+        });
       }
     } catch (err) {
       console.error('Failed to mark attendance:', err);
@@ -275,12 +306,12 @@ export const Attendance: React.FC = () => {
         <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider">
-              Daily Attendance Status (Click cell to toggle: P = Present, A = Absent, L = Leave)
+              Daily Attendance Status (Click cell to toggle: P = Present, A = Absent, - = NIL / Unmarked)
             </h3>
             <div className="flex items-center gap-3 text-[11px] font-mono font-bold">
               <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">P = Present</span>
               <span className="text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">A = Absent</span>
-              <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">L = Leave</span>
+              <span className="text-slate-400 bg-slate-800 px-2 py-0.5 rounded">- = NIL</span>
             </div>
           </div>
 
@@ -319,7 +350,7 @@ export const Attendance: React.FC = () => {
 
                       {Array.from({ length: summary?.total_days || 31 }, (_, i) => i + 1).map((day) => {
                         const dayStr = String(day).padStart(2, '0');
-                        const st = emp.daily_status[dayStr] || 'P';
+                        const st = emp.daily_status[dayStr] || '-';
 
                         return (
                           <td
@@ -327,10 +358,10 @@ export const Attendance: React.FC = () => {
                             onClick={() => handleToggleStatus(emp.employee_id, day, st)}
                             className={`py-2 px-1 text-center font-bold border-l border-[#21262d]/50 cursor-pointer select-none transition-colors ${
                               st === 'P'
-                                ? 'text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/20'
+                                ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25'
                                 : st === 'A'
-                                ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/25'
-                                : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/25'
+                                ? 'text-rose-400 bg-rose-500/15 hover:bg-rose-500/30'
+                                : 'text-slate-500 bg-[#0d1117]/40 hover:bg-slate-800/40'
                             }`}
                           >
                             {st}
