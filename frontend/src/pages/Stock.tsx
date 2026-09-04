@@ -14,6 +14,7 @@ import {
   History,
   TrendingUp,
   Wine,
+  GlassWater,
   FileSpreadsheet,
   Download,
   Calendar,
@@ -39,6 +40,7 @@ export const Stock: React.FC = () => {
 
   // Filter & Search States
   const [selectedCategoryPill, setSelectedCategoryPill] = useState<string>('ALL');
+  const [selectedGridCategoryPill, setSelectedGridCategoryPill] = useState<string>('ALL');
   const [search, setSearch] = useState('');
 
   // Receive Stock Modal State
@@ -320,10 +322,22 @@ export const Stock: React.FC = () => {
     return matchesSearch && matchesPill;
   });
 
-  // Filtered Live Stock Items
-  const filteredStockList = stockList.filter((item) =>
-    item.product_name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtered Live Stock Items with Category support
+  const stockWithCategory = stockList.map((s) => {
+    const prod = products.find((p) => p.id === s.product_id);
+    return {
+      ...s,
+      category: prod ? prod.category : 'Other',
+    };
+  });
+
+  const filteredStockList = stockWithCategory.filter((item) => {
+    const matchesSearch = item.product_name.toLowerCase().includes(search.toLowerCase());
+    const matchesPill =
+      selectedGridCategoryPill === 'ALL' ||
+      item.category.toLowerCase() === selectedGridCategoryPill.toLowerCase();
+    return matchesSearch && matchesPill;
+  });
 
   const totalOpeningBottles = filteredLedgerItems.reduce((sum, item) => sum + item.opening_stock, 0);
   const totalPurchaseBottles = filteredLedgerItems.reduce((sum, item) => sum + item.purchase_qty, 0);
@@ -651,13 +665,13 @@ export const Stock: React.FC = () => {
       {/* TAB 2: LIVE AVAILABLE STOCK GRID CARDS VIEW */}
       {activeTab === 'grid' && (
         <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 space-y-4 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
             <div>
               <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <Wine className="w-4 h-4 text-amber-400" />
                 <span>Live Bottle Inventory Cards ({filteredStockList.length})</span>
               </h3>
-              <p className="text-[11px] text-slate-400">Available bottle stock in real-time</p>
+              <p className="text-[11px] text-slate-400">Available bottle stock in real-time by category</p>
             </div>
 
             {/* Search Bar */}
@@ -673,25 +687,83 @@ export const Stock: React.FC = () => {
             </div>
           </div>
 
+          {/* Horizontal Category Filter Pills Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-[#21262d] pb-3">
+            <button
+              type="button"
+              onClick={() => setSelectedGridCategoryPill('ALL')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                selectedGridCategoryPill === 'ALL'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+              }`}
+            >
+              ALL ({stockWithCategory.length})
+            </button>
+
+            {allCategories.map((cat) => {
+              const count = stockWithCategory.filter((i) => i.category.toLowerCase() === cat.toLowerCase()).length;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedGridCategoryPill(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                    selectedGridCategoryPill === cat
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-[#0d1117] text-slate-400 hover:text-slate-200 border border-[#30363d]'
+                  }`}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
+
           {loading ? (
             <div className="py-12 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
               <span>Loading available stock inventory...</span>
             </div>
+          ) : filteredStockList.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+              No stock inventory found for this filter.
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredStockList.map((item) => (
-                <div key={item.product_id} className="bg-[#0d1117] border border-[#21262d] p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-100">{item.product_name}</h4>
-                    <span className="text-[10px] text-slate-500 font-mono">Product #{item.product_id}</span>
+            <div className="space-y-6">
+              {(selectedGridCategoryPill === 'ALL' ? allCategories : [selectedGridCategoryPill]).map((cat) => {
+                const catItems = filteredStockList.filter(
+                  (item) => item.category.toLowerCase() === cat.toLowerCase()
+                );
+                if (catItems.length === 0) return null;
+
+                return (
+                  <div key={cat} className="space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-[#21262d]/80 pb-1.5">
+                      <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <GlassWater className="w-3.5 h-3.5" />
+                        <span>{cat} Category</span>
+                        <span className="text-slate-500 text-[10px]">({catItems.length} Products)</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {catItems.map((item) => (
+                        <div key={item.product_id} className="bg-[#0d1117] border border-[#21262d] p-3.5 rounded-xl flex items-center justify-between hover:border-[#30363d] transition-all">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-slate-100">{item.product_name}</h4>
+                            <span className="text-[10px] text-slate-500 font-mono">Product #{item.product_id} • {item.category}</span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-sm font-black text-amber-400 font-mono block">{item.current_stock} Bottles</span>
+                            <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">In Stock</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-amber-400 font-mono block">{item.current_stock} Bottles</span>
-                    <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">In Stock</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
