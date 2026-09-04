@@ -1211,6 +1211,7 @@ export const Stock: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
+                    <th className="py-3 px-2 text-center w-12">S.No.</th>
                     <th className="py-3 px-3 min-w-[220px]">Liquor Item Name</th>
                     <th className="py-3 px-2 text-center w-24">Pack Size</th>
                     <th className="py-3 px-2 text-center w-24">Cases (C)</th>
@@ -1224,11 +1225,12 @@ export const Stock: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
-                  {formItems.map((item) => {
+                  {formItems.map((item, idx) => {
                     const costs = calculateRowCosts(item);
 
                     return (
                       <tr key={item.id} className="hover:bg-[#161b22]/50 transition-colors">
+                        <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
                         <td className="py-2.5 px-3 min-w-[240px]">
                           <div className="space-y-1">
                             <select
@@ -1321,29 +1323,37 @@ export const Stock: React.FC = () => {
 
           {/* Grand Calculated Total Banner */}
           <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 w-full xl:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 w-full xl:w-auto">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Cases Received:</span>
-                <h4 className="text-xl font-black text-amber-400 font-mono mt-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Total Cases:</span>
+                <h4 className="text-lg font-black text-amber-400 font-mono mt-0.5">
                   {formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases
                 </h4>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Bottles Received:</span>
-                <h4 className="text-xl font-black text-slate-100 font-mono mt-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Total Bottles:</span>
+                <h4 className="text-lg font-black text-slate-100 font-mono mt-0.5">
                   {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Bottles
                 </h4>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">TCS (2%) Tax:</span>
-                <h4 className="text-xl font-black text-purple-400 font-mono mt-0.5">
-                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0).toFixed(2)}
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Basic Purchase Amount:</span>
+                <h4 className="text-lg font-black text-sky-400 font-mono mt-0.5">
+                  ₹{formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h4>
               </div>
-              <div className="border-l border-[#30363d] pl-4 sm:pl-6">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">Total Invoice Landed Cost:</span>
-                <h3 className="text-2xl font-black text-emerald-400 font-mono mt-0.5">
-                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Added Value Tax:</span>
+                <h4 className="text-lg font-black text-purple-400 font-mono mt-0.5">
+                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h4>
+              </div>
+              <div className="border-l border-[#30363d] pl-3">
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 block">Net Invoice Total Cost:</span>
+                <h3 className="text-xl font-black text-emerald-400 font-mono mt-0.5">
+                  ₹{(
+                    formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 1.02
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
               </div>
             </div>
@@ -1576,6 +1586,7 @@ export const Stock: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
+                    <th className="py-2.5 px-2 text-center w-12">S.No.</th>
                     <th className="py-2.5 px-3">Item Name</th>
                     <th className="py-2.5 px-2 text-center">Pack</th>
                     <th className="py-2.5 px-2 text-center">Cases</th>
@@ -1588,8 +1599,9 @@ export const Stock: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
-                  {viewingReceipt.items?.map((item: any) => (
+                  {viewingReceipt.items?.map((item: any, idx: number) => (
                     <tr key={item.id} className="hover:bg-[#161b22]/50">
+                      <td className="py-2 px-2 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
                       <td className="py-2 px-3 font-bold text-slate-100">{item.product_name}</td>
                       <td className="py-2 px-2 text-center text-slate-400">{item.pack_size}</td>
                       <td className="py-2 px-2 text-center text-amber-400 font-bold">{item.cases}</td>
