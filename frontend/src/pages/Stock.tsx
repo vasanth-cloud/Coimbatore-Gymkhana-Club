@@ -653,9 +653,25 @@ export const Stock: React.FC = () => {
     return sum + item.current_stock * (prod?.selling_price || 0);
   }, 0);
 
-  const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_sales_value, 0);
-  const totalClosingBasicVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_basic_value, 0);
-  const totalClosingMrpVal = filteredLedgerItems.reduce((sum, item) => sum + item.closing_mrp_value, 0);
+  const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_sales_value || 0), 0);
+  const totalClosingBasicVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_basic_value ?? item.closing_cost_value ?? ((item.closing_stock || 0) * (item.basic_rate || 0))), 0);
+  const totalClosingMrpVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_mrp_value || 0), 0);
+
+  const totalObCases = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_cases || 0), 0);
+  const totalObBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_bottles || 0), 0);
+  const totalObStock = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_stock || 0), 0);
+
+  const totalPurCases = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_cases || 0), 0);
+  const totalPurBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_bottles || 0), 0);
+  const totalPurQty = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_qty || 0), 0);
+
+  const totalSaleCases = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_cases || 0), 0);
+  const totalSaleBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_bottles || 0), 0);
+  const totalSaleQty = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_qty || 0), 0);
+
+  const totalCbCases = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_cases || 0), 0);
+  const totalCbBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_bottles || 0), 0);
+  const totalCbStock = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_stock || 0), 0);
 
   return (
     <div className="space-y-6 w-full min-w-0">
@@ -948,6 +964,32 @@ export const Stock: React.FC = () => {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-[#0d1117] border-t-2 border-amber-500/50 font-mono text-xs">
+                    <tr className="font-extrabold text-slate-100">
+                      <td colSpan={7} className="py-3.5 px-3 text-right text-amber-400 uppercase tracking-wider text-[11px]">
+                        GRAND TOTAL LEDGER SUMMARY ({filteredLedgerItems.length} ITEMS):
+                      </td>
+                      <td className="py-3.5 px-2 text-center text-slate-300 border-l border-[#30363d]">{totalObCases}</td>
+                      <td className="py-3.5 px-2 text-center text-slate-300">{totalObBottles}</td>
+                      <td className="py-3.5 px-2 text-center text-slate-100 font-black">{totalObStock}</td>
+                      
+                      <td className="py-3.5 px-2 text-center text-emerald-400 border-l border-[#30363d]">{totalPurCases}</td>
+                      <td className="py-3.5 px-2 text-center text-emerald-400">{totalPurBottles}</td>
+                      <td className="py-3.5 px-2 text-center text-emerald-300 font-black">{totalPurQty}</td>
+                      
+                      <td className="py-3.5 px-2 text-center text-rose-400 border-l border-[#30363d]">{totalSaleCases}</td>
+                      <td className="py-3.5 px-2 text-center text-rose-400">{totalSaleBottles}</td>
+                      <td className="py-3.5 px-2 text-center text-rose-300 font-black">{totalSaleQty}</td>
+                      
+                      <td className="py-3.5 px-2 text-center text-amber-400 border-l border-[#30363d]">{totalCbCases}</td>
+                      <td className="py-3.5 px-2 text-center text-amber-400">{totalCbBottles}</td>
+                      <td className="py-3.5 px-2 text-center text-amber-300 font-black border-r border-[#30363d]">{totalCbStock}</td>
+                      
+                      <td className="py-3.5 px-3 text-right text-amber-400 font-black text-sm">
+                        ₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
