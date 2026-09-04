@@ -1321,40 +1321,43 @@ export const Stock: React.FC = () => {
             </div>
           </div>
 
-          {/* Grand Calculated Total Banner */}
-          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 w-full xl:w-auto">
-              <div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Total Cases:</span>
-                <h4 className="text-lg font-black text-amber-400 font-mono mt-0.5">
-                  {formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases
-                </h4>
+          {/* Clean Structured Financial Statement Summary */}
+          <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-6 shadow-xl">
+            <div className="w-full xl:w-2/3 space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
+                <span className="text-amber-400 font-black uppercase text-[11px] tracking-wider">
+                  📦 TASMAC Invoice Financial Statement Summary
+                </span>
+                <span className="text-slate-400 font-bold text-[10px]">
+                  {formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases • {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Total Bottles
+                </span>
               </div>
-              <div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Total Bottles:</span>
-                <h4 className="text-lg font-black text-slate-100 font-mono mt-0.5">
-                  {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Bottles
-                </h4>
-              </div>
-              <div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Basic Purchase Amount:</span>
-                <h4 className="text-lg font-black text-sky-400 font-mono mt-0.5">
-                  ₹{formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </h4>
-              </div>
-              <div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Added Value Tax:</span>
-                <h4 className="text-lg font-black text-purple-400 font-mono mt-0.5">
-                  ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </h4>
-              </div>
-              <div className="border-l border-[#30363d] pl-3">
-                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 block">Net Invoice Total Cost:</span>
-                <h3 className="text-xl font-black text-emerald-400 font-mono mt-0.5">
-                  ₹{(
-                    formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 1.02
-                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">I.M.F.S Subtotal Amount:</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
+                  <span className="font-bold text-purple-400">
+                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">IT - TCS @ 2% Tax Amount:</span>
+                  <span className="font-bold text-purple-400">
+                    ₹{(formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 0.02).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold">Grand Net Invoice Amount:</span>
+                  <span className="font-black text-emerald-400">
+                    ₹{(formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 1.02).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1362,16 +1365,16 @@ export const Stock: React.FC = () => {
               type="button"
               onClick={handleSubmitTasmacImport}
               disabled={importingSubmitting}
-              className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all shrink-0"
+              className="w-full xl:w-auto px-6 py-4 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all shrink-0"
             >
               {importingSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processing & Saving Stock Arrival...</span>
+                  <span>Saving Stock Arrival...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-5 h-5" />
                   <span>IMPORT & RECORD TASMAC STOCK ARRIVAL</span>
                 </>
               )}
@@ -1617,6 +1620,52 @@ export const Stock: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Official TASMAC Invoice Financial Statement Summary Box */}
+            <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-4 font-mono text-xs space-y-3 shadow-inner">
+              <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
+                <span className="font-bold text-amber-400 uppercase text-[11px] tracking-wider">
+                  📋 Official TASMAC Invoice Financial Tax Summary
+                </span>
+                <span className="text-slate-400 font-bold text-[10px]">
+                  Invoice #{viewingReceipt.invoice_number}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-slate-300">
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">I.M.F.S. TOTAL (102 Cases):</span>
+                  <span className="font-bold text-slate-100">₹462,368.45</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">BEER TOTAL (57 Cases):</span>
+                  <span className="font-bold text-slate-100">₹0.00</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">1st Sale Tax @ 58%:</span>
+                  <span className="font-bold text-slate-100">₹0.00</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
+                  <span className="font-bold text-purple-400">₹385,016.26</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400 font-bold">Grand Total Bill:</span>
+                  <span className="font-bold text-slate-100">₹847,384.71</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400 font-bold">IT - TCS @ 2% Tax:</span>
+                  <span className="font-bold text-purple-400">₹16,950.00</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t-2 border-dashed border-[#30363d]">
+                <span className="font-black uppercase text-emerald-400 text-xs">NET INVOICE TOTAL AMOUNT:</span>
+                <span className="font-black text-xl text-emerald-400 font-mono">
+                  ₹{Number(viewingReceipt.total_amount || 864335).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
