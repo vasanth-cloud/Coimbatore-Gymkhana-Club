@@ -183,7 +183,7 @@ def import_tasmac_stock(
         service.receive_stock(
             product_id=prod.id,
             quantity=t_bottles,
-            transaction_date=datetime.combine(inv_date, datetime.min.time()),
+            transaction_date=datetime.now(),
         )
 
         # Create Receipt Item
