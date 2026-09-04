@@ -601,9 +601,9 @@ export const Stock: React.FC = () => {
                         <td className="py-2.5 px-2 text-slate-400 text-[11px]">{item.category}</td>
                         <td className="py-2.5 px-2 font-mono text-slate-400">{item.volume_ml}ml</td>
                         <td className="py-2.5 px-2 text-center font-mono text-slate-400">{item.pack_size}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-emerald-400 font-bold">₹{item.mrp}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-sky-400 font-bold">₹{item.basic_rate}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-amber-400 font-extrabold">₹{item.selling_price}</td>
+                        <td className="py-2.5 px-2 text-right font-mono text-emerald-400 font-bold">₹{Number(item.mrp || 0).toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono text-sky-400 font-bold">₹{Number(item.basic_rate || 0).toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono text-amber-400 font-extrabold">₹{Number(item.selling_price || 0).toFixed(2)}</td>
                         
                         {/* Opening Stock C, B & Total */}
                         <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 border-l border-[#30363d] bg-[#0d1117]/40">
