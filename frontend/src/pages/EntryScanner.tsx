@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats, Html5Qrcode } from 'html5-qrcode';
 import { entryApi } from '../api/services';
 import { Entry, DetailedEntry } from '../types';
 import {
@@ -19,6 +19,7 @@ import {
   X,
   Usb,
   ShieldCheck,
+  Upload,
 } from 'lucide-react';
 
 export const EntryScanner: React.FC = () => {
@@ -41,6 +42,7 @@ export const EntryScanner: React.FC = () => {
 
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchRecentEntries = async () => {
     try {
@@ -111,6 +113,25 @@ export const EntryScanner: React.FC = () => {
     e.preventDefault();
     if (!manualToken) return;
     handleInitiateScan(manualToken);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    setIsScanning(true);
+
+    try {
+      const html5QrCode = new Html5Qrcode('qr-file-temp-element');
+      const decodedText = await html5QrCode.scanFile(file, false);
+      handleInitiateScan(decodedText);
+    } catch (err: any) {
+      console.error('File QR Scan error:', err);
+      setError('Could not detect a valid QR code in the captured photo. Please make sure the QR card is clearly visible and try again.');
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const startCameraScanner = () => {
@@ -303,13 +324,61 @@ export const EntryScanner: React.FC = () => {
           </form>
         ) : (
           <div className="flex flex-col items-center">
-            <div
-              id="qr-reader"
-              className="w-full max-w-md bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden p-2 text-slate-300"
+            {/* Hidden HTML5QR element for scanning snapshots */}
+            <div id="qr-file-temp-element" className="hidden" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileUpload}
+              className="hidden"
             />
-            <p className="text-xs text-slate-400 mt-3 text-center">
-              Uses built-in camera or external USB webcam. Grant browser camera permissions when prompted.
-            </p>
+
+            {/* Mobile Camera Snapshot Button - Works over HTTP without browser security blocking */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isScanning}
+              className="w-full max-w-md py-4 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 text-xs flex items-center justify-center gap-2 mb-4 transition-all disabled:opacity-50"
+            >
+              {isScanning ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Processing QR Image...</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-5 h-5" />
+                  <span>SNAP & SCAN WITH MOBILE CAMERA (HTTP WORKAROUND)</span>
+                </>
+              )}
+            </button>
+
+            <div className="w-full max-w-md border-t border-[#21262d] my-2 pt-3 text-center">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-3">
+                Or Live Stream Video Scanner:
+              </span>
+              <div
+                id="qr-reader"
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden p-2 text-slate-300"
+              />
+            </div>
+
+            {!window.isSecureContext && (
+              <div className="w-full max-w-md mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 text-xs space-y-1 text-left">
+                <span className="font-bold flex items-center gap-1.5 text-amber-300">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                  Mobile Browser HTTP Security Policy
+                </span>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Mobile browsers (Chrome / Safari) block live video streaming over plain <b>HTTP</b> links (e.g. <code>http://10.228.64.138:5173</code>).
+                </p>
+                <p className="text-[11px] text-emerald-400 font-semibold pt-1">
+                  💡 <b>Solution:</b> Use the <b>"SNAP & SCAN WITH MOBILE CAMERA"</b> button above! It opens your phone's native camera and works 100% over HTTP without any browser blocking.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
