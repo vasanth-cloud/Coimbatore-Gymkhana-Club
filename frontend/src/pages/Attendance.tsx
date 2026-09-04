@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { attendanceApi } from '../api/services';
 import { AttendanceSummary, AttendanceEmployee } from '../types';
 import {
@@ -6,6 +7,7 @@ import {
   CalendarCheck2,
   Coins,
   FileSpreadsheet,
+  Download,
   Plus,
   Loader2,
   CheckCircle2,
@@ -152,6 +154,52 @@ export const Attendance: React.FC = () => {
     }
   };
 
+  const exportAttendanceToExcel = () => {
+    if (!summary || !summary.employees) return;
+
+    const headers = ['Emp ID', 'Employee Name', 'Designation', 'Daily Wage (Rs)'];
+    for (let day = 1; day <= summary.total_days; day++) {
+      headers.push(String(day).padStart(2, '0'));
+    }
+    headers.push('Present Days', 'Absent Days', 'Earned Salary (Rs)', 'Advance Taken (Rs)', 'Net Payable (Rs)');
+
+    const rows: any[] = [];
+    rows.push(headers);
+
+    summary.employees.forEach((emp) => {
+      const row: any[] = [
+        emp.employee_code,
+        emp.name,
+        emp.designation,
+        emp.daily_wage,
+      ];
+
+      for (let day = 1; day <= summary.total_days; day++) {
+        const dayStr = String(day).padStart(2, '0');
+        row.push(emp.daily_status[dayStr] || '-');
+      }
+
+      row.push(
+        emp.present_days,
+        emp.absent_days,
+        emp.earned_salary,
+        emp.advance_amount,
+        emp.net_payable
+      );
+
+      rows.push(row);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Attendance_${selectedMonth}_${selectedYear}`);
+
+    XLSX.writeFile(
+      workbook,
+      `Staff_Attendance_Payroll_${selectedYear}_${String(selectedMonth).padStart(2, '0')}.xlsx`
+    );
+  };
+
   const filteredEmployees = summary
     ? summary.employees.filter(
         (e) =>
@@ -184,14 +232,14 @@ export const Attendance: React.FC = () => {
             <span>+ ADD STAFF EMPLOYEE</span>
           </button>
 
-          <a
-            href={attendanceApi.downloadExcel(selectedMonth, selectedYear)}
-            download
-            className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-2 transition-all"
+          <button
+            onClick={exportAttendanceToExcel}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+            title="Download Attendance & Salary Register Excel Sheet"
           >
-            <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-            <span>DOWNLOAD PAYROLL EXCEL</span>
-          </a>
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>DOWNLOAD EXCEL SHEET (.xlsx)</span>
+          </button>
         </div>
       </div>
 
