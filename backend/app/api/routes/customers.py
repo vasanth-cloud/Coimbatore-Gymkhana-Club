@@ -30,7 +30,7 @@ router = APIRouter(
 def create_customer(
     request: CustomerCreateRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = CustomerService(db)
 
@@ -58,7 +58,7 @@ def update_customer(
     customer_id: int,
     request: CustomerUpdateRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = CustomerService(db)
 
@@ -86,7 +86,7 @@ def update_customer(
 def bulk_import_customers(
     items: list[CustomerBulkItem],
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = CustomerService(db)
     dict_items = [i.model_dump() for i in items]
@@ -131,7 +131,7 @@ def get_customers(
 )
 def delete_all_customers(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = CustomerService(db)
     count = service.delete_all_customers()
@@ -145,7 +145,7 @@ def delete_all_customers(
 def delete_customer(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = CustomerService(db)
 
@@ -166,7 +166,7 @@ def delete_customer(
 def generate_customer_qr(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     repository = CustomerRepository(db)
     customer = repository.get_by_id(customer_id)

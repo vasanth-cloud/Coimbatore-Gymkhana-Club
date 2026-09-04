@@ -26,7 +26,6 @@ export const App: React.FC = () => {
             {/* Protected Routes for ADMIN */}
             <Route element={<ProtectedLayout allowedRoles={['ADMIN']} />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/customers" element={<Customers />} />
               <Route path="/products" element={<Products />} />
               <Route path="/stock" element={<Stock />} />
               <Route path="/attendance" element={<Attendance />} />
@@ -36,6 +35,7 @@ export const App: React.FC = () => {
 
             {/* Protected Routes for STAFF & ADMIN */}
             <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'STAFF']} />}>
+              <Route path="/customers" element={<Customers />} />
               <Route path="/entries" element={<EntryScanner />} />
               <Route path="/sales" element={<Sales />} />
             </Route>

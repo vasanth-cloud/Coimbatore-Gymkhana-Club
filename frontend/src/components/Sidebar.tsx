@@ -33,7 +33,7 @@ export const Sidebar: React.FC = () => {
       name: 'Customers',
       path: '/customers',
       icon: Users,
-      roles: ['ADMIN'],
+      roles: ['ADMIN', 'STAFF'],
     },
     {
       name: 'Brands & Products',
