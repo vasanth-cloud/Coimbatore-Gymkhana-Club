@@ -427,6 +427,7 @@ export const Stock: React.FC = () => {
     const pack = item.packSize > 0 ? item.packSize : 24;
     const totalBottles = item.cases * pack + item.looseBottles;
     const lineAmount = item.cases * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * item.looseBottles : 0);
+    const addedValueRate = (item.ratePerCase * (item.addedValuePercent || 220)) / 100;
     const tcsAmt = lineAmount * 0.02;
     const totalLineCost = lineAmount;
     const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
@@ -435,7 +436,8 @@ export const Stock: React.FC = () => {
       totalBottles,
       baseAmount: lineAmount,
       lineAmount,
-      addedValueAmt: 0,
+      addedValueRate,
+      addedValueAmt: addedValueRate,
       tcsAmt,
       totalLineCost,
       perBottleBasic,
@@ -1215,6 +1217,7 @@ export const Stock: React.FC = () => {
                     <th className="py-3 px-2 text-center w-24">Loose (B)</th>
                     <th className="py-3 px-2 text-center w-28">Total Bottles</th>
                     <th className="py-3 px-2 text-right min-w-[120px]">Rate per Case (₹)</th>
+                    <th className="py-3 px-2 text-right min-w-[110px]">Added Val (₹)</th>
                     <th className="py-3 px-2 text-center w-24">Added Val %</th>
                     <th className="py-3 px-2 text-right min-w-[120px]">Amount (₹)</th>
                     <th className="py-3 px-2 text-center w-12">Action</th>
@@ -1288,6 +1291,7 @@ export const Stock: React.FC = () => {
                             className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 px-2 text-right text-xs font-bold text-emerald-400 focus:outline-none"
                           />
                         </td>
+                        <td className="py-2.5 px-2 text-right font-mono font-bold text-purple-300">₹{costs.addedValueAmt.toFixed(2)}</td>
                         <td className="py-2.5 px-2 text-center">
                           <input
                             type="number"
@@ -1298,9 +1302,6 @@ export const Stock: React.FC = () => {
                           />
                         </td>
                         <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.lineAmount.toFixed(2)}</td>
-                        <td className="py-2.5 px-2 text-right font-mono font-black text-sky-400 bg-sky-500/10 rounded-lg">
-                          ₹{costs.perBottleBasic.toFixed(2)}
-                        </td>
                         <td className="py-2.5 px-2 text-center">
                           <button
                             type="button"
@@ -1581,7 +1582,8 @@ export const Stock: React.FC = () => {
                     <th className="py-2.5 px-2 text-center">Loose</th>
                     <th className="py-2.5 px-2 text-center">Total</th>
                     <th className="py-2.5 px-2 text-right">Rate/Case</th>
-                    <th className="py-2.5 px-2 text-center">Added Val</th>
+                    <th className="py-2.5 px-2 text-right">Added Val (₹)</th>
+                    <th className="py-2.5 px-2 text-center">Added Val %</th>
                     <th className="py-2.5 px-2 text-right">Amount (₹)</th>
                   </tr>
                 </thead>
@@ -1594,6 +1596,9 @@ export const Stock: React.FC = () => {
                       <td className="py-2 px-2 text-center text-slate-300">{item.loose_bottles}</td>
                       <td className="py-2 px-2 text-center font-bold">{item.total_bottles}</td>
                       <td className="py-2 px-2 text-right text-slate-300">₹{Number(item.rate_per_case).toFixed(2)}</td>
+                      <td className="py-2 px-2 text-right text-purple-300 font-bold">
+                        ₹{((Number(item.rate_per_case) * (Number(item.added_value_percent) || 220)) / 100).toFixed(2)}
+                      </td>
                       <td className="py-2 px-2 text-center text-purple-400 font-bold">{item.added_value_percent || 220}%</td>
                       <td className="py-2 px-2 text-right text-slate-100 font-bold">₹{Number(item.total_line_cost).toFixed(2)}</td>
                     </tr>
