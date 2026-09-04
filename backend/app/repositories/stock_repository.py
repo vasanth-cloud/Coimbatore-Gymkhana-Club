@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import func, cast, Date
+from sqlalchemy import func, cast, Date, case
 from sqlalchemy.orm import Session
 
 from app.models.stock_transaction import StockTransaction
@@ -71,104 +71,149 @@ class StockRepository:
         return max(0, stock_in - stock_out)
 
     def get_all_current_stock(self):
-        products = (
-            self.db.query(Product)
-            .filter(
-                Product.is_deleted == False,
-                Product.is_active == True,
+        # Ultra-fast 1-query aggregation for all products
+        tx_agg = (
+            self.db.query(
+                StockTransaction.product_id,
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (StockTransaction.transaction_type == "IN", StockTransaction.quantity),
+                            else_=0,
+                        )
+                    ) - func.sum(
+                        case(
+                            (StockTransaction.transaction_type == "OUT", StockTransaction.quantity),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("net_stock"),
             )
-            .order_by(Product.name.asc())
-            .all()
+            .filter(StockTransaction.is_deleted == False)
+            .group_by(StockTransaction.product_id)
+            .subquery()
         )
 
-        result = []
-        for product in products:
-            current_stock = self.get_current_stock(product.id)
-            result.append(
-                {
-                    "product_id": product.id,
-                    "product_name": product.name,
-                    "current_stock": current_stock,
-                }
-            )
-        return result
-
-    def get_daily_stock_ledger(self, target_date: date):
-        products = (
-            self.db.query(Product)
+        query = (
+            self.db.query(Product.id, Product.name, func.coalesce(tx_agg.c.net_stock, 0).label("stock"))
+            .outerjoin(tx_agg, Product.id == tx_agg.c.product_id)
             .filter(Product.is_deleted == False, Product.is_active == True)
             .order_by(Product.name.asc())
-            .all()
         )
 
+        results = query.all()
+        return [
+            {
+                "product_id": r.id,
+                "product_name": r.name,
+                "current_stock": max(0, r.stock),
+            }
+            for r in results
+        ]
+
+    def get_daily_stock_ledger(self, target_date: date):
+        # Single aggregated SQL query for all 653 products across prior and today dates
+        tx_subquery = (
+            self.db.query(
+                StockTransaction.product_id,
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                (cast(StockTransaction.transaction_date, Date) < target_date)
+                                & (StockTransaction.transaction_type == "IN"),
+                                StockTransaction.quantity,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("prior_in"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                (cast(StockTransaction.transaction_date, Date) < target_date)
+                                & (StockTransaction.transaction_type == "OUT"),
+                                StockTransaction.quantity,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("prior_out"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                (cast(StockTransaction.transaction_date, Date) == target_date)
+                                & (StockTransaction.transaction_type == "IN"),
+                                StockTransaction.quantity,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("today_in"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                (cast(StockTransaction.transaction_date, Date) == target_date)
+                                & (StockTransaction.transaction_type == "OUT"),
+                                StockTransaction.quantity,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("today_out"),
+            )
+            .filter(StockTransaction.is_deleted == False)
+            .group_by(StockTransaction.product_id)
+            .subquery()
+        )
+
+        query = (
+            self.db.query(
+                Product,
+                tx_subquery.c.prior_in,
+                tx_subquery.c.prior_out,
+                tx_subquery.c.today_in,
+                tx_subquery.c.today_out,
+            )
+            .outerjoin(tx_subquery, Product.id == tx_subquery.c.product_id)
+            .filter(Product.is_deleted == False, Product.is_active == True)
+            .order_by(Product.name.asc())
+        )
+
+        rows = query.all()
         result = []
-        for p in products:
+
+        def format_case_bottle(total_bottles, psz):
+            if total_bottles <= 0:
+                return {"cases": 0, "bottles": 0, "formatted": "0C + 0B"}
+            cases = total_bottles // psz
+            btts = total_bottles % psz
+            return {
+                "cases": cases,
+                "bottles": btts,
+                "formatted": f"{cases}C + {btts}B"
+            }
+
+        for p, prior_in, prior_out, today_in, today_out in rows:
             pack_sz = p.pack_size or (48 if p.volume_ml <= 180 else 24 if p.volume_ml == 375 else 12)
 
-            # 1. Prior IN (date < target_date)
-            prior_in = (
-                self.db.query(func.coalesce(func.sum(StockTransaction.quantity), 0))
-                .filter(
-                    StockTransaction.product_id == p.id,
-                    StockTransaction.transaction_type == "IN",
-                    cast(StockTransaction.transaction_date, Date) < target_date,
-                    StockTransaction.is_deleted == False,
-                )
-                .scalar() or 0
-            )
+            p_in = prior_in or 0
+            p_out = prior_out or 0
+            t_in = today_in or 0
+            t_out = today_out or 0
 
-            # 2. Prior OUT (date < target_date)
-            prior_out = (
-                self.db.query(func.coalesce(func.sum(StockTransaction.quantity), 0))
-                .filter(
-                    StockTransaction.product_id == p.id,
-                    StockTransaction.transaction_type == "OUT",
-                    cast(StockTransaction.transaction_date, Date) < target_date,
-                    StockTransaction.is_deleted == False,
-                )
-                .scalar() or 0
-            )
-
-            opening_stock = max(0, prior_in - prior_out)
-
-            # 3. Today Purchase IN (date == target_date)
-            today_purchase = (
-                self.db.query(func.coalesce(func.sum(StockTransaction.quantity), 0))
-                .filter(
-                    StockTransaction.product_id == p.id,
-                    StockTransaction.transaction_type == "IN",
-                    cast(StockTransaction.transaction_date, Date) == target_date,
-                    StockTransaction.is_deleted == False,
-                )
-                .scalar() or 0
-            )
-
-            # 4. Today Sale OUT (date == target_date)
-            today_sale = (
-                self.db.query(func.coalesce(func.sum(StockTransaction.quantity), 0))
-                .filter(
-                    StockTransaction.product_id == p.id,
-                    StockTransaction.transaction_type == "OUT",
-                    cast(StockTransaction.transaction_date, Date) == target_date,
-                    StockTransaction.is_deleted == False,
-                )
-                .scalar() or 0
-            )
-
-            closing_stock_calc = opening_stock + today_purchase - today_sale
-            closing_stock = max(0, closing_stock_calc)
-
-            # Format Cases & Loose Bottles
-            def format_case_bottle(total_bottles, psz):
-                if total_bottles <= 0:
-                    return {"cases": 0, "bottles": 0, "formatted": "0C + 0B"}
-                cases = total_bottles // psz
-                btts = total_bottles % psz
-                return {
-                    "cases": cases,
-                    "bottles": btts,
-                    "formatted": f"{cases}C + {btts}B"
-                }
+            opening_stock = max(0, p_in - p_out)
+            today_purchase = max(0, t_in)
+            today_sale = max(0, t_out)
+            closing_stock = max(0, opening_stock + today_purchase - today_sale)
 
             opening_cb = format_case_bottle(opening_stock, pack_sz)
             purchase_cb = format_case_bottle(today_purchase, pack_sz)
@@ -186,19 +231,16 @@ class StockRepository:
                 "volume_ml": p.volume_ml,
                 "pack_size": pack_sz,
                 
-                # Prices
-                "unit_price": selling_rate,       # Sales Rate
+                "unit_price": selling_rate,
                 "selling_price": selling_rate,
-                "mrp": mrp_rate,                 # MRP Rate
-                "basic_rate": basic_rate,         # Basic Purchase Rate
+                "mrp": mrp_rate,
+                "basic_rate": basic_rate,
                 
-                # Totals in Bottles (No negative numbers)
                 "opening_stock": opening_stock,
                 "purchase_qty": today_purchase,
                 "sale_qty": today_sale,
                 "closing_stock": closing_stock,
 
-                # Cases & Loose Bottles Breakdown
                 "opening_cases": opening_cb["cases"],
                 "opening_bottles": opening_cb["bottles"],
                 "opening_str": opening_cb["formatted"],
@@ -215,7 +257,6 @@ class StockRepository:
                 "closing_bottles": closing_cb["bottles"],
                 "closing_str": closing_cb["formatted"],
 
-                # Valuation (Evening Total Rate - No negative values)
                 "closing_sales_value": closing_stock * selling_rate,
                 "closing_cost_value": closing_stock * basic_rate,
                 "closing_mrp_value": closing_stock * mrp_rate,
