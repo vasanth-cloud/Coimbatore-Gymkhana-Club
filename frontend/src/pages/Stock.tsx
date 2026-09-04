@@ -563,44 +563,59 @@ export const Stock: React.FC = () => {
       'OB (Cases)',
       'OB (Bottles)',
       'OB Total Bottles',
+      'OB Units',
       'PUR (Cases)',
       'PUR (Bottles)',
       'PUR Total Bottles',
+      'PUR Units',
       'SALE (Cases)',
       'SALE (Bottles)',
       'SALE Total Bottles',
+      'SALE Units',
       'CB (Cases)',
       'CB (Bottles)',
       'CB Total Bottles',
+      'CB Units',
       'CLOSING TOTAL BASIC COST VALUE (INR)',
       'CLOSING TOTAL MRP VALUE (INR)',
       'CLOSING TOTAL SALES VALUE (INR)',
     ];
 
-    const rows = ledgerData.map((item) => [
-      `"${item.product_name}"`,
-      `"${item.category}"`,
-      item.volume_ml,
-      item.pack_size,
-      item.basic_rate,
-      item.mrp,
-      item.selling_price,
-      item.opening_cases,
-      item.opening_bottles,
-      item.opening_stock,
-      item.purchase_cases,
-      item.purchase_bottles,
-      item.purchase_qty,
-      item.sale_cases,
-      item.sale_bottles,
-      item.sale_qty,
-      item.closing_cases,
-      item.closing_bottles,
-      item.closing_stock,
-      item.closing_basic_value,
-      item.closing_mrp_value,
-      item.closing_sales_value,
-    ]);
+    const rows = ledgerData.map((item) => {
+      const obU = item.opening_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.opening_stock);
+      const purU = item.purchase_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.purchase_qty);
+      const saleU = item.sale_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.sale_qty);
+      const cbU = item.closing_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.closing_stock);
+
+      return [
+        `"${item.product_name}"`,
+        `"${item.category}"`,
+        item.volume_ml,
+        item.pack_size,
+        item.basic_rate,
+        item.mrp,
+        item.selling_price,
+        item.opening_cases,
+        item.opening_bottles,
+        item.opening_stock,
+        obU.toFixed(2),
+        item.purchase_cases,
+        item.purchase_bottles,
+        item.purchase_qty,
+        purU.toFixed(2),
+        item.sale_cases,
+        item.sale_bottles,
+        item.sale_qty,
+        saleU.toFixed(2),
+        item.closing_cases,
+        item.closing_bottles,
+        item.closing_stock,
+        cbU.toFixed(2),
+        item.closing_basic_value ?? item.closing_cost_value ?? ((item.closing_stock || 0) * (item.basic_rate || 0)),
+        item.closing_mrp_value,
+        item.closing_sales_value,
+      ];
+    });
 
     const csvContent =
       '\uFEFF' + [`DAILY STOCK LEDGER REPORT - Date: ${ledgerDate}`, headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -648,6 +663,21 @@ export const Stock: React.FC = () => {
     )
   );
 
+  const calculateItemUnits = (category: string, volume_ml: number, pack_size: number, total_bottles: number) => {
+    if (!total_bottles || total_bottles <= 0) return 0;
+    const catLower = (category || '').toLowerCase();
+    const vol = volume_ml || 750;
+    const pack = pack_size && pack_size > 0 ? pack_size : 12;
+
+    if (catLower.includes('beer')) {
+      return Number((total_bottles / pack).toFixed(2));
+    } else if (catLower.includes('wine')) {
+      return Number(((total_bottles * vol) / 2250).toFixed(2));
+    } else {
+      return Number(((total_bottles * vol) / 750).toFixed(2));
+    }
+  };
+
   const totalStockValuation = stockList.reduce((sum, item) => {
     const prod = products.find((p) => p.id === item.product_id);
     return sum + item.current_stock * (prod?.selling_price || 0);
@@ -660,18 +690,22 @@ export const Stock: React.FC = () => {
   const totalObCases = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_cases || 0), 0);
   const totalObBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_bottles || 0), 0);
   const totalObStock = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_stock || 0), 0);
+  const totalObUnits = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.opening_stock)), 0);
 
   const totalPurCases = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_cases || 0), 0);
   const totalPurBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_bottles || 0), 0);
   const totalPurQty = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_qty || 0), 0);
+  const totalPurUnits = filteredLedgerItems.reduce((sum, item) => sum + (item.purchase_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.purchase_qty)), 0);
 
   const totalSaleCases = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_cases || 0), 0);
   const totalSaleBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_bottles || 0), 0);
   const totalSaleQty = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_qty || 0), 0);
+  const totalSaleUnits = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.sale_qty)), 0);
 
   const totalCbCases = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_cases || 0), 0);
   const totalCbBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_bottles || 0), 0);
   const totalCbStock = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_stock || 0), 0);
+  const totalCbUnits = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.closing_stock)), 0);
 
   return (
     <div className="space-y-6 w-full min-w-0">
@@ -841,18 +875,22 @@ export const Stock: React.FC = () => {
           </div>
 
           {/* Valuation Summary Banner Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value:</span>
-              <h3 className="text-xl font-black text-sky-400 font-mono mt-1">₹{totalClosingBasicVal.toLocaleString()}</h3>
+              <h3 className="text-xl font-black text-sky-400 font-mono mt-1">₹{totalClosingBasicVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Total MRP Value:</span>
-              <h3 className="text-xl font-black text-emerald-400 font-mono mt-1">₹{totalClosingMrpVal.toLocaleString()}</h3>
+              <h3 className="text-xl font-black text-emerald-400 font-mono mt-1">₹{totalClosingMrpVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            </div>
+            <div className="bg-[#161b22] border border-purple-500/40 p-4 rounded-2xl bg-purple-500/5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 block">Total Closing Units:</span>
+              <h3 className="text-xl font-black text-purple-400 font-mono mt-1">{totalCbUnits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Units</h3>
             </div>
             <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl bg-amber-500/5">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block">Total Closing Sales Value:</span>
-              <h3 className="text-xl font-black text-amber-400 font-mono mt-1">₹{totalClosingSalesVal.toLocaleString()}</h3>
+              <h3 className="text-xl font-black text-amber-400 font-mono mt-1">₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
           </div>
 
@@ -895,74 +933,81 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400">SALE (B)</th>
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-300 font-black">SALE Total</th>
                       
-                      {/* Closing Stock C, B & Total */}
+                      {/* Closing Stock C, B, Total & Units */}
                       <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400 border-l border-[#30363d]">CB (C)</th>
                       <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400">CB (B)</th>
-                      <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-300 font-black border-r border-[#30363d]">CB Total</th>
+                      <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-300 font-black">CB Total</th>
+                      <th className="py-3 px-2 text-center bg-purple-500/10 text-purple-300 font-black border-r border-[#30363d]">CB Units</th>
                       
                       <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#21262d] text-slate-200">
-                    {filteredLedgerItems.map((item) => (
-                      <tr key={item.product_id} className="hover:bg-[#0d1117]/60 transition-colors">
-                        <td className="py-2.5 px-3 font-bold text-slate-100">{item.product_name}</td>
-                        <td className="py-2.5 px-2 text-slate-400 text-[11px]">{item.category}</td>
-                        <td className="py-2.5 px-2 font-mono text-slate-400">{item.volume_ml}ml</td>
-                        <td className="py-2.5 px-2 text-center font-mono text-slate-400">{item.pack_size}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-emerald-400 font-bold">₹{Number(item.mrp || 0).toFixed(2)}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-sky-400 font-bold">₹{Number(item.basic_rate || 0).toFixed(2)}</td>
-                        <td className="py-2.5 px-2 text-right font-mono text-amber-400 font-extrabold">₹{Number(item.selling_price || 0).toFixed(2)}</td>
-                        
-                        {/* Opening Stock C, B & Total */}
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 border-l border-[#30363d] bg-[#0d1117]/40">
-                          {item.opening_cases}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 bg-[#0d1117]/40">
-                          {item.opening_bottles}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-slate-100 bg-[#0d1117]/60">
-                          {item.opening_stock}
-                        </td>
-                        
-                        {/* Purchases C, B & Total */}
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5 border-l border-[#30363d]">
-                          {item.purchase_cases}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">
-                          {item.purchase_bottles}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-emerald-300 bg-emerald-500/10">
-                          {item.purchase_qty}
-                        </td>
-                        
-                        {/* Sales C, B & Total */}
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5 border-l border-[#30363d]">
-                          {item.sale_cases}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5">
-                          {item.sale_bottles}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-rose-300 bg-rose-500/10">
-                          {item.sale_qty}
-                        </td>
-                        
-                        {/* Closing Stock C, B & Total */}
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-l border-[#30363d]">
-                          {item.closing_cases}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5">
-                          {item.closing_bottles}
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-black text-amber-300 bg-amber-500/10 border-r border-[#30363d]">
-                          {item.closing_stock}
-                        </td>
-                        
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
-                          ₹{item.closing_sales_value.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredLedgerItems.map((item) => {
+                      const cbUnits = item.closing_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.closing_stock);
+                      return (
+                        <tr key={item.product_id} className="hover:bg-[#0d1117]/60 transition-colors">
+                          <td className="py-2.5 px-3 font-bold text-slate-100">{item.product_name}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px]">{item.category}</td>
+                          <td className="py-2.5 px-2 font-mono text-slate-400">{item.volume_ml}ml</td>
+                          <td className="py-2.5 px-2 text-center font-mono text-slate-400">{item.pack_size}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-emerald-400 font-bold">₹{Number(item.mrp || 0).toFixed(2)}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-sky-400 font-bold">₹{Number(item.basic_rate || 0).toFixed(2)}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-amber-400 font-extrabold">₹{Number(item.selling_price || 0).toFixed(2)}</td>
+                          
+                          {/* Opening Stock C, B & Total */}
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 border-l border-[#30363d] bg-[#0d1117]/40">
+                            {item.opening_cases}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-200 bg-[#0d1117]/40">
+                            {item.opening_bottles}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-slate-100 bg-[#0d1117]/60">
+                            {item.opening_stock}
+                          </td>
+                          
+                          {/* Purchases C, B & Total */}
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5 border-l border-[#30363d]">
+                            {item.purchase_cases}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">
+                            {item.purchase_bottles}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-emerald-300 bg-emerald-500/10">
+                            {item.purchase_qty}
+                          </td>
+                          
+                          {/* Sales C, B & Total */}
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5 border-l border-[#30363d]">
+                            {item.sale_cases}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5">
+                            {item.sale_bottles}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-rose-300 bg-rose-500/10">
+                            {item.sale_qty}
+                          </td>
+                          
+                          {/* Closing Stock C, B, Total & Units */}
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5 border-l border-[#30363d]">
+                            {item.closing_cases}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-amber-400 bg-amber-500/5">
+                            {item.closing_bottles}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-amber-300 bg-amber-500/10">
+                            {item.closing_stock}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-black text-purple-300 bg-purple-500/10 border-r border-[#30363d]">
+                            {cbUnits.toFixed(2)}
+                          </td>
+                          
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
+                            ₹{item.closing_sales_value.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot className="bg-[#0d1117] border-t-2 border-amber-500/50 font-mono text-xs">
                     <tr className="font-extrabold text-slate-100">
@@ -983,7 +1028,8 @@ export const Stock: React.FC = () => {
                       
                       <td className="py-3.5 px-2 text-center text-amber-400 border-l border-[#30363d]">{totalCbCases}</td>
                       <td className="py-3.5 px-2 text-center text-amber-400">{totalCbBottles}</td>
-                      <td className="py-3.5 px-2 text-center text-amber-300 font-black border-r border-[#30363d]">{totalCbStock}</td>
+                      <td className="py-3.5 px-2 text-center text-amber-300 font-black">{totalCbStock}</td>
+                      <td className="py-3.5 px-2 text-center text-purple-300 font-black border-r border-[#30363d]">{totalCbUnits.toFixed(2)}</td>
                       
                       <td className="py-3.5 px-3 text-right text-amber-400 font-black text-sm">
                         ₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1094,8 +1140,16 @@ export const Stock: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-[#21262d]">
-                    <span className="text-slate-400 text-[10px]">Total Available:</span>
-                    <span className="font-mono font-black text-amber-400 text-sm">{item.current_stock} Bottles</span>
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 text-[10px]">Total Available:</span>
+                      <span className="font-mono font-black text-amber-400 text-sm">{item.current_stock} Bottles</span>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-purple-400 text-[10px] font-bold">Units:</span>
+                      <span className="font-mono font-black text-purple-300 text-xs bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                        {calculateItemUnits(prod?.category || 'Liquor', prod?.volume_ml || 750, packSize, item.current_stock)} U
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

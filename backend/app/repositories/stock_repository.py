@@ -202,6 +202,22 @@ class StockRepository:
                 "formatted": f"{cases}C + {btts}B"
             }
 
+        def calculate_units(category: str, volume_ml: int, pack_size: int, total_bottles: int) -> float:
+            if total_bottles <= 0:
+                return 0.0
+            cat_lower = (category or "").lower()
+            vol = volume_ml or 750
+            pack = pack_size if pack_size and pack_size > 0 else 12
+
+            if "beer" in cat_lower:
+                return round(total_bottles / float(pack), 2)
+            elif "wine" in cat_lower:
+                total_ml = total_bottles * vol
+                return round(total_ml / 2250.0, 2)
+            else:
+                total_ml = total_bottles * vol
+                return round(total_ml / 750.0, 2)
+
         for p, prior_in, prior_out, today_in, today_out in rows:
             pack_sz = p.pack_size or (48 if p.volume_ml <= 180 else 24 if p.volume_ml == 375 else 12)
 
@@ -219,6 +235,11 @@ class StockRepository:
             purchase_cb = format_case_bottle(today_purchase, pack_sz)
             sale_cb = format_case_bottle(today_sale, pack_sz)
             closing_cb = format_case_bottle(closing_stock, pack_sz)
+
+            opening_u = calculate_units(p.category, p.volume_ml, pack_sz, opening_stock)
+            purchase_u = calculate_units(p.category, p.volume_ml, pack_sz, today_purchase)
+            sale_u = calculate_units(p.category, p.volume_ml, pack_sz, today_sale)
+            closing_u = calculate_units(p.category, p.volume_ml, pack_sz, closing_stock)
 
             selling_rate = p.selling_price or 0
             mrp_rate = p.mrp or selling_rate
@@ -244,18 +265,22 @@ class StockRepository:
                 "opening_cases": opening_cb["cases"],
                 "opening_bottles": opening_cb["bottles"],
                 "opening_str": opening_cb["formatted"],
+                "opening_units": opening_u,
 
                 "purchase_cases": purchase_cb["cases"],
                 "purchase_bottles": purchase_cb["bottles"],
                 "purchase_str": purchase_cb["formatted"],
+                "purchase_units": purchase_u,
 
                 "sale_cases": sale_cb["cases"],
                 "sale_bottles": sale_cb["bottles"],
                 "sale_str": sale_cb["formatted"],
+                "sale_units": sale_u,
 
                 "closing_cases": closing_cb["cases"],
                 "closing_bottles": closing_cb["bottles"],
                 "closing_str": closing_cb["formatted"],
+                "closing_units": closing_u,
 
                 "closing_sales_value": closing_stock * selling_rate,
                 "closing_cost_value": closing_stock * basic_rate,
