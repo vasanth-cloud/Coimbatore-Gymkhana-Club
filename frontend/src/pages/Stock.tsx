@@ -562,17 +562,18 @@ export const Stock: React.FC = () => {
     const pack = item.packSize > 0 ? item.packSize : 24;
     const totalBottles = item.cases * pack + item.looseBottles;
     const lineAmount = item.cases * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * item.looseBottles : 0);
-    const addedValueRate = (item.ratePerCase * (item.addedValuePercent || 220)) / 100;
-    const tcsAmt = lineAmount * 0.02;
-    const totalLineCost = lineAmount;
+    const addedValueRatePerCase = (item.ratePerCase * (item.addedValuePercent || 220)) / 100;
+    const addedValueAmt = (lineAmount * (item.addedValuePercent || 220)) / 100;
+    const tcsAmt = (lineAmount + addedValueAmt) * 0.02;
+    const totalLineCost = lineAmount + addedValueAmt + tcsAmt;
     const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
 
     return {
       totalBottles,
       baseAmount: lineAmount,
       lineAmount,
-      addedValueRate,
-      addedValueAmt: addedValueRate,
+      addedValueRate: addedValueRatePerCase,
+      addedValueAmt,
       tcsAmt,
       totalLineCost,
       perBottleBasic,
@@ -1616,25 +1617,31 @@ export const Stock: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">I.M.F.S Subtotal Amount:</span>
                   <span className="font-bold text-slate-100">
-                    ₹{formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">BEER Subtotal Amount:</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{formItems.filter(i => i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
                   <span className="font-bold text-purple-400">
-                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">IT - TCS @ 2% Tax Amount:</span>
                   <span className="font-bold text-purple-400">
-                    ₹{(formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 0.02).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400 font-bold">Grand Net Invoice Amount:</span>
-                  <span className="font-black text-emerald-400">
-                    ₹{(formItems.reduce((sum, i) => sum + ((i.cases || 0) * (i.ratePerCase || 0)) + calculateRowCosts(i).addedValueAmt, 0) * 1.02).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <div className="flex justify-between sm:col-span-2 border-t border-[#21262d] pt-1.5 mt-1">
+                  <span className="text-slate-200 font-extrabold uppercase">Grand Net Invoice Amount:</span>
+                  <span className="font-black text-emerald-400 text-sm">
+                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
