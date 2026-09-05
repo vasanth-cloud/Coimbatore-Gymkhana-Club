@@ -110,10 +110,11 @@ export const Stock: React.FC = () => {
   // Parsed Invoice Summary from Excel File
   const [excelSummary, setExcelSummary] = useState<{
     totalCases: number;
-    totalBasicAmt: number;
+    totalAmount: number;
     imfsCases: number;
     imfsSubtotal: number;
     beerCases: number;
+    beerSubtotal: number;
     secondSaleTax: number;
     grandTotal: number;
     tcsTax: number;
@@ -452,6 +453,137 @@ export const Stock: React.FC = () => {
             mrp: matchedProd ? matchedProd.mrp || 0 : 0,
             sellingPrice: matchedProd ? matchedProd.selling_price || 0 : 0,
           });
+        }
+
+        // 3. Scan Summary Section (Rows 35+)
+        let extractedSummary = {
+          totalCases: 0,
+          totalAmount: 0,
+          imfsCases: 0,
+          imfsSubtotal: 0,
+          beerCases: 0,
+          beerSubtotal: 0,
+          secondSaleTax: 0,
+          grandTotal: 0,
+          tcsTax: 0,
+          netAmount: 0,
+        };
+
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r) continue;
+          const rText = r.map((c: any) => String(c || '').trim().toLowerCase()).join(' ');
+
+          if (rText.includes('total cases')) {
+            for (let j = 0; j < r.length; j++) {
+              if (String(r[j] || '').toLowerCase().includes('total cases')) {
+                for (let k = j + 1; k < r.length; k++) {
+                  const num = parseFloat(String(r[k] || ''));
+                  if (!isNaN(num) && num > 0) {
+                    extractedSummary.totalCases = num;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (rText.includes('total amount')) {
+            for (let j = 0; j < r.length; j++) {
+              if (String(r[j] || '').toLowerCase().includes('total amount')) {
+                for (let k = j + 1; k < r.length; k++) {
+                  const num = parseFloat(String(r[k] || ''));
+                  if (!isNaN(num) && num > 0) {
+                    extractedSummary.totalAmount = num;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (rText.includes('imfs total') || (rText.includes('subtotal') && rText.includes('imfs'))) {
+            for (let j = 0; j < r.length; j++) {
+              if (String(r[j] || '').toLowerCase().includes('imfs')) {
+                for (let k = j + 1; k < r.length; k++) {
+                  const num = parseFloat(String(r[k] || ''));
+                  if (!isNaN(num) && num > 0 && extractedSummary.imfsCases === 0) {
+                    extractedSummary.imfsCases = num;
+                    break;
+                  }
+                }
+              }
+              if (String(r[j] || '').toLowerCase().includes('subtotal')) {
+                for (let k = j + 1; k < r.length; k++) {
+                  const num = parseFloat(String(r[k] || ''));
+                  if (!isNaN(num) && num > 0) {
+                    extractedSummary.imfsSubtotal = num;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (rText.includes('beer total')) {
+            for (let j = 0; j < r.length; j++) {
+              if (String(r[j] || '').toLowerCase().includes('beer')) {
+                for (let k = j + 1; k < r.length; k++) {
+                  const num = parseFloat(String(r[k] || ''));
+                  if (!isNaN(num) && num > 0) {
+                    extractedSummary.beerCases = num;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (rText.includes('ii nd sale tax') || rText.includes('2nd sale tax') || rText.includes('second sale tax')) {
+            for (let j = 0; j < r.length; j++) {
+              const num = parseFloat(String(r[j] || ''));
+              if (!isNaN(num) && num > 0) {
+                extractedSummary.secondSaleTax = num;
+              }
+            }
+          }
+
+          if (rText.includes('grand total')) {
+            for (let j = 0; j < r.length; j++) {
+              const num = parseFloat(String(r[j] || ''));
+              if (!isNaN(num) && num > 0) {
+                extractedSummary.grandTotal = num;
+              }
+            }
+          }
+
+          if (rText.includes('tcs')) {
+            for (let j = 0; j < r.length; j++) {
+              const num = parseFloat(String(r[j] || ''));
+              if (!isNaN(num) && num > 0) {
+                extractedSummary.tcsTax = num;
+              }
+            }
+          }
+
+          if (rText.includes('net amount')) {
+            for (let j = 0; j < r.length; j++) {
+              const num = parseFloat(String(r[j] || ''));
+              if (!isNaN(num) && num > 0) {
+                extractedSummary.netAmount = num;
+              }
+            }
+          }
+        }
+
+        if (extractedSummary.totalAmount > 0 && extractedSummary.imfsSubtotal > 0) {
+          extractedSummary.beerSubtotal = extractedSummary.totalAmount - extractedSummary.imfsSubtotal;
+        }
+
+        if (extractedSummary.netAmount > 0) {
+          setExcelSummary(extractedSummary);
+        } else {
+          setExcelSummary(null);
         }
 
         if (newFormItems.length > 0) {
@@ -1618,43 +1750,56 @@ export const Stock: React.FC = () => {
           <div className="bg-[#0d1117] border border-amber-500/40 p-5 rounded-2xl flex flex-col xl:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="w-full xl:w-2/3 space-y-3 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
-                <span className="text-amber-400 font-black uppercase text-[11px] tracking-wider">
-                  📦 TASMAC Invoice Financial Statement Summary
+                <span className="text-amber-400 font-black uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                  <Receipt className="w-4 h-4 text-amber-400" />
+                  <span>TASMAC Official Invoice Financial Statement Summary</span>
                 </span>
                 <span className="text-slate-400 font-bold text-[10px]">
-                  {formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases • {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Total Bottles
+                  {excelSummary ? `${excelSummary.totalCases} Cases` : `${formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases`} • {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Total Bottles
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-slate-300">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">I.M.F.S Subtotal Amount:</span>
+                  <span className="text-slate-400">Total Basic Amount:</span>
                   <span className="font-bold text-slate-100">
-                    ₹{formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.totalAmount : formItems.reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">BEER Subtotal Amount:</span>
+                  <span className="text-slate-400">I.M.F.S Subtotal ({excelSummary ? `${excelSummary.imfsCases} Cases` : 'Spirits'}):</span>
                   <span className="font-bold text-slate-100">
-                    ₹{formItems.filter(i => i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.imfsSubtotal : formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">BEER Subtotal ({excelSummary ? `${excelSummary.beerCases} Cases` : 'Beer'}):</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{(excelSummary ? (excelSummary.beerSubtotal || (excelSummary.totalAmount - excelSummary.imfsSubtotal)) : formItems.filter(i => i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
                   <span className="font-bold text-purple-400">
-                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.secondSaleTax : formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Grand Total (Subtotal + II Tax):</span>
+                  <span className="font-bold text-slate-200">
+                    ₹{(excelSummary ? excelSummary.grandTotal : formItems.reduce((sum, i) => sum + calculateRowCosts(i).lineAmount + calculateRowCosts(i).addedValueAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">IT - TCS @ 2% Tax Amount:</span>
                   <span className="font-bold text-purple-400">
-                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.tcsTax : formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between sm:col-span-2 border-t border-[#21262d] pt-1.5 mt-1">
-                  <span className="text-slate-200 font-extrabold uppercase">Grand Net Invoice Amount:</span>
-                  <span className="font-black text-emerald-400 text-sm">
-                    ₹{formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="flex justify-between sm:col-span-2 border-t border-[#21262d] pt-2 mt-1">
+                  <span className="text-slate-100 font-extrabold uppercase text-xs">Grand Net Invoice Amount:</span>
+                  <span className="font-black text-emerald-400 text-base">
+                    ₹{(excelSummary ? excelSummary.netAmount : formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
