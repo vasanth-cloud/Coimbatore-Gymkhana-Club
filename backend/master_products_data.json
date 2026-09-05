@@ -1,0 +1,2018 @@
+[
+  {
+    "name": "AMSTEL PREMIUM STRONG BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 165.4,
+    "mrp": 180,
+    "selling_price": 210
+  },
+  {
+    "name": "1848 PREMIUM XO BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 500,
+    "selling_price": 560
+  },
+  {
+    "name": "1848 PREMIUM XO BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "Louis vernant Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 266.45,
+    "mrp": 270,
+    "selling_price": 300
+  },
+  {
+    "name": "MGM GOLD VSOP PREMIUM BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 232.27,
+    "mrp": 230,
+    "selling_price": 260
+  },
+  {
+    "name": "MANSION HOUSE RESERVE BRANDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "MORPHEUS BLUE XO +BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 344.82,
+    "mrp": 350,
+    "selling_price": 380
+  },
+  {
+    "name": "Royal accord  Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 219.87,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "ROYAL PALACE PREMIUM BLENDED BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 216.25,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "BACARDI LIMON ORIGINAL CITRUS RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 272.53,
+    "mrp": 270,
+    "selling_price": 300
+  },
+  {
+    "name": "one Man Army Q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "KING LOUIS XIV XO FRENCH BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 979.64,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "KING LOUIS XIV XO FRENCH BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "SIGNATURE RARE WHISKY QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 256.75,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "100 pipers 8 yrs Q",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 578.73,
+    "mrp": 630,
+    "selling_price": 660
+  },
+  {
+    "name": "Globus wine Q",
+    "category": "WINE",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 142.25,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "Vorion rum Q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.47,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BLACK PEARL TRIPLE SUPER STRONG BEER 650 ML",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 137.01,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "MCDOWELL'S VSOP BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 784.24,
+    "mrp": 800,
+    "selling_price": 920
+  },
+  {
+    "name": "MAGIC MOMENTS PREMIUM APPLE VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 257.31,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "BACARDI LIMON ORIGINAL CITRUS RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 537.93,
+    "mrp": 540,
+    "selling_price": 600
+  },
+  {
+    "name": "BLACK PEARL BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 273.87,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "King f beer H",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 75.27,
+    "mrp": 75,
+    "selling_price": 100
+  },
+  {
+    "name": "MCDOWELL\u2019S VSOP BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 198.33,
+    "mrp": 200,
+    "selling_price": 230
+  },
+  {
+    "name": "DIAMOND XXX RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 549.2,
+    "mrp": 560,
+    "selling_price": 680
+  },
+  {
+    "name": "NO.1 MCDOWELL\u2019S FINE BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 331.47,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "HONEY BEE FINE BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 331.47,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "DIAMOND XXX RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.54,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MCDOWELL\u2019S VSOP BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 394.7,
+    "mrp": 400,
+    "selling_price": 460
+  },
+  {
+    "name": "AccordS orange vod Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 166.53,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "Snj no 1 bdy Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.51,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MEN'S CLUB DELUXE BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "COPPER BARREL VSOP BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.88,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MEN'S CLUB DELUXE BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "Signature F",
+    "category": "WHISKY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1020.09,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "1848 PREMIUM XO BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 979.64,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "OLD SECRET RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.57,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "SNJ 10000 DELUXE SUPER STRONG BEER (CAN) 500 ML",
+    "category": "BEER",
+    "volume_ml": 500,
+    "pack_size": 24,
+    "basic_rate": 130.49,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "Sterren 8 Beer",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 147.09,
+    "mrp": 160,
+    "selling_price": 190
+  },
+  {
+    "name": "IMPERIAL S SPECIAL EXPRESS BDY H",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 269.94,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "KING FISHER  SELECT PREMIUM 325 BEER HB",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 75.27,
+    "mrp": 75,
+    "selling_price": 100
+  },
+  {
+    "name": "POWER APPLE VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 168.99,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "SIPPING SPITITS RESSOLUTE PINK VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 310.9,
+    "mrp": 310,
+    "selling_price": 340
+  },
+  {
+    "name": "ANTIQUITY BLUE SUPER PREMIUM WHISKY FULL",
+    "category": "WHISKY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1391.27,
+    "mrp": 1400,
+    "selling_price": 1520
+  },
+  {
+    "name": "MGM APPLE MEDIUM VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 169.16,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "DIAMOND XXX RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 276.39,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "SNJ 10000 DELUXE SUPER STRONG BEER 650 ML",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 147.09,
+    "mrp": 160,
+    "selling_price": 190
+  },
+  {
+    "name": "JUNO ORANGE VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 275.9,
+    "mrp": 280,
+    "selling_price": 310
+  },
+  {
+    "name": "IMPERIALS XXX  RUM Q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MAGIC MOMEMENTS APPLE VODKA FULL",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1019.41,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "SPIEL TRIPLE STRONG BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 165.4,
+    "mrp": 190,
+    "selling_price": 220
+  },
+  {
+    "name": "TEACHERSHIGHLAND 1000ML",
+    "category": "IFL",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 3425.49,
+    "mrp": 3360,
+    "selling_price": 3760
+  },
+  {
+    "name": "JIM BEAM WHITE 1000ML",
+    "category": "IFL",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 3517.24,
+    "mrp": 3450,
+    "selling_price": 3850
+  },
+  {
+    "name": "1848 PREMIUM GRAIN WHISKY QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 253.32,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "POWER ORANGE VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 168.99,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MAGIC MOMENTS PREMIUM CHOCOLATE VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 204.9,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "mgm apple vodka HALF",
+    "category": "VODKA",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 337.03,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "KING LOUIS XO FRENCH PREM BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 500,
+    "selling_price": 560
+  },
+  {
+    "name": "MORPHEUS BLUE H",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 690.53,
+    "mrp": 700,
+    "selling_price": 760
+  },
+  {
+    "name": "CHEVALIER DE PARIS PREM BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 500,
+    "selling_price": 560
+  },
+  {
+    "name": "DES MARQUIS PRE BDY H",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 500,
+    "selling_price": 560
+  },
+  {
+    "name": "MGM APPLE VODKA NEW Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 169.16,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MONITOR RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.72,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BRITISH EMPIRE 100% MALT SUPER STRONG BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 195.52,
+    "mrp": 210,
+    "selling_price": 240
+  },
+  {
+    "name": "AFTER DARK WHISKY F",
+    "category": "WHISKY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1092.8,
+    "mrp": 1120,
+    "selling_price": 1240
+  },
+  {
+    "name": "MONITER DELUXE BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 550.31,
+    "mrp": 560,
+    "selling_price": 680
+  },
+  {
+    "name": "CHEVALLIER DE PARIS PREM BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 979.64,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "CLASSIC GRANDEE RUM Q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 192.52,
+    "mrp": 200,
+    "selling_price": 230
+  },
+  {
+    "name": "KINGFISHER ULTRA MAX BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 195.52,
+    "mrp": 210,
+    "selling_price": 240
+  },
+  {
+    "name": "JUNO PURE DISTILLED VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 253.32,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "TOP STAR BRANDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.47,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "ARIZONA APPLE VODKA H",
+    "category": "VODKA",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 337.03,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "FOSTERS MALTED BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 205.54,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "BLACK FORT STRONG BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 183.51,
+    "mrp": 180,
+    "selling_price": 210
+  },
+  {
+    "name": "OLD CHEF RUMQ QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.47,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BLACK PEARL BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 546.02,
+    "mrp": 560,
+    "selling_price": 680
+  },
+  {
+    "name": "100pipers 12years whisky QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 597.4,
+    "mrp": 650,
+    "selling_price": 680
+  },
+  {
+    "name": "BLACK PEARL XXX RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.41,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BRITISH ULTRA PREMIUM LAGER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 75.27,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MGM ORANGE VODKA 1L",
+    "category": "VODKA",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 893.52,
+    "mrp": 880,
+    "selling_price": 1030
+  },
+  {
+    "name": "MGM MEDIUM VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.68,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "BRITISH EMPIRE GOLD WHISKY QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 253.32,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "BLACK FORT SUPER STONG 330ML BEER MINI",
+    "category": "BEER",
+    "volume_ml": 330,
+    "pack_size": 24,
+    "basic_rate": 152.92,
+    "mrp": 90,
+    "selling_price": 120
+  },
+  {
+    "name": "MGM GOVA VODKA FULL",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 976.07,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "MGM GOVA VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 246.7,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "BRITISH EMPIRE GOLD WHISKY F",
+    "category": "WHISKY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1007.87,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "HUNTER BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 193.7,
+    "mrp": 190,
+    "selling_price": 220
+  },
+  {
+    "name": "ABSOLUT VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 907.35,
+    "mrp": 890,
+    "selling_price": 1090
+  },
+  {
+    "name": "BALLANTINE FINEST WHISKY Q",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 927.74,
+    "mrp": 910,
+    "selling_price": 1110
+  },
+  {
+    "name": "ONE MAN ARMY XXX RUM H",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "FOSTERS SPECIAL MALTED BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 109.44,
+    "mrp": 110,
+    "selling_price": 140
+  },
+  {
+    "name": "MISTY VINTAGE WINE QUARTER",
+    "category": "WINE",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 113.44,
+    "mrp": 130,
+    "selling_price": 160
+  },
+  {
+    "name": "BLOCKBUSTER ULTRA STRONG",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 183.51,
+    "mrp": 180,
+    "selling_price": 210
+  },
+  {
+    "name": "BEEFEATER LONDON DRY GIN FULL",
+    "category": "GIN",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2660.87,
+    "mrp": 2610,
+    "selling_price": 3010
+  },
+  {
+    "name": "KING FISHER SELECT PREMIUM BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 142.07,
+    "mrp": 70,
+    "selling_price": 100
+  },
+  {
+    "name": "TI S MANSION HOUSE ULTRA FRENCH BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 216.25,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "KINGFISHER BLUE SPECIAL STRONG BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 162.22,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "BRITISH EMPIRE 100%MALT SS BR 325",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 104.23,
+    "mrp": 110,
+    "selling_price": 140
+  },
+  {
+    "name": "BRITISH EMPIRE PREM S S BEER (CAN)500",
+    "category": "BEER",
+    "volume_ml": 500,
+    "pack_size": 24,
+    "basic_rate": 130.6,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "KING FISHER SELECT PREM BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 142.05,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "ROYAL CHALLENGE PREM WHISKY HALF",
+    "category": "WHISKY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 513.14,
+    "mrp": 520,
+    "selling_price": 580
+  },
+  {
+    "name": "RED SEA CLASSIC FORTIFIED WINE QUARTER",
+    "category": "WINE",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 100.77,
+    "mrp": 120,
+    "selling_price": 150
+  },
+  {
+    "name": "MORPHEUS XO PREM BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1019.41,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "bacardi black original rum QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 277.13,
+    "mrp": 280,
+    "selling_price": 310
+  },
+  {
+    "name": "LOUIS VERNANT XO PREM BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 521.12,
+    "mrp": 540,
+    "selling_price": 600
+  },
+  {
+    "name": "1848PREMIUM GRAIN WHY F",
+    "category": "WHISKY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1007.87,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "MONITOR 3D RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.72,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "1848 PREMIUM WHISKY H",
+    "category": "WHISKY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 520,
+    "selling_price": 580
+  },
+  {
+    "name": "OLD MONK LEMON RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "TI S MANSION HOUSE BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 861.81,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "TI S MANSION HOUSE BRANDY HALF",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 430.66,
+    "mrp": 530,
+    "selling_price": 560
+  },
+  {
+    "name": "OLD MONK GOLD RES PRE RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 800.08,
+    "mrp": 840,
+    "selling_price": 960
+  },
+  {
+    "name": "BACARDI BLACK ORIGINAL RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1094.03,
+    "mrp": 1120,
+    "selling_price": 1240
+  },
+  {
+    "name": "COURRIER NAPOLEON ULTRA FRENCH BDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 238.59,
+    "mrp": 240,
+    "selling_price": 270
+  },
+  {
+    "name": "LOUIS VERNANT XO BLENDED PREMIUM BDY F",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1042.48,
+    "mrp": 1080,
+    "selling_price": 1200
+  },
+  {
+    "name": "BRITISH EMPIRE BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 271.91,
+    "mrp": 270,
+    "selling_price": 300
+  },
+  {
+    "name": "vasco 1498 premium brandy FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 979.64,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "THE DUTCH MAN EXCLUSIVE PREMIUM BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 860.58,
+    "mrp": 880,
+    "selling_price": 1000
+  },
+  {
+    "name": "MGM GOL VSOP HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 462.45,
+    "mrp": 460,
+    "selling_price": 520
+  },
+  {
+    "name": "KONIGGEN PREMIUM FRENCH BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 327.86,
+    "mrp": 330,
+    "selling_price": 360
+  },
+  {
+    "name": "WASSUP TRENDY VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 264.61,
+    "mrp": 270,
+    "selling_price": 300
+  },
+  {
+    "name": "BLACK MAGIC SUPERIOR BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.51,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "BRO CODE BRUT HALF 330 ML",
+    "category": "BEER",
+    "volume_ml": 330,
+    "pack_size": 24,
+    "basic_rate": 413.12,
+    "mrp": 480,
+    "selling_price": 510
+  },
+  {
+    "name": "JOHNNIE WALKER RED LABEL WHISKY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2620.09,
+    "mrp": 2570,
+    "selling_price": 2970
+  },
+  {
+    "name": "GORDON GIN FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2293.85,
+    "mrp": 2250,
+    "selling_price": 2650
+  },
+  {
+    "name": "TAMERLANE BLANDED SCOTCH WHISKY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2232.68,
+    "mrp": 2190,
+    "selling_price": 2590
+  },
+  {
+    "name": "EEGO BY CAMAS MERLOT WHISKY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1896.25,
+    "mrp": 1860,
+    "selling_price": 2260
+  },
+  {
+    "name": "EEGO BY CAMAS SAUVIGNON WHY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1896.25,
+    "mrp": 1860,
+    "selling_price": 2260
+  },
+  {
+    "name": "EEGO CAMAS CHARDONNAY WHISKY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1896.25,
+    "mrp": 1860,
+    "selling_price": 2260
+  },
+  {
+    "name": "VORION NO 1 INDIAN BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.11,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "VORION NO 1 INDIAN BRANDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.47,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MC LENE BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "ACCORD BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 168.0,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "SEAMENS PRIDE CLASSIC BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "DIAMOND BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 271.03,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "DIAMOND BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 136.45,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MGM GOLD VSOP BDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 924.41,
+    "mrp": 920,
+    "selling_price": 1040
+  },
+  {
+    "name": "MANSION HOUSE RESERVE BDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 484.79,
+    "mrp": 500,
+    "selling_price": 560
+  },
+  {
+    "name": "JET BRANDY QUATER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "GOLDEN CHOICE DELUXE BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "SEAMENS BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "DAY NIGHT BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 166.78,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "HONIEY DAY BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.53,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "OLD SECRET RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 276.03,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "VASCO PREM BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "OLD CHEF RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "GOLDEN CHOICE BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "DIAMOND BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 538.49,
+    "mrp": 560,
+    "selling_price": 680
+  },
+  {
+    "name": "JET BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "VEERAN SPL BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BACARDI APPLE VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 272.53,
+    "mrp": 270,
+    "selling_price": 300
+  },
+  {
+    "name": "LA MARTIN VSOP BRANDY 1000ML",
+    "category": "BRANDY",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 1163.88,
+    "mrp": 1170,
+    "selling_price": 1320
+  },
+  {
+    "name": "SNJ NO 1 BRANDY  HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 331.9,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "MGM NO 1  BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 661.96,
+    "mrp": 680,
+    "selling_price": 800
+  },
+  {
+    "name": "MGM NO1 BRANDY HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 332.21,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "MGM NO1 BRANDY QTR",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.51,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MGM ORANGE VODKA H",
+    "category": "VODKA",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 594.81,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "DIAMOND RUM 1000ML",
+    "category": "RUM",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 730.44,
+    "mrp": 700,
+    "selling_price": 850
+  },
+  {
+    "name": "MGM MEDIUM VODKA F",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 662.86,
+    "mrp": 680,
+    "selling_price": 800
+  },
+  {
+    "name": "MANSION HOUSE RESERVE BRANDY F",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 979.64,
+    "mrp": 1000,
+    "selling_price": 1120
+  },
+  {
+    "name": "SIGNATURE WHY 1000ML",
+    "category": "WHISKY",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 1321.57,
+    "mrp": 1390,
+    "selling_price": 1540
+  },
+  {
+    "name": "KOLT BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 142.05,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "FOSTERS ORIGINAL PREMIUM STRONG BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 157.17,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "CHENNAI KING BEER",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 165.4,
+    "mrp": 180,
+    "selling_price": 210
+  },
+  {
+    "name": "FOSTER CAN BEER 500 ML",
+    "category": "BEER",
+    "volume_ml": 500,
+    "pack_size": 24,
+    "basic_rate": 130.6,
+    "mrp": 150,
+    "selling_price": 180
+  },
+  {
+    "name": "MORPHEUS XO BLENDED PREMIUM BRANDY BLACK HALF",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 512.16,
+    "mrp": 520,
+    "selling_price": 580
+  },
+  {
+    "name": "100 pipers 1LIT",
+    "category": "WHISKY",
+    "volume_ml": 1000,
+    "pack_size": 12,
+    "basic_rate": 2465.39,
+    "mrp": 2770,
+    "selling_price": 2920
+  },
+  {
+    "name": "JACK DANIAL WISHKY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 5260.57,
+    "mrp": 5160,
+    "selling_price": 5560
+  },
+  {
+    "name": "SIGNATURE RARE WISKY HALF",
+    "category": "WHISKY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 511.83,
+    "mrp": 520,
+    "selling_price": 580
+  },
+  {
+    "name": "CHIVAS REGAL 12 YEARS SCOTCH FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 5444.08,
+    "mrp": 5340,
+    "selling_price": 5740
+  },
+  {
+    "name": "THUNDER BOLT",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 157.17,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "GODFATHER THE LEGENDARY SUPER STRONG BEER 650",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 165.4,
+    "mrp": 180,
+    "selling_price": 210
+  },
+  {
+    "name": "OLD MONG GOLD RESERVE SUPER PREMIUM RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 445.02,
+    "mrp": 460,
+    "selling_price": 520
+  },
+  {
+    "name": "OAK VAT MATURED RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 333.1,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "BLACK PEARL TRIPLE SUPER STRONG BEER (CAN) 500 ML",
+    "category": "BEER",
+    "volume_ml": 500,
+    "pack_size": 24,
+    "basic_rate": 120.38,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MGM LIMON VODKA QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 246.7,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "ROYAL CHALLENGE DELUXE WHISKY FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1026.28,
+    "mrp": 1040,
+    "selling_price": 1160
+  },
+  {
+    "name": "OLD MONK GOLD RESERVE SUPER PREMIUM RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 224.96,
+    "mrp": 230,
+    "selling_price": 260
+  },
+  {
+    "name": "BLENDERS PRIDE SCOTTH WHISKY Q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 336.28,
+    "mrp": 360,
+    "selling_price": 390
+  },
+  {
+    "name": "GOLD MAKER 375ML",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 334.65,
+    "mrp": 340,
+    "selling_price": 400
+  },
+  {
+    "name": "MGM Indian chalance whisky q",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 258.1,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "British empire ultra premium 325ml beer",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 75.27,
+    "mrp": 80,
+    "selling_price": 110
+  },
+  {
+    "name": "ketel one vodka f",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2895.35,
+    "mrp": 2840,
+    "selling_price": 3240
+  },
+  {
+    "name": "jagermeistere WhiskY FULL",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 4383.81,
+    "mrp": 4300,
+    "selling_price": 4700
+  },
+  {
+    "name": "jacobs creek wine f",
+    "category": "IFL",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 2222.49,
+    "mrp": 2180,
+    "selling_price": 2580
+  },
+  {
+    "name": "MONITOR DELUXE BRDY H",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 277.4,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "CLASSIC GRANDEE RUM F",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 761.5,
+    "mrp": 800,
+    "selling_price": 920
+  },
+  {
+    "name": "VORION NO.1 RUM HALF",
+    "category": "RUM",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.11,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "OLD CHEF BRANDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.47,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "OLD CHEF BRANDY H",
+    "category": "BRANDY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 274.48,
+    "mrp": 280,
+    "selling_price": 340
+  },
+  {
+    "name": "peter scote Whisky Q",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 344.84,
+    "mrp": 350,
+    "selling_price": 380
+  },
+  {
+    "name": "Royal Rathambare Whisky H",
+    "category": "WHISKY",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 965.86,
+    "mrp": 1040,
+    "selling_price": 1100
+  },
+  {
+    "name": "Royal Rathambare Whisky Q",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 478.01,
+    "mrp": 520,
+    "selling_price": 550
+  },
+  {
+    "name": "MORPHEUS BLUE XO +BRANDY FULL",
+    "category": "BRANDY",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1385.48,
+    "mrp": 1400,
+    "selling_price": 1520
+  },
+  {
+    "name": "ROYAL CHALLENGE DELUXE WHISKY QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 258.12,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "ANTIQUITY BLUE SUPER PREMIUM WHISKY QUARTER",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 349.99,
+    "mrp": 350,
+    "selling_price": 380
+  },
+  {
+    "name": "AFTER DARK WHY Q",
+    "category": "WHISKY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 275.9,
+    "mrp": 280,
+    "selling_price": 310
+  },
+  {
+    "name": "BLACK PEARL BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.41,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "IMPERIAL S SPECIAL EXPRESS BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MCLENE BRANDY Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.28,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "MONITER DELUX BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 138.75,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "HONEY BEE FINE BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.51,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "NO.1 MCDOWELL\u2019S FINE BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.51,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "THE DUTCH MAN Q",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 213.67,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "LA MARTINE VSOP PREMIUM BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 219.87,
+    "mrp": 220,
+    "selling_price": 250
+  },
+  {
+    "name": "CHEVALIER DE PARIS PREM BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "DES MARQUIS PREMIUM FRENCH BRANDY QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 247.61,
+    "mrp": 250,
+    "selling_price": 280
+  },
+  {
+    "name": "MORPHEUS XO BLENDED PREMIUM BRANDY BLACK QUARTER",
+    "category": "BRANDY",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 257.31,
+    "mrp": 260,
+    "selling_price": 290
+  },
+  {
+    "name": "JUNO SUPERIOR PINK VODKA HALF",
+    "category": "VODKA",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 547.02,
+    "mrp": 560,
+    "selling_price": 620
+  },
+  {
+    "name": "Juno orange H",
+    "category": "VODKA",
+    "volume_ml": 375,
+    "pack_size": 24,
+    "basic_rate": 547.02,
+    "mrp": 560,
+    "selling_price": 620
+  },
+  {
+    "name": "MGM ORANGE VODKA F",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 672.86,
+    "mrp": 680,
+    "selling_price": 800
+  },
+  {
+    "name": "JUNO SUPERIOR PINK VODKA FULL",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1092.8,
+    "mrp": 1120,
+    "selling_price": 1240
+  },
+  {
+    "name": "JUNO ORANGE VODKA F",
+    "category": "VODKA",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1092.8,
+    "mrp": 1120,
+    "selling_price": 1240
+  },
+  {
+    "name": "ARIZONA APPLE VODKA Q",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 169.17,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "MGM ORANGE MEDIUM VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 169.16,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "JUNO SUPERIOR PINK VODKA QUARTER",
+    "category": "VODKA",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 275.9,
+    "mrp": 280,
+    "selling_price": 310
+  },
+  {
+    "name": "GOLD MAKER WHITE RUM QUARTER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 168.27,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "OAK VAT MATURED RUM QUATER",
+    "category": "RUM",
+    "volume_ml": 180,
+    "pack_size": 48,
+    "basic_rate": 167.8,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "OAKVATMATURED RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 662.62,
+    "mrp": 680,
+    "selling_price": 800
+  },
+  {
+    "name": "OLD MONK GOLD RESERVE SUPER PREMIUM RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 889.06,
+    "mrp": 920,
+    "selling_price": 1040
+  },
+  {
+    "name": "BACARDI LIMON ORIGINAL CITRUS RUM FULL",
+    "category": "RUM",
+    "volume_ml": 750,
+    "pack_size": 12,
+    "basic_rate": 1064.57,
+    "mrp": 1080,
+    "selling_price": 1200
+  },
+  {
+    "name": "BRITISH EMPIRE PREMIUM EXCLUS BEER (CAN) 500 ML",
+    "category": "BEER",
+    "volume_ml": 500,
+    "pack_size": 24,
+    "basic_rate": 130.6,
+    "mrp": 140,
+    "selling_price": 170
+  },
+  {
+    "name": "BRITISH EMPIRE PREMIUM SUPER STRONG BEER 650 ML",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 157.17,
+    "mrp": 170,
+    "selling_price": 200
+  },
+  {
+    "name": "KINGFISHER MAGNUM STRONG BEER 650 ML",
+    "category": "BEER",
+    "volume_ml": 650,
+    "pack_size": 12,
+    "basic_rate": 157.17,
+    "mrp": 170,
+    "selling_price": 200
+  }
+]

@@ -79,6 +79,15 @@ app.include_router(
 )
 
 
+@app.on_event("startup")
+def on_startup():
+    try:
+        from sync_master_products import sync_products
+        sync_products()
+    except Exception as e:
+        print(f"Startup product sync error: {e}")
+
+
 @app.get("/")
 def read_root():
     return {
