@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -152,18 +153,43 @@ def import_tasmac_stock(
 
             grand_total_amount += total_line_cost
 
-            # Find or match Product in DB
+            # Multi-tier bulletproof product matcher
             prod = None
             if item.product_id and item.product_id > 0:
-                prod = db.query(Product).filter(Product.id == item.product_id).first()
+                prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+
+            clean_pname = p_name.replace(" 48pack", "").replace(" 24pack", "").replace(" 12pack", "").strip()
+
+            if not prod and clean_pname:
+                # 1. Exact name match (case-insensitive)
+                prod = db.query(Product).filter(func.lower(Product.name) == clean_pname.lower(), Product.is_deleted == False).first()
+
+            if not prod and clean_pname:
+                # 2. Exact name match with ML / Pack variations
+                prod = db.query(Product).filter(
+                    (Product.name.ilike(clean_pname)) |
+                    (Product.name.ilike(f"{clean_pname}%")) |
+                    (Product.name.ilike(f"%{clean_pname}%")),
+                    Product.is_deleted == False
+                ).first()
+
+            if not prod and clean_pname:
+                # 3. Token-based match across active catalog
+                p_tokens = set(clean_pname.lower().replace("quarter", "180ml").replace("half", "375ml").replace("full", "750ml").split())
+                all_prods = db.query(Product).filter(Product.is_deleted == False, Product.is_active == True).all()
+                best_match = None
+                best_score = 0
+                for existing in all_prods:
+                    e_tokens = set(existing.name.lower().replace("quarter", "180ml").replace("half", "375ml").replace("full", "750ml").split())
+                    common = p_tokens.intersection(e_tokens)
+                    if len(common) > best_score and len(common) >= 1:
+                        best_score = len(common)
+                        best_match = existing
+                if best_match:
+                    prod = best_match
 
             if not prod:
-                # Match by exact or partial name
-                prod = db.query(Product).filter(Product.name.ilike(f"%{p_name}%")).first()
-
-            if not prod:
-                # Clean name matching
-                clean_name = p_name.strip()
+                # 4. Create product with clean_pname (WITHOUT adding 48pack suffix)
                 from app.models.brand import Brand
                 brand = db.query(Brand).first()
                 if not brand:
@@ -172,18 +198,18 @@ def import_tasmac_stock(
                     db.flush()
                 b_id = brand.id
                 
-                # Create product if missing
                 prod = Product(
                     brand_id=b_id,
-                    name=clean_name if clean_name.lower().endswith('ml') else f"{clean_name} {pack}pack",
+                    name=clean_pname,
                     category="Liquor",
                     volume_ml=180 if pack == 48 else (375 if pack == 24 else 750),
-                    unit="ml",
+                    unit="bottle",
                     selling_price=item.selling_price if item.selling_price and item.selling_price > 0 else (item.mrp if item.mrp and item.mrp > 0 else (calc_basic_cost * 1.2 if calc_basic_cost > 0 else 100.0)),
                     mrp=item.mrp or calc_basic_cost or 100.0,
                     basic_rate=calc_basic_cost,
                     pack_size=pack,
-                    is_active=True
+                    is_active=True,
+                    is_deleted=False
                 )
                 db.add(prod)
                 db.flush()
