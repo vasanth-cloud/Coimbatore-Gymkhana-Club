@@ -309,10 +309,10 @@ export const Stock: React.FC = () => {
 
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (['jpg', 'jpeg', 'png', 'pdf', 'webp', 'bmp'].includes(ext || '')) {
-      alert(`Image and PDF files (${file.name}) cannot be parsed directly as spreadsheet data. Please upload a valid Excel file (.xlsx, .xls) or CSV file, or select products manually from the catalog dropdown.`);
+      alert(`Image and PDF files (${file.name}) cannot be parsed directly as spreadsheet data. Please upload a valid Excel file (.xlsx, .xls) or CSV file.`);
       setImportMsg({
         type: 'error',
-        text: `Image/PDF file detected (${file.name}). Please upload an Excel (.xlsx/.xls) or CSV file, or use the Product Catalog dropdown below.`,
+        text: `Image/PDF file detected (${file.name}). Please upload an Excel (.xlsx/.xls) or CSV file.`,
       });
       return;
     }
@@ -326,60 +326,116 @@ export const Stock: React.FC = () => {
         const wb = XLSX.read(bstr, { type: 'binary' });
         
         // Pick best sheet
-        const sheetName = wb.SheetNames.find((s) => s.includes('Sheet3') || s.includes('Sheet1')) || wb.SheetNames[0];
+        const sheetName = wb.SheetNames.find((s) => s.includes('Invoice') || s.includes('Sheet1') || s.includes('Sheet3')) || wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
 
-        const newFormItems: TasmacFormItem[] = [];
+        if (!rows || rows.length === 0) {
+          alert('Uploaded sheet is empty.');
+          return;
+        }
 
-        for (let i = 0; i < rows.length; i++) {
+        // 1. Scan Metadata Header
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
           const r = rows[i];
-          if (!r || r.length < 2) continue;
-
-          // Find item name
-          let name = '';
-          let packSize = 24;
-          let cases = 0;
-          let looseBottles = 0;
-          let rateCase = 0;
-          let addedValue = 220;
-
-          // Search row cells for product text and numbers
+          if (!r) continue;
           for (let j = 0; j < r.length; j++) {
-            const val = r[j];
-            if (typeof val === 'string' && val.length > 3 && !['Item', 'SubProduct', 'Product', 'S.No.', 'INVOICE', 'COIMBATORE'].includes(val.trim())) {
-              if (!name) name = val.trim();
+            const cellVal = String(r[j] || '').trim();
+            if (cellVal.toLowerCase().includes('invoice number') || cellVal.toLowerCase().includes('invoice no')) {
+              const val = String(r[j + 1] || r[j + 2] || '').trim();
+              if (val) setInvoiceNumber(val);
+            }
+            if (cellVal.toLowerCase() === 'depot') {
+              const val = String(r[j + 1] || '').trim();
+              if (val) setDepotName(`TASMAC ${val.toUpperCase()}`);
+            }
+            if (cellVal.toLowerCase() === 'date') {
+              const val = r[j + 1];
+              if (val) {
+                if (typeof val === 'number') {
+                  const d = XLSX.SSF.parse_date_code(val);
+                  if (d) setInvoiceDate(`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`);
+                } else {
+                  const strD = String(val).split('T')[0];
+                  if (strD && strD.length >= 8) setInvoiceDate(strD);
+                }
+              }
             }
           }
+        }
 
-          if (!name || name.startsWith('FROM:') || name.startsWith('Basic Purchase')) continue;
+        // Helper for Token Normalization
+        const normalizeTokens = (txt: string) => {
+          let t = String(txt || '').toLowerCase();
+          ['(qmb)', '(can)', 'deluxe', 'special', 'original', 'premium', 'strong', 'brandy', 'bdy', 'brdy'].forEach((sub) => {
+            t = t.replace(sub, '');
+          });
+          return new Set(t.split(/\s+/).filter((x) => x.length > 1));
+        };
 
-          // Extract numeric values from row
-          const nums = r.filter((x: any) => typeof x === 'number' && !isNaN(x));
-          if (nums.length >= 1) {
-            // Check if pack size
-            if (name.toLowerCase().includes('180')) packSize = 48;
-            else if (name.toLowerCase().includes('375')) packSize = 24;
-            else packSize = 12;
+        const newFormItems: TasmacFormItem[] = [];
 
-            cases = nums[0] || 1;
-            rateCase = nums[1] || nums[0] || 3500;
+        // 2. Scan Table Rows
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || r.length < 4) continue;
+
+          // Check if row has S.No
+          const snoRaw = r[0];
+          const snoNum = typeof snoRaw === 'number' ? snoRaw : parseInt(String(snoRaw || ''), 10);
+          if (isNaN(snoNum) || snoNum <= 0) continue;
+
+          const rawItemName = String(r[1] || '').trim();
+          if (!rawItemName || ['item', 'product', 'subproduct', 'total', 's.no'].some((k) => rawItemName.toLowerCase().includes(k))) continue;
+
+          const volRaw = parseFloat(String(r[2] || '750'));
+          const volNum = !isNaN(volRaw) && volRaw > 0 ? volRaw : 750;
+
+          const casesRaw = parseFloat(String(r[3] || '0'));
+          const casesNum = !isNaN(casesRaw) ? casesRaw : 0;
+
+          const looseRaw = parseFloat(String(r[4] || '0'));
+          const looseNum = !isNaN(looseRaw) ? looseRaw : 0;
+
+          const rateCaseRaw = parseFloat(String(r[5] || '0'));
+          const rateCaseNum = !isNaN(rateCaseRaw) ? rateCaseRaw : 0;
+
+          const addedValRaw = String(r[6] || '220').replace('%', '').trim();
+          const addedValNum = parseFloat(addedValRaw) || 220;
+
+          // Default pack size by volume
+          let defaultPack = 12;
+          if (volNum <= 180) defaultPack = 48;
+          else if (volNum === 375) defaultPack = 24;
+          else defaultPack = 12;
+
+          // Fuzzy Match with Products DB
+          const rawTokens = normalizeTokens(rawItemName);
+          let matchedProd: Product | null = null;
+          let bestScore = 0;
+
+          for (const p of products) {
+            if (p.volume_ml !== volNum && Math.abs(p.volume_ml - volNum) > 50) continue;
+            const pTokens = normalizeTokens(p.name);
+            let score = 0;
+            rawTokens.forEach((tok) => {
+              if (pTokens.has(tok)) score += 1;
+            });
+            if (score > bestScore) {
+              bestScore = score;
+              matchedProd = p;
+            }
           }
-
-          // Match product from DB list if available
-          const matchedProd = products.find(
-            (p) => p.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(p.name.toLowerCase())
-          );
 
           newFormItems.push({
             id: Math.random().toString(),
             productId: matchedProd ? matchedProd.id : 0,
-            productName: name,
-            packSize: matchedProd ? matchedProd.volume_ml === 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12 : packSize,
-            cases: cases > 0 ? cases : 1,
-            looseBottles: 0,
-            ratePerCase: rateCase > 0 ? rateCase : 3500,
-            addedValuePercent: addedValue,
+            productName: matchedProd ? matchedProd.name : rawItemName,
+            packSize: matchedProd ? matchedProd.volume_ml <= 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12 : defaultPack,
+            cases: casesNum,
+            looseBottles: looseNum,
+            ratePerCase: rateCaseNum,
+            addedValuePercent: addedValNum,
             mrp: matchedProd ? matchedProd.mrp || 0 : 0,
             sellingPrice: matchedProd ? matchedProd.selling_price || 0 : 0,
           });
@@ -387,11 +443,13 @@ export const Stock: React.FC = () => {
 
         if (newFormItems.length > 0) {
           setFormItems(newFormItems);
-          setImportMsg({ type: 'success', text: `Loaded ${newFormItems.length} items from ${file.name}!` });
+          setImportMsg({ type: 'success', text: `Loaded ${newFormItems.length} line items from ${file.name} successfully!` });
+        } else {
+          alert('No valid invoice line items found in the uploaded file.');
         }
       } catch (err) {
         console.error('File parse error:', err);
-        alert('Could not parse file. Try uploading standard Excel/CSV or pasting text.');
+        alert('Could not parse Excel file. Please ensure it is a valid TASMAC Invoice spreadsheet.');
       }
     };
 
@@ -410,22 +468,38 @@ export const Stock: React.FC = () => {
       const parts = line.split(/[\t,;|]/).map((p) => p.trim()).filter(Boolean);
       
       if (parts.length >= 1) {
-        const name = parts[0];
-        const cases = parseInt(parts[1] || '1', 10) || 1;
-        const rateCase = parseFloat(parts[2] || '3500') || 3500;
-        const pack = name.toLowerCase().includes('180') ? 48 : name.toLowerCase().includes('375') ? 24 : 12;
+        // If line starts with S.No (integer), shift
+        let name = parts[0];
+        let vol = 750;
+        let cases = 1;
+        let loose = 0;
+        let rateCase = 3500;
+        let addedVal = 220;
 
-        const matched = products.find((p) => p.name.toLowerCase().includes(name.toLowerCase()));
+        if (!isNaN(parseInt(parts[0], 10)) && parts.length > 1) {
+          name = parts[1];
+          vol = parseFloat(parts[2]) || 750;
+          cases = parseFloat(parts[3]) || 1;
+          loose = parseFloat(parts[4]) || 0;
+          rateCase = parseFloat(parts[5]) || 3500;
+          addedVal = parseFloat(String(parts[6] || '220').replace('%', '')) || 220;
+        } else {
+          cases = parseInt(parts[1] || '1', 10) || 1;
+          rateCase = parseFloat(parts[2] || '3500') || 3500;
+        }
+
+        const pack = vol <= 180 ? 48 : vol === 375 ? 24 : 12;
+        const matched = products.find((p) => p.volume_ml === vol && p.name.toLowerCase().includes(name.toLowerCase()));
 
         newItems.push({
           id: Math.random().toString(),
           productId: matched ? matched.id : 0,
-          productName: name,
+          productName: matched ? matched.name : name,
           packSize: matched ? matched.volume_ml === 180 ? 48 : matched.volume_ml === 375 ? 24 : 12 : pack,
           cases: cases,
-          looseBottles: 0,
+          looseBottles: loose,
           ratePerCase: rateCase,
-          addedValuePercent: 220,
+          addedValuePercent: addedVal,
           mrp: matched ? matched.mrp || 0 : 0,
           sellingPrice: matched ? matched.selling_price || 0 : 0,
         });
