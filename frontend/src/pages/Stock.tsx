@@ -1559,14 +1559,33 @@ export const Stock: React.FC = () => {
                         ₹{Number(rc.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 px-3 text-slate-400">{rc.received_by || 'Staff'}</td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3 px-3 text-center flex items-center justify-center gap-2">
                         <button
                           type="button"
                           onClick={() => setViewingReceipt(rc)}
-                          className="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-sky-400 font-bold rounded-lg text-xs flex items-center gap-1 mx-auto transition-all"
+                          className="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-sky-400 font-bold rounded-lg text-xs flex items-center gap-1 transition-all"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View Log</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`Are you sure you want to delete stock arrival receipt #${rc.id}?`)) return;
+                            try {
+                              await stockApi.deleteReceipt(rc.id);
+                              setReceipts((prev) => prev.filter((r) => r.id !== rc.id));
+                              await loadStockData();
+                            } catch (err: any) {
+                              alert(err.response?.data?.detail || 'Failed to delete stock arrival receipt');
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold rounded-lg text-xs flex items-center gap-1 transition-all"
+                          title="Delete Stock Arrival Receipt"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
                         </button>
                       </td>
                     </tr>

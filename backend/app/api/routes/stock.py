@@ -154,7 +154,11 @@ def import_tasmac_stock(
             # Try to get default brand_id
             from app.models.brand import Brand
             brand = db.query(Brand).first()
-            b_id = brand.id if brand else 1
+            if not brand:
+                brand = Brand(name="TASMAC", description="Default Brand for Bulk Stock Imports")
+                db.add(brand)
+                db.flush()
+            b_id = brand.id
             
             # Create product if missing
             prod = Product(
@@ -324,3 +328,24 @@ def get_all_current_stock(
 ):
     service = StockService(db)
     return service.get_all_current_stock()
+
+
+@router.delete(
+    "/receipts/{receipt_id}",
+    status_code=status.HTTP_200_OK,
+)
+def delete_stock_receipt(
+    receipt_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    receipt = db.query(StockReceipt).filter(StockReceipt.id == receipt_id).first()
+    if not receipt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stock receipt log not found",
+        )
+    db.query(StockReceiptItem).filter(StockReceiptItem.receipt_id == receipt_id).delete()
+    db.delete(receipt)
+    db.commit()
+    return {"message": f"Stock arrival receipt #{receipt_id} deleted successfully"}

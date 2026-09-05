@@ -118,6 +118,9 @@ export const entryApi = {
     const response = await api.get<DetailedEntry[]>(`/entries/recent?limit=${limit}`);
     return response.data;
   },
+  deleteEntry: async (entryId: number): Promise<void> => {
+    await api.delete(`/entries/${entryId}`);
+  },
 };
 
 export const brandApi = {
@@ -213,6 +216,9 @@ export const stockApi = {
   getReceipts: async (): Promise<any[]> => {
     const response = await api.get<any[]>('/stock/receipts');
     return response.data;
+  },
+  deleteReceipt: async (receiptId: number): Promise<void> => {
+    await api.delete(`/stock/receipts/${receiptId}`);
   },
 };
 

@@ -62,3 +62,24 @@ def get_recent_entries(
 ):
     repository = EntryRepository(db)
     return repository.get_recent_entries_detailed(limit=limit)
+
+
+@router.delete(
+    "/{entry_id}",
+    status_code=status.HTTP_200_OK,
+)
+def delete_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    from app.models.entry import Entry
+    entry = db.query(Entry).filter(Entry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entry log not found",
+        )
+    db.delete(entry)
+    db.commit()
+    return {"message": f"Entry log #{entry_id} deleted successfully"}

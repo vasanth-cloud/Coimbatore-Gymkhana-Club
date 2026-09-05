@@ -20,6 +20,7 @@ import {
   Usb,
   ShieldCheck,
   Upload,
+  Trash2,
 } from 'lucide-react';
 
 export const EntryScanner: React.FC = () => {
@@ -223,6 +224,16 @@ export const EntryScanner: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleDeleteEntry = async (id: number) => {
+    if (!window.confirm(`Are you sure you want to delete arrival log #${id}?`)) return;
+    try {
+      await entryApi.deleteEntry(id);
+      setRecentEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to delete arrival entry log');
+    }
+  };
+
   const filteredEntries = recentEntries.filter((e) => {
     if (!searchLog) return true;
     const term = searchLog.toLowerCase();
@@ -422,7 +433,7 @@ export const EntryScanner: React.FC = () => {
         </div>
       )}
 
-      {/* REAL-TIME ENTRY LOG TABLE WITH CSV DOWNLOAD */}
+      {/* REAL-TIME ENTRY LOG TABLE WITH CSV DOWNLOAD & DELETE OPTION */}
       <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-5 shadow-lg space-y-4 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21262d] pb-3">
           <div>
@@ -479,6 +490,7 @@ export const EntryScanner: React.FC = () => {
                   <th className="py-2.5 px-3">Phone</th>
                   <th className="py-2.5 px-3">QR Token ID</th>
                   <th className="py-2.5 px-3 text-center">Headcount</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#21262d]/70 text-slate-200">
@@ -499,6 +511,16 @@ export const EntryScanner: React.FC = () => {
                       <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md font-bold">
                         {item.total_people} Headcount ({item.additional_guests > 0 ? `1+${item.additional_guests}` : '1'})
                       </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEntry(item.id)}
+                        className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors"
+                        title="Delete Arrival Entry Log"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
