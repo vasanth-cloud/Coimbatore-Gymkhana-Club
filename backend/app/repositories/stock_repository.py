@@ -249,7 +249,7 @@ class StockRepository:
 
             selling_rate = float(p.selling_price or 0.0)
             mrp_rate = float(p.mrp or selling_rate)
-            basic_rate = float(p.basic_rate or round(selling_rate * 0.7, 2))
+            basic_rate = float(p.basic_rate) if (p.basic_rate is not None and float(p.basic_rate) > 0) else (mrp_rate if mrp_rate > 0 else selling_rate)
 
             result.append({
                 "product_id": p.id,
