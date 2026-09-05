@@ -119,6 +119,8 @@ class StockRepository:
             except Exception:
                 target_date = date.today()
 
+        target_date_str = target_date.strftime("%Y-%m-%d") if isinstance(target_date, date) else str(target_date)
+
         # Single aggregated SQL query for all 653 products across prior and today dates
         tx_subquery = (
             self.db.query(
@@ -127,7 +129,7 @@ class StockRepository:
                     func.sum(
                         case(
                             (
-                                (cast(StockTransaction.transaction_date, Date) < target_date)
+                                (func.date(StockTransaction.transaction_date) < target_date_str)
                                 & (StockTransaction.transaction_type == "IN"),
                                 StockTransaction.quantity,
                             ),
@@ -140,7 +142,7 @@ class StockRepository:
                     func.sum(
                         case(
                             (
-                                (cast(StockTransaction.transaction_date, Date) < target_date)
+                                (func.date(StockTransaction.transaction_date) < target_date_str)
                                 & (StockTransaction.transaction_type == "OUT"),
                                 StockTransaction.quantity,
                             ),
@@ -153,7 +155,7 @@ class StockRepository:
                     func.sum(
                         case(
                             (
-                                (cast(StockTransaction.transaction_date, Date) == target_date)
+                                (func.date(StockTransaction.transaction_date) == target_date_str)
                                 & (StockTransaction.transaction_type == "IN"),
                                 StockTransaction.quantity,
                             ),
@@ -166,7 +168,7 @@ class StockRepository:
                     func.sum(
                         case(
                             (
-                                (cast(StockTransaction.transaction_date, Date) == target_date)
+                                (func.date(StockTransaction.transaction_date) == target_date_str)
                                 & (StockTransaction.transaction_type == "OUT"),
                                 StockTransaction.quantity,
                             ),
