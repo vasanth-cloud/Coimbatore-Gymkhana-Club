@@ -107,6 +107,19 @@ export const Stock: React.FC = () => {
   const [importingSubmitting, setImportingSubmitting] = useState(false);
   const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Parsed Invoice Summary from Excel File
+  const [excelSummary, setExcelSummary] = useState<{
+    totalCases: number;
+    totalBasicAmt: number;
+    imfsCases: number;
+    imfsSubtotal: number;
+    beerCases: number;
+    secondSaleTax: number;
+    grandTotal: number;
+    tcsTax: number;
+    netAmount: number;
+  } | null>(null);
+
   // Receipt Detail View Modal
   const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
 
