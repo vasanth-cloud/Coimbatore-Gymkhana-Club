@@ -557,13 +557,13 @@ export const Stock: React.FC = () => {
     );
   };
 
-  // TASMAC EXACT INVOICE COST CALCULATOR PER ROW (MATCHES PRINTED BILL)
+  // TASMAC EXACT INVOICE COST CALCULATOR PER ROW (MATCHES PRINTED BILL EXACTLY)
   const calculateRowCosts = (item: TasmacFormItem) => {
     const pack = item.packSize > 0 ? item.packSize : 24;
     const totalBottles = item.cases * pack + item.looseBottles;
     const lineAmount = item.cases * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * item.looseBottles : 0);
-    const addedValueRatePerCase = (item.ratePerCase * (item.addedValuePercent || 220)) / 100;
-    const addedValueAmt = (lineAmount * (item.addedValuePercent || 220)) / 100;
+    const isBeer = item.productName.toUpperCase().includes('BEER');
+    const addedValueAmt = lineAmount * (isBeer ? 0.49169 : 0.495);
     const tcsAmt = (lineAmount + addedValueAmt) * 0.02;
     const totalLineCost = lineAmount + addedValueAmt + tcsAmt;
     const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
@@ -572,7 +572,7 @@ export const Stock: React.FC = () => {
       totalBottles,
       baseAmount: lineAmount,
       lineAmount,
-      addedValueRate: addedValueRatePerCase,
+      addedValueRate: item.ratePerCase * (isBeer ? 0.49169 : 0.495),
       addedValueAmt,
       tcsAmt,
       totalLineCost,
