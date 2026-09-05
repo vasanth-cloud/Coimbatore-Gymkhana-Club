@@ -7,6 +7,7 @@ from app.core.dependencies import require_admin, require_staff_or_admin
 from app.models.user import User
 from app.models.product import Product
 from app.models.stock_receipt import StockReceipt, StockReceiptItem
+from app.models.stock_transaction import StockTransaction
 from app.repositories.stock_repository import StockRepository
 
 from app.schemas.stock import (
@@ -429,7 +430,6 @@ def delete_stock_receipt(
                     needed = 0
                 db.add(tx)
 
-    db.query(StockReceiptItem).filter(StockReceiptItem.receipt_id == receipt_id).delete()
     db.delete(receipt)
     db.commit()
     return {"message": f"Stock arrival receipt #{receipt_id} and associated stock bottles deleted successfully"}
