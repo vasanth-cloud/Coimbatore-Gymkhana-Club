@@ -88,6 +88,23 @@ def on_startup():
         print(f"Startup product sync error: {e}")
 
     try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        cols = [
+            'imfs_subtotal NUMERIC(12,2) DEFAULT 0.0',
+            'beer_subtotal NUMERIC(12,2) DEFAULT 0.0',
+            'second_sale_tax NUMERIC(12,2) DEFAULT 0.0',
+            'grand_total NUMERIC(12,2) DEFAULT 0.0',
+            'tcs_tax NUMERIC(12,2) DEFAULT 0.0',
+            'net_amount NUMERIC(12,2) DEFAULT 0.0'
+        ]
+        with engine.begin() as conn:
+            for col in cols:
+                conn.execute(text(f'ALTER TABLE stock_receipts ADD COLUMN IF NOT EXISTS {col};'))
+    except Exception as e:
+        print(f"Startup stock_receipts alter table error: {e}")
+
+    try:
         from app.core.database import SessionLocal
         from app.models.stock_receipt import StockReceipt
         from app.models.stock_transaction import StockTransaction
