@@ -247,9 +247,9 @@ class StockRepository:
             sale_u = calculate_units(p.category, p.volume_ml, pack_sz, today_sale)
             closing_u = calculate_units(p.category, p.volume_ml, pack_sz, closing_stock)
 
-            selling_rate = p.selling_price or 0
-            mrp_rate = p.mrp or selling_rate
-            basic_rate = p.basic_rate or round(selling_rate * 0.7)
+            selling_rate = float(p.selling_price or 0.0)
+            mrp_rate = float(p.mrp or selling_rate)
+            basic_rate = float(p.basic_rate or round(selling_rate * 0.7, 2))
 
             result.append({
                 "product_id": p.id,
