@@ -331,6 +331,29 @@ def get_all_current_stock(
 
 
 @router.delete(
+    "/receipts",
+    status_code=status.HTTP_200_OK,
+)
+def clear_all_stock_receipts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    receipts = db.query(StockReceipt).all()
+    count = len(receipts)
+    
+    # Soft-delete all IN stock transactions so available stock drops back
+    db.query(StockTransaction).filter(
+        StockTransaction.transaction_type == "IN",
+        StockTransaction.is_deleted == False,
+    ).update({"is_deleted": True}, synchronize_session=False)
+
+    db.query(StockReceiptItem).delete(synchronize_session=False)
+    db.query(StockReceipt).delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"Successfully deleted all {count} stock arrival logs and reset all associated available stock bottles."}
+
+
+@router.delete(
     "/receipts/{receipt_id}",
     status_code=status.HTTP_200_OK,
 )
@@ -345,7 +368,33 @@ def delete_stock_receipt(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Stock receipt log not found",
         )
+    
+    # Deduct stock IN quantities associated with this arrival log
+    for item in receipt.items:
+        if item.product_id and item.total_bottles > 0:
+            txs = (
+                db.query(StockTransaction)
+                .filter(
+                    StockTransaction.product_id == item.product_id,
+                    StockTransaction.transaction_type == "IN",
+                    StockTransaction.is_deleted == False,
+                )
+                .order_by(StockTransaction.id.desc())
+                .all()
+            )
+            needed = item.total_bottles
+            for tx in txs:
+                if needed <= 0:
+                    break
+                if tx.quantity <= needed:
+                    needed -= tx.quantity
+                    tx.is_deleted = True
+                else:
+                    tx.quantity -= needed
+                    needed = 0
+                db.add(tx)
+
     db.query(StockReceiptItem).filter(StockReceiptItem.receipt_id == receipt_id).delete()
     db.delete(receipt)
     db.commit()
-    return {"message": f"Stock arrival receipt #{receipt_id} deleted successfully"}
+    return {"message": f"Stock arrival receipt #{receipt_id} and associated stock bottles deleted successfully"}

@@ -220,6 +220,9 @@ export const stockApi = {
   deleteReceipt: async (receiptId: number): Promise<void> => {
     await api.delete(`/stock/receipts/${receiptId}`);
   },
+  deleteAllReceipts: async (): Promise<void> => {
+    await api.delete('/stock/receipts');
+  },
 };
 
 export const saleApi = {

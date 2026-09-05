@@ -1838,6 +1838,28 @@ export const Stock: React.FC = () => {
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">Historical log of all imported TASMAC deliveries & stock arrivals</p>
             </div>
+
+            {receipts.length > 0 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm('⚠️ Are you sure you want to CLEAR ALL arrival logs history?\n\nThis will reset and remove ALL arrival stock bottles from your current inventory!')) return;
+                  try {
+                    await stockApi.deleteAllReceipts();
+                    setReceipts([]);
+                    await loadStockData();
+                    await loadLedgerData();
+                    alert('Successfully cleared all arrival logs and reset available stock bottles.');
+                  } catch (err: any) {
+                    alert(err.response?.data?.detail || 'Failed to clear stock arrival logs');
+                  }
+                }}
+                className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>CLEAR ALL ARRIVAL HISTORY & RESET STOCK</span>
+              </button>
+            )}
           </div>
 
           {receipts.length === 0 ? (
