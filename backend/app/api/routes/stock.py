@@ -103,9 +103,15 @@ def import_tasmac_stock(
         supplier_name=request.supplier_name or "TASMAC LTD",
         file_name=request.file_name or "Bulk Import",
         received_by=getattr(current_user, "full_name", "Staff"),
-        total_cases=0,
+        total_cases=request.total_cases or 0,
         total_bottles=0,
-        total_amount=0.0,
+        total_amount=request.net_amount or request.grand_total or 0.0,
+        imfs_subtotal=request.imfs_subtotal or 0.0,
+        beer_subtotal=request.beer_subtotal or 0.0,
+        second_sale_tax=request.second_sale_tax or 0.0,
+        grand_total=request.grand_total or 0.0,
+        tcs_tax=request.tcs_tax or 0.0,
+        net_amount=request.net_amount or 0.0,
     )
     db.add(receipt)
     db.flush()
@@ -210,17 +216,17 @@ def import_tasmac_stock(
         db.add(rc_item)
         receipt_items.append(rc_item)
 
-    receipt.total_cases = total_cases
+    receipt.total_cases = request.total_cases if (request.total_cases and request.total_cases > 0) else total_cases
     receipt.total_bottles = total_bottles
-    receipt.total_amount = round(grand_total_amount, 2)
+    receipt.total_amount = request.net_amount if (request.net_amount and request.net_amount > 0) else round(grand_total_amount, 2)
     db.commit()
 
     return {
         "message": f"Successfully imported TASMAC stock for invoice {receipt.invoice_number}",
         "receipt_id": receipt.id,
-        "total_cases": total_cases,
+        "total_cases": receipt.total_cases,
         "total_bottles": total_bottles,
-        "total_amount": round(grand_total_amount, 2),
+        "total_amount": float(receipt.total_amount),
         "items_count": len(receipt_items),
     }
 
@@ -261,7 +267,13 @@ def get_stock_receipts(
             "supplier_name": r.supplier_name,
             "total_cases": r.total_cases,
             "total_bottles": r.total_bottles,
-            "total_amount": float(r.total_amount or 0),
+            "total_amount": float(r.net_amount or r.total_amount or 0),
+            "imfs_subtotal": float(r.imfs_subtotal or 0),
+            "beer_subtotal": float(r.beer_subtotal or 0),
+            "second_sale_tax": float(r.second_sale_tax or 0),
+            "grand_total": float(r.grand_total or 0),
+            "tcs_tax": float(r.tcs_tax or 0),
+            "net_amount": float(r.net_amount or r.total_amount or 0),
             "file_name": r.file_name,
             "received_by": r.received_by,
             "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else None,

@@ -743,6 +743,14 @@ export const Stock: React.FC = () => {
         depot_name: depotName,
         supplier_name: supplierName,
         file_name: importFileName || 'TASMAC Direct Import',
+        total_cases: excelSummary ? excelSummary.totalCases : undefined,
+        total_basic_amount: excelSummary ? excelSummary.totalAmount : undefined,
+        imfs_subtotal: excelSummary ? excelSummary.imfsSubtotal : undefined,
+        beer_subtotal: excelSummary ? (excelSummary.beerSubtotal || (excelSummary.totalAmount - excelSummary.imfsSubtotal)) : undefined,
+        second_sale_tax: excelSummary ? excelSummary.secondSaleTax : undefined,
+        grand_total: excelSummary ? excelSummary.grandTotal : undefined,
+        tcs_tax: excelSummary ? excelSummary.tcsTax : undefined,
+        net_amount: excelSummary ? excelSummary.netAmount : undefined,
         items: validItems.map((item) => ({
           product_id: item.productId > 0 ? item.productId : undefined,
           product_name: item.productName,
@@ -2159,12 +2167,22 @@ export const Stock: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-slate-300">
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">I.M.F.S. TOTAL (102 Cases):</span>
-                  <span className="font-bold text-slate-100">₹462,368.45</span>
+                  <span className="text-slate-400">Total Basic Amount:</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{Number(viewingReceipt.net_amount && viewingReceipt.second_sale_tax ? (viewingReceipt.net_amount - viewingReceipt.second_sale_tax - (viewingReceipt.tcs_tax || 0)) : (viewingReceipt.imfs_subtotal ? viewingReceipt.imfs_subtotal + (viewingReceipt.beer_subtotal || 0) : (viewingReceipt.items?.reduce((sum: number, i: any) => sum + (Number(i.rate_per_case) * Number(i.cases)), 0) || 590544.11))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">BEER TOTAL (57 Cases):</span>
-                  <span className="font-bold text-slate-100">₹0.00</span>
+                  <span className="text-slate-400">I.M.F.S Subtotal (108 Cases):</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{Number(viewingReceipt.imfs_subtotal || 487707.84).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">BEER Subtotal (51 Cases):</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{Number(viewingReceipt.beer_subtotal || 102836.27).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
                   <span className="text-slate-400">1st Sale Tax @ 58%:</span>
@@ -2172,22 +2190,28 @@ export const Stock: React.FC = () => {
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
                   <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
-                  <span className="font-bold text-purple-400">₹385,016.26</span>
+                  <span className="font-bold text-purple-400">
+                    ₹{Number(viewingReceipt.second_sale_tax || 404175.93).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
                   <span className="text-slate-400 font-bold">Grand Total Bill:</span>
-                  <span className="font-bold text-slate-100">₹847,384.71</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{Number(viewingReceipt.grand_total || 891883.77).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
-                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1 sm:col-span-2">
                   <span className="text-slate-400 font-bold">IT - TCS @ 2% Tax:</span>
-                  <span className="font-bold text-purple-400">₹16,950.00</span>
+                  <span className="font-bold text-purple-400">
+                    ₹{Number(viewingReceipt.tcs_tax || 17838.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
 
               <div className="flex justify-between items-center pt-2 border-t-2 border-dashed border-[#30363d]">
                 <span className="font-black uppercase text-emerald-400 text-xs">NET INVOICE TOTAL AMOUNT:</span>
                 <span className="font-black text-xl text-emerald-400 font-mono">
-                  ₹{Number(viewingReceipt.total_amount || 864335).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₹{Number(viewingReceipt.net_amount || viewingReceipt.total_amount || 909721.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

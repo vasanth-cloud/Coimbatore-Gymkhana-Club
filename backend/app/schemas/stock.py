@@ -50,6 +50,14 @@ class TASMACImportRequest(BaseModel):
     depot_name: str | None = "TASMAC COIMBATORE (SOUTH)"
     supplier_name: str | None = "TASMAC LTD"
     file_name: str | None = None
+    total_cases: int | None = 0
+    total_basic_amount: float | None = 0.0
+    imfs_subtotal: float | None = 0.0
+    beer_subtotal: float | None = 0.0
+    second_sale_tax: float | None = 0.0
+    grand_total: float | None = 0.0
+    tcs_tax: float | None = 0.0
+    net_amount: float | None = 0.0
     items: list[TASMACImportItem]
 
 
@@ -79,6 +87,12 @@ class StockReceiptResponse(BaseModel):
     total_cases: int
     total_bottles: int
     total_amount: float
+    imfs_subtotal: float | None = 0.0
+    beer_subtotal: float | None = 0.0
+    second_sale_tax: float | None = 0.0
+    grand_total: float | None = 0.0
+    tcs_tax: float | None = 0.0
+    net_amount: float | None = 0.0
     supplier_name: str | None = None
     file_name: str | None = None
     received_by: str | None = None
