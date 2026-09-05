@@ -98,9 +98,23 @@ def on_startup():
             'tcs_tax NUMERIC(12,2) DEFAULT 0.0',
             'net_amount NUMERIC(12,2) DEFAULT 0.0'
         ]
+        item_cols = [
+            'added_value_percent',
+            'rate_per_case',
+            'tcs_amount',
+            'total_line_cost',
+            'calculated_basic_cost',
+            'mrp',
+            'selling_price'
+        ]
         with engine.begin() as conn:
             for col in cols:
                 conn.execute(text(f'ALTER TABLE stock_receipts ADD COLUMN IF NOT EXISTS {col};'))
+            for col in item_cols:
+                try:
+                    conn.execute(text(f'ALTER TABLE stock_receipt_items ALTER COLUMN {col} TYPE NUMERIC(12,2);'))
+                except Exception:
+                    pass
     except Exception as e:
         print(f"Startup stock_receipts alter table error: {e}")
 
