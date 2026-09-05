@@ -820,7 +820,7 @@ export const Stock: React.FC = () => {
 
   // SUBMIT FULL TASMAC BULK IMPORT TO BACKEND
   const handleSubmitTasmacImport = async () => {
-    const validItems = formItems.filter((i) => i.productName.trim() !== '' && (i.cases > 0 || i.looseBottles > 0));
+    const validItems = formItems.filter((i) => (i.productName.trim() !== '' || i.productId > 0) && (Number(i.cases || 0) > 0 || Number(i.looseBottles || 0) > 0));
     if (validItems.length === 0) {
       alert('Please add at least one valid item with cases or bottles.');
       return;
@@ -831,8 +831,8 @@ export const Stock: React.FC = () => {
 
     try {
       const payload = {
-        invoice_number: invoiceNumber,
-        invoice_date: invoiceDate,
+        invoice_number: invoiceNumber || `TASMAC-${Date.now()}`,
+        invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
         depot_name: depotName,
         supplier_name: supplierName,
         file_name: importFileName || 'TASMAC Direct Import',
@@ -845,15 +845,15 @@ export const Stock: React.FC = () => {
         tcs_tax: excelSummary ? excelSummary.tcsTax : undefined,
         net_amount: excelSummary ? excelSummary.netAmount : undefined,
         items: validItems.map((item) => ({
-          product_id: item.productId > 0 ? item.productId : undefined,
-          product_name: item.productName,
-          pack_size: item.packSize,
-          cases: item.cases,
-          loose_bottles: item.looseBottles,
-          rate_per_case: item.ratePerCase,
-          added_value_percent: item.addedValuePercent,
-          mrp: item.mrp,
-          selling_price: item.sellingPrice,
+          product_id: Number(item.productId) > 0 ? Number(item.productId) : undefined,
+          product_name: String(item.productName || '').trim() || 'UNNAMED PRODUCT',
+          pack_size: Number(item.packSize) > 0 ? Number(item.packSize) : 24,
+          cases: Math.max(0, Number(item.cases) || 0),
+          loose_bottles: Math.max(0, Number(item.looseBottles) || 0),
+          rate_per_case: Math.max(0, Number(item.ratePerCase) || 0),
+          added_value_percent: Number(item.addedValuePercent) || 220,
+          mrp: Math.max(0, Number(item.mrp) || 0),
+          selling_price: Math.max(0, Number(item.sellingPrice) || 0),
         })),
       };
 
@@ -861,7 +861,7 @@ export const Stock: React.FC = () => {
 
       setImportMsg({
         type: 'success',
-        text: `Successfully recorded stock arrival for Invoice #${invoiceNumber}! Total: ${res.total_cases} Cases (${res.total_bottles} Bottles) — ₹${res.total_amount.toLocaleString()}`,
+        text: `Successfully recorded stock arrival for Invoice #${invoiceNumber}! Total: ${res.total_cases} Cases (${res.total_bottles} Bottles) — ₹${Number(res.total_amount || 0).toLocaleString()}`,
       });
 
       await loadStockData();
@@ -884,7 +884,16 @@ export const Stock: React.FC = () => {
         },
       ]);
     } catch (err: any) {
-      setImportMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to import TASMAC stock arrival.' });
+      const detail = err.response?.data?.detail;
+      let errMsg = 'Failed to import TASMAC stock arrival.';
+      if (typeof detail === 'string') {
+        errMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errMsg = detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || d}`).join(', ');
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setImportMsg({ type: 'error', text: errMsg });
     } finally {
       setImportingSubmitting(false);
     }
