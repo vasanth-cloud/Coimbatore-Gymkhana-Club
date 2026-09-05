@@ -87,7 +87,10 @@ class ProductRepository:
         category: str | None = None,
         volume_ml: int | None = None,
         unit: str | None = None,
-        selling_price: int | None = None,
+        selling_price: float | None = None,
+        mrp: float | None = None,
+        basic_rate: float | None = None,
+        pack_size: int | None = None,
         is_active: bool | None = None,
     ):
         if brand_id is not None:
@@ -102,6 +105,12 @@ class ProductRepository:
             product.unit = unit
         if selling_price is not None:
             product.selling_price = selling_price
+        if mrp is not None:
+            product.mrp = mrp
+        if basic_rate is not None:
+            product.basic_rate = basic_rate
+        if pack_size is not None:
+            product.pack_size = pack_size
         if is_active is not None:
             product.is_active = is_active
 

@@ -31,6 +31,7 @@ import {
   Truck,
   CheckCircle2,
   Sparkles,
+  Pencil,
 } from 'lucide-react';
 
 interface TasmacFormItem {
@@ -108,6 +109,65 @@ export const Stock: React.FC = () => {
 
   // Receipt Detail View Modal
   const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
+
+  // Edit Product & Rates Modal States
+  const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editVolume, setEditVolume] = useState<number>(750);
+  const [editPackSize, setEditPackSize] = useState<number>(12);
+  const [editMrp, setEditMrp] = useState<number>(0);
+  const [editBasicRate, setEditBasicRate] = useState<number>(0);
+  const [editSellingPrice, setEditSellingPrice] = useState<number>(0);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleOpenEditModal = (item: any) => {
+    setEditingItem(item);
+    setEditName(item.product_name || item.name || '');
+    setEditCategory(item.category || 'SPIRITS');
+    setEditVolume(item.volume_ml || 750);
+    setEditPackSize(item.pack_size || 12);
+    setEditMrp(item.mrp || 0);
+    setEditBasicRate(item.basic_rate || 0);
+    setEditSellingPrice(item.selling_price || 0);
+    setEditMsg(null);
+  };
+
+  const handleSaveProductEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    const prodId = editingItem.product_id || editingItem.id;
+    if (!prodId) return;
+
+    setEditSubmitting(true);
+    setEditMsg(null);
+
+    try {
+      await productApi.updateProduct(prodId, {
+        name: editName,
+        category: editCategory,
+        volume_ml: editVolume,
+        pack_size: editPackSize,
+        mrp: editMrp,
+        basic_rate: editBasicRate,
+        selling_price: editSellingPrice,
+      });
+
+      setEditMsg({ type: 'success', text: 'Product rates & specs updated successfully!' });
+      await loadStockData();
+      if (activeTab === 'ledger') await loadLedgerData();
+
+      setTimeout(() => {
+        setEditingItem(null);
+        setEditMsg(null);
+      }, 1200);
+    } catch (err: any) {
+      setEditMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to update product details' });
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   const loadStockData = async () => {
     try {
@@ -976,6 +1036,7 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-center bg-purple-500/10 text-purple-300 font-black border-r border-[#30363d]">CB Units</th>
                       
                       <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
+                      <th className="py-3 px-2 text-center text-amber-400 border-l border-[#30363d]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#21262d] text-slate-200">
@@ -1040,6 +1101,18 @@ export const Stock: React.FC = () => {
                           
                           <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
                             ₹{item.closing_sales_value.toLocaleString()}
+                          </td>
+
+                          <td className="py-2.5 px-2 text-center border-l border-[#30363d]">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(item)}
+                              className="px-2.5 py-1 text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-slate-950 transition-all flex items-center gap-1 mx-auto shadow-sm"
+                              title="Edit Product Rates & Specs"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
                           </td>
                         </tr>
                       );
@@ -2043,6 +2116,144 @@ export const Stock: React.FC = () => {
                 <span>{msg.text}</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PRODUCT & RATES MODAL */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#21262d] pb-4">
+              <div className="flex items-center gap-2.5 text-amber-400 font-extrabold text-sm">
+                <Pencil className="w-4 h-4" />
+                <span>Edit Drink Specs & Rates</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-[#21262d] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editMsg && (
+              <div
+                className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                  editMsg.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                }`}
+              >
+                {editMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                <span>{editMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProductEdit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Product Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-bold focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Category</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-amber-400 font-bold focus:outline-none focus:border-amber-500"
+                  >
+                    {['BEER', 'BRANDY', 'RUM', 'WHISKY', 'VODKA', 'WINE', 'GIN', 'IFL'].map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Volume (ml)</label>
+                  <input
+                    type="number"
+                    value={editVolume}
+                    onChange={(e) => setEditVolume(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Pack Size</label>
+                  <input
+                    type="number"
+                    value={editPackSize}
+                    onChange={(e) => setEditPackSize(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[#21262d]">
+                <div>
+                  <label className="block text-[11px] font-bold text-emerald-400 uppercase mb-1">MRP Rate (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editMrp}
+                    onChange={(e) => setEditMrp(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-sky-400 uppercase mb-1">Basic Rate (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editBasicRate}
+                    onChange={(e) => setEditBasicRate(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-sky-400 font-mono font-bold focus:outline-none focus:border-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-amber-400 uppercase mb-1">Sales Rate (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editSellingPrice}
+                    onChange={(e) => setEditSellingPrice(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-amber-500/30 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#21262d]">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {editSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

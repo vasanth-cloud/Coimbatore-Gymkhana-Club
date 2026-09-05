@@ -110,7 +110,7 @@ def update_product(
     product_id: int,
     request: ProductUpdateRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     service = ProductService(db)
 
@@ -123,6 +123,9 @@ def update_product(
             volume_ml=request.volume_ml,
             unit=request.unit,
             selling_price=request.selling_price,
+            mrp=request.mrp,
+            basic_rate=request.basic_rate,
+            pack_size=request.pack_size,
             is_active=request.is_active,
         )
 

@@ -68,7 +68,10 @@ class ProductService:
         category: str | None = None,
         volume_ml: int | None = None,
         unit: str | None = None,
-        selling_price: int | None = None,
+        selling_price: float | None = None,
+        mrp: float | None = None,
+        basic_rate: float | None = None,
+        pack_size: int | None = None,
         is_active: bool | None = None,
     ):
         product = self.product_repository.get_by_id(product_id)
@@ -91,6 +94,9 @@ class ProductService:
             volume_ml=volume_ml,
             unit=unit,
             selling_price=selling_price,
+            mrp=mrp,
+            basic_rate=basic_rate,
+            pack_size=pack_size,
             is_active=is_active,
         )
 

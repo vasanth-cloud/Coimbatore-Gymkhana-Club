@@ -21,6 +21,7 @@ class ProductUpdateRequest(BaseModel):
     selling_price: float | None = None
     mrp: float | None = None
     basic_rate: float | None = None
+    pack_size: int | None = None
     is_active: bool | None = None
 
 
@@ -34,6 +35,7 @@ class ProductResponse(BaseModel):
     selling_price: float
     mrp: float = 0.0
     basic_rate: float = 0.0
+    pack_size: int = 24
     is_active: bool
 
     model_config = ConfigDict(

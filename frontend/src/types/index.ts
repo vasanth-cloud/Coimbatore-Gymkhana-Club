@@ -128,6 +128,7 @@ export interface Product {
   selling_price: number;
   mrp?: number;
   basic_rate?: number;
+  pack_size?: number;
   is_active: boolean;
 }
 
@@ -140,6 +141,7 @@ export interface ProductCreatePayload {
   selling_price: number;
   mrp?: number;
   basic_rate?: number;
+  pack_size?: number;
 }
 
 export interface ProductUpdatePayload {
@@ -151,6 +153,7 @@ export interface ProductUpdatePayload {
   selling_price?: number;
   mrp?: number;
   basic_rate?: number;
+  pack_size?: number;
   is_active?: boolean;
 }
 
