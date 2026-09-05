@@ -330,6 +330,29 @@ def get_all_current_stock(
     return service.get_all_current_stock()
 
 
+@router.post(
+    "/reset-inventory",
+    status_code=status.HTTP_200_OK,
+)
+def reset_all_inventory(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    """
+    Clears all stock arrival logs, receipt items, and soft-deletes all IN stock transactions.
+    Resets net available stock for all products back to 0.
+    """
+    db.query(StockTransaction).filter(
+        StockTransaction.transaction_type == "IN",
+        StockTransaction.is_deleted == False,
+    ).update({"is_deleted": True}, synchronize_session=False)
+
+    db.query(StockReceiptItem).delete(synchronize_session=False)
+    db.query(StockReceipt).delete(synchronize_session=False)
+    db.commit()
+    return {"message": "All stock arrival logs and available bottle inventory have been completely reset to 0."}
+
+
 @router.delete(
     "/receipts",
     status_code=status.HTTP_200_OK,

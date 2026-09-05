@@ -87,6 +87,23 @@ def on_startup():
     except Exception as e:
         print(f"Startup product sync error: {e}")
 
+    try:
+        from app.core.database import SessionLocal
+        from app.models.stock_receipt import StockReceipt
+        from app.models.stock_transaction import StockTransaction
+        db = SessionLocal()
+        rc_count = db.query(StockReceipt).count()
+        if rc_count == 0:
+            db.query(StockTransaction).filter(
+                StockTransaction.transaction_type == "IN",
+                StockTransaction.is_deleted == False
+            ).update({"is_deleted": True}, synchronize_session=False)
+            db.commit()
+            print("Cleared orphan stock IN transactions as 0 arrival receipts exist.")
+        db.close()
+    except Exception as e:
+        print(f"Startup stock sync error: {e}")
+
 
 @app.get("/")
 def read_root():

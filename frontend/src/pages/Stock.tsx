@@ -1049,6 +1049,26 @@ export const Stock: React.FC = () => {
             <FileSpreadsheet className="w-4 h-4 text-amber-400" />
             <span>EXPORT LEDGER EXCEL</span>
           </button>
+
+          <button
+            onClick={async () => {
+              if (!window.confirm('⚠️ Are you sure you want to RESET ALL STOCK INVENTORY to 0?\n\nThis will soft-delete all stock records and reset available bottle counts for all products to 0.')) return;
+              try {
+                await stockApi.resetInventory();
+                await loadStockData();
+                await loadLedgerData();
+                await loadReceiptsData();
+                alert('Stock inventory has been completely reset to 0.');
+              } catch (err: any) {
+                alert(err.response?.data?.detail || 'Failed to reset inventory');
+              }
+            }}
+            className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
+            title="Reset available bottle inventory to 0"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>RESET INVENTORY (0 BOTTLES)</span>
+          </button>
         </div>
       </div>
 
