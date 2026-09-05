@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
+import Tesseract from 'tesseract.js';
 import { productApi, stockApi } from '../api/services';
 import { CurrentStock, Product, StockTransaction } from '../types';
 import {
@@ -32,6 +33,7 @@ import {
   CheckCircle2,
   Sparkles,
   Pencil,
+  Camera,
 } from 'lucide-react';
 
 interface TasmacFormItem {
@@ -105,6 +107,7 @@ export const Stock: React.FC = () => {
   const [pasteText, setPasteText] = useState('');
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [importingSubmitting, setImportingSubmitting] = useState(false);
+  const [ocrScanning, setOcrScanning] = useState(false);
   const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Parsed Invoice Summary from Excel File
@@ -316,18 +319,108 @@ export const Stock: React.FC = () => {
     reader.readAsBinaryString(file);
   };
 
-  // MULTI-FORMAT FILE UPLOAD HANDLER FOR TASMAC BULK IMPORT TAB (.xlsx, .xls, .csv, .txt)
+  // OCR PARSER FOR PHOTO INVOICES (JPG, PNG, WEBP)
+  const parseOcrInvoiceText = (ocrText: string, fileName: string) => {
+    if (!ocrText || !ocrText.trim()) {
+      setImportMsg({ type: 'error', text: `Could not detect text in photo (${fileName}).` });
+      return;
+    }
+
+    const lines = ocrText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+    // Meta fields extraction
+    lines.forEach((l) => {
+      const lower = l.toLowerCase();
+      if (lower.includes('invoice') || lower.includes('inv')) {
+        const m = l.match(/[S0-9]{7,12}/i);
+        if (m) setInvoiceNumber(m[0]);
+      }
+      if (lower.includes('depot')) {
+        setDepotName(l.toUpperCase());
+      }
+    });
+
+    const newItems: TasmacFormItem[] = [];
+
+    lines.forEach((line) => {
+      const lower = line.toLowerCase();
+      if (['invoice', 'depot', 'total', 'subtotal', 'grand total', 'tax', 's.no', 'added value', 'license'].some((k) => lower.includes(k))) return;
+
+      const nums = line.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+      const cleanName = line.replace(/[\d.,₹%()]/g, '').trim();
+      if (!cleanName || cleanName.length < 3) return;
+
+      const matched = products.find((p) => p.name.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(p.name.toLowerCase()));
+
+      let cases = 1;
+      let rateCase = 3500;
+      if (nums.length >= 2) {
+        cases = nums[0] < 500 ? Math.max(1, Math.floor(nums[0])) : 1;
+        rateCase = nums.find((n) => n > 500 && n < 20000) || 3500;
+      } else if (nums.length === 1) {
+        if (nums[0] > 500) rateCase = nums[0];
+        else cases = Math.max(1, Math.floor(nums[0]));
+      }
+
+      const pack = matched ? (matched.volume_ml === 180 ? 48 : matched.volume_ml === 375 ? 24 : 12) : 12;
+
+      newItems.push({
+        id: Math.random().toString(),
+        productId: matched ? matched.id : 0,
+        productName: matched ? matched.name : cleanName.toUpperCase(),
+        packSize: pack,
+        cases,
+        looseBottles: 0,
+        ratePerCase: rateCase,
+        addedValuePercent: 220,
+        mrp: matched ? matched.mrp || 0 : 0,
+        sellingPrice: matched ? matched.selling_price || 0 : 0,
+      });
+    });
+
+    if (newItems.length > 0) {
+      setFormItems(newItems);
+      setImportMsg({
+        type: 'success',
+        text: `📷 OCR Photo Scan Complete! Loaded ${newItems.length} line items from photo (${fileName}).`
+      });
+    } else {
+      setImportMsg({
+        type: 'error',
+        text: `Scanned photo (${fileName}), but could not auto-detect line items. You can paste lines manually or upload Excel.`
+      });
+    }
+  };
+
+  // MULTI-FORMAT FILE UPLOAD HANDLER FOR TASMAC BULK IMPORT TAB (.xlsx, .xls, .csv, .txt, .jpg, .png)
   const handleTasmacFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const ext = file.name.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'pdf', 'webp', 'bmp'].includes(ext || '')) {
-      alert(`Image and PDF files (${file.name}) cannot be parsed directly as spreadsheet data. Please upload a valid Excel file (.xlsx, .xls) or CSV file.`);
+
+    // Check for Image Upload (JPG, PNG, WEBP, BMP)
+    if (['jpg', 'jpeg', 'png', 'webp', 'bmp'].includes(ext || '')) {
+      setImportFileName(file.name);
+      setOcrScanning(true);
       setImportMsg({
-        type: 'error',
-        text: `Image/PDF file detected (${file.name}). Please upload an Excel (.xlsx/.xls) or CSV file.`,
+        type: 'success',
+        text: `📷 Scanning photo invoice (${file.name}) via OCR text extraction... Please wait.`
       });
+
+      Tesseract.recognize(file, 'eng')
+        .then(({ data: { text } }) => {
+          setOcrScanning(false);
+          parseOcrInvoiceText(text, file.name);
+        })
+        .catch((err) => {
+          setOcrScanning(false);
+          console.error('OCR Error:', err);
+          setImportMsg({
+            type: 'error',
+            text: `Could not process photo invoice (${file.name}). Please ensure photo is clear or upload Excel/CSV.`
+          });
+        });
       return;
     }
 
@@ -1618,27 +1711,41 @@ export const Stock: React.FC = () => {
 
           {/* Multi-Format Drag & Drop Upload Zone */}
           <div className="border-2 border-dashed border-sky-500/40 hover:border-sky-400 bg-[#0d1117] rounded-2xl p-6 text-center space-y-2 transition-all">
-            <Upload className="w-10 h-10 text-sky-400 mx-auto" />
-            <div>
-              <label className="cursor-pointer">
-                <span className="text-sm font-extrabold text-slate-100 block">
-                  Click or Drag & Drop TASMAC Invoice File (.xlsx, .xls, .csv, .txt)
+            {ocrScanning ? (
+              <div className="py-2 space-y-2">
+                <Loader2 className="w-10 h-10 text-sky-400 animate-spin mx-auto" />
+                <span className="text-xs font-bold text-sky-400 font-mono block">
+                  📷 Running OCR Scan on Photo Invoice ({importFileName})...
                 </span>
-                <span className="text-xs text-slate-400 mt-1 block">
-                  Supports all Excel formats, CSV files, and copied line sheets
-                </span>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv,.txt"
-                  onChange={handleTasmacFileUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            {importFileName && (
-              <span className="inline-block bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono font-bold px-3 py-1 rounded-lg">
-                Uploaded: {importFileName}
-              </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-3">
+                  <Upload className="w-8 h-8 text-sky-400" />
+                  <Camera className="w-8 h-8 text-amber-400" />
+                </div>
+                <div>
+                  <label className="cursor-pointer">
+                    <span className="text-sm font-extrabold text-slate-100 block">
+                      Click or Drag & Drop TASMAC Invoice File (.XLSX, .CSV, .JPG, .PNG)
+                    </span>
+                    <span className="text-xs text-slate-400 mt-1 block">
+                      Supports Excel spreadsheets, CSV files, and Invoice Photos (JPG, PNG, WEBP) via OCR Scanning
+                    </span>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png,.webp,.bmp,image/*"
+                      onChange={handleTasmacFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {importFileName && (
+                  <span className="inline-block bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono font-bold px-3 py-1 rounded-lg">
+                    Uploaded: {importFileName}
+                  </span>
+                )}
+              </>
             )}
           </div>
 
