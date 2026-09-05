@@ -112,7 +112,13 @@ class StockRepository:
             for r in results
         ]
 
-    def get_daily_stock_ledger(self, target_date: date):
+    def get_daily_stock_ledger(self, target_date: date | str):
+        if isinstance(target_date, str):
+            try:
+                target_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+            except Exception:
+                target_date = date.today()
+
         # Single aggregated SQL query for all 653 products across prior and today dates
         tx_subquery = (
             self.db.query(

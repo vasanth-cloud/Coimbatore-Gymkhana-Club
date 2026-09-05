@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from app.schemas.customer import (
 )
 from app.services.customer_service import CustomerService
 from app.services.qr_service import QRService
+from app.services.ocr_service import IDCardOCRService
 
 
 router = APIRouter(
@@ -40,6 +41,18 @@ def create_customer(
             phone=request.phone,
             address=request.address,
             custom_code=request.customer_code,
+            father_guardian_name=request.father_guardian_name,
+            date_of_birth=request.date_of_birth,
+            gender=request.gender,
+            occupation=request.occupation,
+            institution_organization=request.institution_organization,
+            aadhaar_card_no=request.aadhaar_card_no,
+            email=request.email,
+            blood_group=request.blood_group,
+            emergency_contact_no=request.emergency_contact_no,
+            purpose_of_membership=request.purpose_of_membership,
+            declaration_accepted=request.declaration_accepted,
+            photo_url=request.photo_url,
         )
         return customer
 
@@ -69,6 +82,18 @@ def update_customer(
             phone=request.phone,
             address=request.address,
             customer_code=request.customer_code,
+            father_guardian_name=request.father_guardian_name,
+            date_of_birth=request.date_of_birth,
+            gender=request.gender,
+            occupation=request.occupation,
+            institution_organization=request.institution_organization,
+            aadhaar_card_no=request.aadhaar_card_no,
+            email=request.email,
+            blood_group=request.blood_group,
+            emergency_contact_no=request.emergency_contact_no,
+            purpose_of_membership=request.purpose_of_membership,
+            declaration_accepted=request.declaration_accepted,
+            photo_url=request.photo_url,
         )
         return updated
 
@@ -194,3 +219,30 @@ def generate_customer_qr(
             )
         },
     )
+
+
+@router.post(
+    "/scan-id-card",
+    status_code=status.HTTP_200_OK,
+)
+async def scan_id_card(
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    if not file.content_type or not (
+        file.content_type.startswith("image/") or file.content_type == "application/pdf"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image (PNG, JPG, WEBP) or PDF of an Aadhaar, PAN, or License card",
+        )
+
+    try:
+        contents = await file.read()
+        extracted_data = IDCardOCRService.process_id_card_image(contents)
+        return extracted_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to extract text from ID card: {str(e)}",
+        )

@@ -8,25 +8,25 @@ export const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="h-16 bg-[#161b22] border-b border-[#21262d] flex items-center justify-between px-6 sticky top-0 z-30 shadow-md">
+    <header className="h-16 bg-[#161b22] border-b border-[#21262d] flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shadow-md">
       {/* Official Gymkhana Club Logo & Title */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3 min-w-0">
         <img
           src="/gymkhana-logo-transparent.png"
           alt="Coimbatore Gymkhana Club Official Crest Logo"
-          className="h-12 w-auto object-contain shrink-0 drop-shadow-md"
+          className="h-10 sm:h-11 w-auto object-contain shrink-0 drop-shadow-md ml-1"
         />
 
-        <div>
-          <h1 className="font-extrabold text-base sm:text-lg text-slate-100 tracking-tight font-serif flex items-center gap-2">
-            <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
+        <div className="min-w-0">
+          <h1 className="font-extrabold text-sm sm:text-base text-slate-100 tracking-tight font-serif flex items-center gap-2 truncate">
+            <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent truncate">
               COIMBATORE GYMKHANA CLUB
             </span>
-            <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider">
+            <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider shrink-0">
               VIP
             </span>
           </h1>
-          <p className="text-[11px] text-slate-400 font-semibold tracking-wide">
+          <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold tracking-wide truncate">
             Est. 2024 • Digital Bar & Membership System
           </p>
         </div>

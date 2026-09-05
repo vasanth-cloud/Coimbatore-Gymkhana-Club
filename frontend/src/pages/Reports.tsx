@@ -304,9 +304,56 @@ export const Reports: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // Export Member Liquor Sales CSV (Format 1: Member + Bottle Rate)
+  const exportMemberLiquorSalesCSV = () => {
+    const detailsList = reportData?.items || reportData?.details || [];
+    if (!reportData || detailsList.length === 0) {
+      alert('No sales log records available to export');
+      return;
+    }
+
+    const headers = [
+      'Sale ID',
+      'Date & Time',
+      'Member Card #',
+      'Member Name',
+      'Liquor Product Name',
+      'Category',
+      'Volume (ml)',
+      'Quantity Sold',
+      'Unit Price / Bottle Rate (INR)',
+      'Total Amount (INR)',
+    ];
+
+    const rows = detailsList.map((d: any) => [
+      `"#${d.sale_id || 'N/A'}"`,
+      `"${d.sale_date ? new Date(d.sale_date).toLocaleString() : 'N/A'}"`,
+      `"#${d.customer_code || 'N/A'}"`,
+      `"${d.customer_name || 'N/A'}"`,
+      `"${d.product_name || 'N/A'}"`,
+      `"${d.category || 'N/A'}"`,
+      d.volume_ml || 0,
+      d.quantity || 0,
+      d.unit_price || 0,
+      d.total_amount ?? d.total_price ?? 0,
+    ]);
+
+    const title = `Member_Liquor_Sales_Report_${selectedDate}`;
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Export Standard Reports to CSV
   const exportToCSV = () => {
-    if (!reportData || !reportData.details || reportData.details.length === 0) {
+    const detailsList = reportData?.items || reportData?.details || [];
+    if (!reportData || detailsList.length === 0) {
       alert('No data available to export');
       return;
     }
@@ -316,33 +363,37 @@ export const Reports: React.FC = () => {
     const title = `${reportType.toUpperCase()}_REPORT_${selectedDate}`;
 
     if (reportType === 'entries') {
-      headers = ['Check-in Time', 'Member Code', 'Member Name', 'Phone', 'Guests'];
-      rows = reportData.details.map((d: any) => [
-        `"${new Date(d.check_in_time).toLocaleString()}"`,
+      headers = ['Check-in Time', 'Member Code', 'Member Name', 'Phone', 'Additional Guests', 'Total People'];
+      rows = detailsList.map((d: any) => [
+        `"${d.entry_time || d.check_in_time ? new Date(d.entry_time || d.check_in_time).toLocaleString() : 'N/A'}"`,
         `"#${d.customer_code || 'N/A'}"`,
         `"${d.customer_name || 'N/A'}"`,
         `"${d.phone || 'N/A'}"`,
         d.additional_guests || 0,
+        d.total_people || 1,
       ]);
     } else if (reportType === 'stock') {
-      headers = ['Product Name', 'Category', 'Volume (ml)', 'Transaction Type', 'Quantity', 'Date'];
-      rows = reportData.details.map((d: any) => [
-        `"${d.product_name}"`,
-        `"${d.category}"`,
-        d.volume_ml,
-        d.transaction_type,
-        d.quantity,
-        `"${new Date(d.transaction_date).toLocaleString()}"`,
+      headers = ['Transaction ID', 'Product Name', 'Category', 'Volume (ml)', 'Type', 'Quantity', 'Date'];
+      rows = detailsList.map((d: any) => [
+        `"#${d.transaction_id || 'N/A'}"`,
+        `"${d.product_name || 'N/A'}"`,
+        `"${d.category || 'N/A'}"`,
+        d.volume_ml || 0,
+        d.transaction_type || 'IN',
+        d.quantity || 0,
+        `"${d.transaction_date ? new Date(d.transaction_date).toLocaleString() : 'N/A'}"`,
       ]);
     } else if (reportType === 'sales') {
-      headers = ['Product Name', 'Category', 'Volume (ml)', 'Quantity Sold', 'Unit Price', 'Total Sales'];
-      rows = reportData.details.map((d: any) => [
-        `"${d.product_name}"`,
-        `"${d.category}"`,
-        d.volume_ml,
-        d.quantity,
-        d.unit_price,
-        d.total_price,
+      headers = ['Sale ID', 'Product Name', 'Category', 'Volume (ml)', 'Quantity Sold', 'Unit Price (INR)', 'Total Amount (INR)', 'Sale Date'];
+      rows = detailsList.map((d: any) => [
+        `"#${d.sale_id || 'N/A'}"`,
+        `"${d.sale_date ? new Date(d.sale_date).toLocaleString() : 'N/A'}"`,
+        `"${d.product_name || 'N/A'}"`,
+        `"${d.category || 'N/A'}"`,
+        d.volume_ml || 0,
+        d.quantity || 0,
+        d.unit_price || 0,
+        d.total_amount ?? d.total_price ?? 0,
       ]);
     }
 
@@ -371,10 +422,30 @@ export const Reports: React.FC = () => {
           </p>
         </div>
 
-        {reportType !== 'denominations' && (
+        {reportType === 'sales' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={exportMemberLiquorSalesCSV}
+              disabled={!reportData || (!reportData.items?.length && !reportData.details?.length)}
+              className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>1. Member Sales Excel</span>
+            </button>
+
+            <button
+              onClick={exportToCSV}
+              disabled={!reportData || (!reportData.items?.length && !reportData.details?.length)}
+              className="px-3.5 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              <Download className="w-4 h-4 text-amber-400" />
+              <span>2. General Bottle Excel</span>
+            </button>
+          </div>
+        ) : reportType !== 'denominations' && (
           <button
             onClick={exportToCSV}
-            disabled={!reportData || !reportData.details || reportData.details.length === 0}
+            disabled={!reportData || (!reportData.items?.length && !reportData.details?.length)}
             className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-2 transition-all disabled:opacity-50"
           >
             <Download className="w-4 h-4 text-amber-400" />
@@ -901,93 +972,152 @@ export const Reports: React.FC = () => {
           </div>
 
           {/* Report Data Render */}
-          {loading ? (
-            <div className="py-12 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-              <span>Loading report data...</span>
-            </div>
-          ) : !reportData || !reportData.details || reportData.details.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
-              No report records found for selected date/period.
-            </div>
-          ) : (
-            <div className="overflow-x-auto min-w-0">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-[#0d1117] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#21262d]">
-                    {reportType === 'entries' && (
-                      <>
-                        <th className="py-3 px-3">Check-in Time</th>
-                        <th className="py-3 px-3">Member ID</th>
-                        <th className="py-3 px-3">Member Name</th>
-                        <th className="py-3 px-3">Phone</th>
-                        <th className="py-3 px-3 text-right">Guests</th>
-                      </>
-                    )}
-                    {reportType === 'sales' && (
-                      <>
-                        <th className="py-3 px-3">Liquor Bottle</th>
-                        <th className="py-3 px-3">Category</th>
-                        <th className="py-3 px-3">Volume</th>
-                        <th className="py-3 px-3 text-center">Quantity Sold</th>
-                        <th className="py-3 px-3 text-right">Unit Price</th>
-                        <th className="py-3 px-3 text-right">Total Revenue</th>
-                      </>
-                    )}
-                    {reportType === 'stock' && (
-                      <>
-                        <th className="py-3 px-3">Product Name</th>
-                        <th className="py-3 px-3">Category</th>
-                        <th className="py-3 px-3">Volume</th>
-                        <th className="py-3 px-3">Type</th>
-                        <th className="py-3 px-3 text-right">Quantity</th>
-                        <th className="py-3 px-3 text-right">Date</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#21262d] text-slate-200">
-                  {reportData.details.map((row: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-[#0d1117]/60 transition-colors">
-                      {reportType === 'entries' && (
-                        <>
-                          <td className="py-3 px-3 font-mono text-slate-400">{new Date(row.check_in_time).toLocaleString()}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-amber-400">#{row.customer_code || 'N/A'}</td>
-                          <td className="py-3 px-3 font-bold text-slate-100">{row.customer_name || 'N/A'}</td>
-                          <td className="py-3 px-3 font-mono text-slate-400">{row.phone || 'N/A'}</td>
-                          <td className="py-3 px-3 text-right font-mono font-bold">{row.additional_guests}</td>
-                        </>
-                      )}
-                      {reportType === 'sales' && (
-                        <>
-                          <td className="py-3 px-3 font-bold text-slate-100">{row.product_name}</td>
-                          <td className="py-3 px-3 text-slate-400">{row.category}</td>
-                          <td className="py-3 px-3 font-mono text-slate-400">{row.volume_ml}ml</td>
-                          <td className="py-3 px-3 text-center font-mono font-bold text-amber-400">{row.quantity}</td>
-                          <td className="py-3 px-3 text-right font-mono">₹{row.unit_price}</td>
-                          <td className="py-3 px-3 text-right font-mono font-black text-amber-400">₹{row.total_price}</td>
-                        </>
-                      )}
-                      {reportType === 'stock' && (
-                        <>
-                          <td className="py-3 px-3 font-bold text-slate-100">{row.product_name}</td>
-                          <td className="py-3 px-3 text-slate-400">{row.category}</td>
-                          <td className="py-3 px-3 font-mono text-slate-400">{row.volume_ml}ml</td>
-                          <td className="py-3 px-3 font-mono font-bold">
-                            <span className={`px-2 py-0.5 rounded text-[10px] ${row.transaction_type === 'IN' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                              {row.transaction_type}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold">{row.quantity}</td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-400">{new Date(row.transaction_date).toLocaleDateString()}</td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {(() => {
+            const detailsList = reportData?.items || reportData?.details || [];
+            return loading ? (
+              <div className="py-12 text-center text-slate-400 text-xs flex justify-center items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                <span>Loading report data...</span>
+              </div>
+            ) : !reportData || detailsList.length === 0 ? (
+              <div className="py-12 text-center text-slate-500 text-xs border-2 border-dashed border-[#21262d] rounded-xl">
+                No report records found for selected date/period ({period === 'daily' ? selectedDate : `${MONTHS.find((m) => m.value === selectedMonth)?.label} ${selectedYear}`}).
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Summary Metric KPI Banner Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {reportType === 'sales' && (
+                    <>
+                      <div className="bg-[#0d1117] border border-amber-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Sales Logs</span>
+                        <h4 className="text-lg font-black text-amber-400 font-mono mt-0.5">{reportData.total_transactions || detailsList.length} Transactions</h4>
+                      </div>
+                      <div className="bg-[#0d1117] border border-amber-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Bottles Sold</span>
+                        <h4 className="text-lg font-black text-amber-400 font-mono mt-0.5">{reportData.total_bottles_sold || detailsList.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0)} Bottles</h4>
+                      </div>
+                      <div className="bg-[#0d1117] border border-emerald-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-emerald-400 block">Total Sales Revenue</span>
+                        <h4 className="text-lg font-black text-emerald-400 font-mono mt-0.5">₹{(reportData.total_revenue || detailsList.reduce((sum: number, i: any) => sum + (i.total_amount || i.total_price || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</h4>
+                      </div>
+                    </>
+                  )}
+                  {reportType === 'entries' && (
+                    <>
+                      <div className="bg-[#0d1117] border border-amber-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Members Admitted</span>
+                        <h4 className="text-lg font-black text-amber-400 font-mono mt-0.5">{reportData.total_customers || detailsList.length} Members</h4>
+                      </div>
+                      <div className="bg-[#0d1117] border border-sky-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Additional Guests</span>
+                        <h4 className="text-lg font-black text-sky-400 font-mono mt-0.5">{reportData.total_additional_guests || 0} Guests</h4>
+                      </div>
+                      <div className="bg-[#0d1117] border border-emerald-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-emerald-400 block">Total Footfall</span>
+                        <h4 className="text-lg font-black text-emerald-400 font-mono mt-0.5">{reportData.total_footfall || 0} People</h4>
+                      </div>
+                    </>
+                  )}
+                  {reportType === 'stock' && (
+                    <>
+                      <div className="bg-[#0d1117] border border-sky-500/30 p-4 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Stock Shipments</span>
+                        <h4 className="text-lg font-black text-sky-400 font-mono mt-0.5">{reportData.total_shipments || detailsList.length} Inward Shipments</h4>
+                      </div>
+                      <div className="bg-[#0d1117] border border-emerald-500/30 p-4 rounded-xl sm:col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-emerald-400 block">Total Stock Received</span>
+                        <h4 className="text-lg font-black text-emerald-400 font-mono mt-0.5">{reportData.total_bottles_added || detailsList.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0)} Bottles</h4>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto min-w-0 border border-[#30363d] rounded-xl bg-[#0d1117]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
+                        {reportType === 'entries' && (
+                          <>
+                            <th className="py-3 px-3">Check-in Time</th>
+                            <th className="py-3 px-3">Member ID</th>
+                            <th className="py-3 px-3">Member Name</th>
+                            <th className="py-3 px-3">Phone</th>
+                            <th className="py-3 px-3 text-right">Guests</th>
+                          </>
+                        )}
+                        {reportType === 'sales' && (
+                          <>
+                            <th className="py-3 px-3 font-mono">Sale ID</th>
+                            <th className="py-3 px-3">Liquor Bottle</th>
+                            <th className="py-3 px-3">Category</th>
+                            <th className="py-3 px-3">Volume</th>
+                            <th className="py-3 px-3 text-center">Quantity Sold</th>
+                            <th className="py-3 px-3 text-right">Unit Price</th>
+                            <th className="py-3 px-3 text-right">Total Revenue</th>
+                            <th className="py-3 px-3 text-right">Date & Time</th>
+                          </>
+                        )}
+                        {reportType === 'stock' && (
+                          <>
+                            <th className="py-3 px-3">Tx ID</th>
+                            <th className="py-3 px-3">Product Name</th>
+                            <th className="py-3 px-3">Category</th>
+                            <th className="py-3 px-3">Volume</th>
+                            <th className="py-3 px-3">Type</th>
+                            <th className="py-3 px-3 text-right">Quantity</th>
+                            <th className="py-3 px-3 text-right">Date</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
+                      {detailsList.map((row: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-[#161b22]/50 transition-colors">
+                          {reportType === 'entries' && (
+                            <>
+                              <td className="py-3 px-3 text-slate-400">{row.entry_time || row.check_in_time ? new Date(row.entry_time || row.check_in_time).toLocaleString() : '-'}</td>
+                              <td className="py-3 px-3 font-bold text-amber-400">#{row.customer_code || 'N/A'}</td>
+                              <td className="py-3 px-3 font-bold text-slate-100">{row.customer_name || 'N/A'}</td>
+                              <td className="py-3 px-3 text-slate-400">{row.phone || 'N/A'}</td>
+                              <td className="py-3 px-3 text-right font-bold">{row.additional_guests || 0}</td>
+                            </>
+                          )}
+                          {reportType === 'sales' && (
+                            <>
+                              <td className="py-3 px-3 font-bold text-slate-400">#{row.sale_id || idx + 1}</td>
+                              <td className="py-3 px-3 font-bold text-slate-100">{row.product_name}</td>
+                              <td className="py-3 px-3 text-slate-400">{row.category}</td>
+                              <td className="py-3 px-3 text-slate-400">{row.volume_ml}ml</td>
+                              <td className="py-3 px-3 text-center font-bold text-amber-400">{row.quantity}</td>
+                              <td className="py-3 px-3 text-right">₹{Number(row.unit_price || 0).toFixed(2)}</td>
+                              <td className="py-3 px-3 text-right font-black text-emerald-400">₹{Number(row.total_amount ?? row.total_price ?? 0).toFixed(2)}</td>
+                              <td className="py-3 px-3 text-right text-slate-400">{row.sale_date ? new Date(row.sale_date).toLocaleString() : '-'}</td>
+                            </>
+                          )}
+                          {reportType === 'stock' && (
+                            <>
+                              <td className="py-3 px-3 font-bold text-slate-400">#{row.transaction_id || idx + 1}</td>
+                              <td className="py-3 px-3 font-bold text-slate-100">{row.product_name}</td>
+                              <td className="py-3 px-3 text-slate-400">{row.category}</td>
+                              <td className="py-3 px-3 text-slate-400">{row.volume_ml}ml</td>
+                              <td className="py-3 px-3 font-bold">
+                                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400">
+                                  {row.transaction_type || 'IN'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-right font-bold">{row.quantity}</td>
+                              <td className="py-3 px-3 text-right text-slate-400">{row.transaction_date ? new Date(row.transaction_date).toLocaleString() : '-'}</td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

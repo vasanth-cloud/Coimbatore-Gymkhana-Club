@@ -20,7 +20,20 @@ export interface Customer {
   full_name: string;
   phone: string;
   address?: string;
+  father_guardian_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+  occupation?: string;
+  institution_organization?: string;
+  aadhaar_card_no?: string;
+  email?: string;
+  blood_group?: string;
+  emergency_contact_no?: string;
+  purpose_of_membership?: string;
+  declaration_accepted?: boolean;
   qr_token?: string;
+  photo_url?: string;
+  created_at?: string;
   is_active: boolean;
 }
 
@@ -29,6 +42,18 @@ export interface CustomerCreatePayload {
   full_name: string;
   phone: string;
   address?: string;
+  father_guardian_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+  occupation?: string;
+  institution_organization?: string;
+  aadhaar_card_no?: string;
+  email?: string;
+  blood_group?: string;
+  emergency_contact_no?: string;
+  purpose_of_membership?: string;
+  declaration_accepted?: boolean;
+  photo_url?: string;
 }
 
 export interface CustomerUpdatePayload {
@@ -36,6 +61,18 @@ export interface CustomerUpdatePayload {
   full_name?: string;
   phone?: string;
   address?: string;
+  father_guardian_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+  occupation?: string;
+  institution_organization?: string;
+  aadhaar_card_no?: string;
+  email?: string;
+  blood_group?: string;
+  emergency_contact_no?: string;
+  purpose_of_membership?: string;
+  declaration_accepted?: boolean;
+  photo_url?: string;
 }
 
 export interface Entry {

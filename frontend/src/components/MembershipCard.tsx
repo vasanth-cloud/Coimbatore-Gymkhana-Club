@@ -1,12 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import { Customer } from '../types';
-import { Printer, Download, X, Loader2, CreditCard, RotateCw } from 'lucide-react';
+import {
+  Printer,
+  Download,
+  X,
+  Loader2,
+  CreditCard,
+  RotateCw,
+  Phone,
+  MapPin,
+  Briefcase,
+  ShieldAlert,
+  Mail,
+  User,
+  Calendar,
+  HeartPulse,
+} from 'lucide-react';
 
 interface MembershipCardProps {
   customer: Customer;
   qrImageUrl: string | null;
   onClose: () => void;
 }
+
+const drawDefaultAvatar = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) => {
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 10);
+  ctx.fillStyle = '#F3F4F6';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 10);
+  ctx.clip();
+
+  // Head
+  ctx.fillStyle = '#9CA3AF';
+  ctx.beginPath();
+  ctx.arc(x + w / 2, y + h * 0.35, w * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Shoulders body
+  ctx.beginPath();
+  ctx.ellipse(x + w / 2, y + h * 0.88, w * 0.36, h * 0.28, 0, Math.PI, 0);
+  ctx.fill();
+
+  ctx.restore();
+};
 
 export const MembershipCard: React.FC<MembershipCardProps> = ({
   customer,
@@ -31,18 +77,22 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
 
     const renderCards = async () => {
       // -------------------------------------------------------------
-      // 1. RENDER FRONT SIDE (New Curved Dark-Green & White Template)
+      // 1. RENDER FRONT SIDE (Official Gymkhana Membership Template)
       // -------------------------------------------------------------
       const frontCanvas = document.createElement('canvas');
       const frontCtx = frontCanvas.getContext('2d');
 
       const frontImg = new Image();
       frontImg.crossOrigin = 'anonymous';
-      frontImg.src = '/card-template-front.png';
+      frontImg.src = '/card-template-front-new.png';
 
       const backImg = new Image();
       backImg.crossOrigin = 'anonymous';
-      backImg.src = '/card-template-back.png';
+      backImg.src = '/card-template-back-new.png';
+
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.src = '/gymkhana-logo-transparent.png';
 
       const loadFront = new Promise<void>((resolve) => {
         frontImg.onload = () => resolve();
@@ -52,11 +102,16 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
         backImg.onload = () => resolve();
       });
 
-      await Promise.all([loadFront, loadBack]);
+      const loadLogo = new Promise<void>((resolve) => {
+        logoImg.onload = () => resolve();
+        logoImg.onerror = () => resolve();
+      });
+
+      await Promise.all([loadFront, loadBack, loadLogo]);
 
       if (frontCtx) {
-        frontCanvas.width = frontImg.width || 1056;
-        frontCanvas.height = frontImg.height || 660;
+        frontCanvas.width = frontImg.width || 1024;
+        frontCanvas.height = frontImg.height || 682;
 
         const w = frontCanvas.width;
         const h = frontCanvas.height;
@@ -64,16 +119,78 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
         // Draw base front template image
         frontCtx.drawImage(frontImg, 0, 0, w, h);
 
-        // 1. Clean QR Code Frame Box
-        const qrX = w * 0.262;
-        const qrY = h * 0.408;
-        const qrW = w * 0.203;
-        const qrH = h * 0.325;
+        // 1. Draw Member Photo in Left Photo Frame Box (x=60, y=226, w=204, h=257)
+        const photoX = 60;
+        const photoY = 226;
+        const photoW = 204;
+        const photoH = 257;
+
+        if (customer.photo_url) {
+          const photoImg = new Image();
+          photoImg.crossOrigin = 'anonymous';
+          photoImg.src = customer.photo_url;
+
+          await new Promise<void>((res) => {
+            photoImg.onload = () => {
+              frontCtx.save();
+              frontCtx.beginPath();
+              frontCtx.roundRect(photoX, photoY, photoW, photoH, 10);
+              frontCtx.clip();
+
+              // Object-fit cover algorithm for member photo
+              const imgRatio = photoImg.width / photoImg.height;
+              const boxRatio = photoW / photoH;
+              let renderW = photoW;
+              let renderH = photoH;
+              let renderX = photoX;
+              let renderY = photoY;
+
+              if (imgRatio > boxRatio) {
+                renderW = photoH * imgRatio;
+                renderX = photoX - (renderW - photoW) / 2;
+              } else {
+                renderH = photoW / imgRatio;
+                renderY = photoY - (renderH - photoH) / 2;
+              }
+
+              frontCtx.drawImage(photoImg, renderX, renderY, renderW, renderH);
+              frontCtx.restore();
+              res();
+            };
+            photoImg.onerror = () => {
+              drawDefaultAvatar(frontCtx, photoX, photoY, photoW, photoH);
+              res();
+            };
+          });
+        } else {
+          drawDefaultAvatar(frontCtx, photoX, photoY, photoW, photoH);
+        }
+
+        // 2. Draw Member ID Value (aligned right after colon : at x=525, y=295)
+        frontCtx.fillStyle = '#0F172A';
+        frontCtx.textAlign = 'left';
+        frontCtx.textBaseline = 'middle';
+        frontCtx.font = 'bold 24px "Times New Roman", serif';
+        frontCtx.fillText(customer.customer_code.toUpperCase(), 525, 295);
+
+        // 3. Draw Member Name Value (aligned right after colon : at x=525, y=376)
+        const nameUpper = customer.full_name.toUpperCase();
+        if (nameUpper.length > 20) {
+          frontCtx.font = 'bold 18px "Times New Roman", serif';
+        } else if (nameUpper.length > 14) {
+          frontCtx.font = 'bold 21px "Times New Roman", serif';
+        } else {
+          frontCtx.font = 'bold 24px "Times New Roman", serif';
+        }
+        frontCtx.fillText(nameUpper, 525, 376);
+
+        // 4. Draw Right QR Code Box (x=778, y=231, w=175, h=175)
+        const qrX = 778;
+        const qrY = 231;
+        const qrSize = 175;
 
         frontCtx.fillStyle = '#FFFFFF';
-        frontCtx.beginPath();
-        frontCtx.roundRect(qrX, qrY, qrW, qrH, 18);
-        frontCtx.fill();
+        frontCtx.fillRect(qrX, qrY, qrSize, qrSize);
 
         if (qrImageUrl) {
           const qrImg = new Image();
@@ -82,55 +199,20 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
 
           await new Promise<void>((res) => {
             qrImg.onload = () => {
-              const pad = 8;
-              frontCtx.drawImage(qrImg, qrX + pad, qrY + pad, qrW - pad * 2, qrH - pad * 2);
+              const pad = 6;
+              frontCtx.drawImage(qrImg, qrX + pad, qrY + pad, qrSize - pad * 2, qrSize - pad * 2);
               res();
             };
             qrImg.onerror = () => res();
           });
         }
 
-        // 2. Clear sample text background fields before drawing customer's actual data
-        const textCoverX = w * 0.725;
-        const textCoverW = w * 0.24;
-        const textCoverH = h * 0.07;
-
-        const y1 = h * 0.420; // MEMBER ID cover
-        const y2 = h * 0.530; // MEMBER NAME cover
-        const y3 = h * 0.640; // DATE OF ISSUE cover
-
-        frontCtx.fillStyle = '#FAF8F5'; // Off-white matching template background
-        frontCtx.fillRect(textCoverX, y1, textCoverW, textCoverH);
-        frontCtx.fillRect(textCoverX, y2, textCoverW, textCoverH);
-        frontCtx.fillRect(textCoverX, y3, textCoverW, textCoverH);
-
-        // 3. Draw Customer details in crisp dark green/charcoal serif text
-        frontCtx.fillStyle = '#0F2018';
-        frontCtx.shadowColor = 'rgba(0,0,0,0.1)';
-        frontCtx.shadowBlur = 1;
-        frontCtx.shadowOffsetX = 1;
-        frontCtx.shadowOffsetY = 1;
-
-        frontCtx.textAlign = 'left';
+        // 5. Draw Date of Issue Value (centered below DATE OF ISSUE label at x=865, y=474)
+        frontCtx.fillStyle = '#0F172A';
+        frontCtx.textAlign = 'center';
         frontCtx.textBaseline = 'middle';
-        const textX = w * 0.730;
-
-        // Member ID
-        frontCtx.font = 'bold 26px "Times New Roman", serif';
-        frontCtx.fillText(customer.customer_code.toUpperCase(), textX, y1 + textCoverH / 2);
-
-        // Member Name
-        const nameUpper = customer.full_name.toUpperCase();
-        if (nameUpper.length > 18) {
-          frontCtx.font = 'bold 21px "Times New Roman", serif';
-        } else {
-          frontCtx.font = 'bold 25px "Times New Roman", serif';
-        }
-        frontCtx.fillText(nameUpper, textX, y2 + textCoverH / 2);
-
-        // Date of Issue
-        frontCtx.font = 'bold 25px "Times New Roman", serif';
-        frontCtx.fillText(formattedDate, textX, y3 + textCoverH / 2);
+        frontCtx.font = 'bold 18px "Times New Roman", serif';
+        frontCtx.fillText(formattedDate, 865, 474);
 
         if (isMounted) {
           setFrontCardUrl(frontCanvas.toDataURL('image/png'));
@@ -138,14 +220,14 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
       }
 
       // -------------------------------------------------------------
-      // 2. RENDER BACK SIDE (Dark Green Official Crest Template)
+      // 2. RENDER BACK SIDE (Dark Green Official Crest & Rules Template)
       // -------------------------------------------------------------
       const backCanvas = document.createElement('canvas');
       const backCtx = backCanvas.getContext('2d');
 
       if (backCtx) {
-        backCanvas.width = backImg.width || 1056;
-        backCanvas.height = backImg.height || 660;
+        backCanvas.width = backImg.width || 1024;
+        backCanvas.height = backImg.height || 683;
 
         backCtx.drawImage(backImg, 0, 0, backCanvas.width, backCanvas.height);
 
@@ -249,8 +331,8 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#161b22] border border-[#21262d] rounded-3xl p-6 max-w-2xl w-full relative shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-[#161b22] border border-[#21262d] rounded-3xl p-6 max-w-2xl w-full relative shadow-2xl space-y-5 my-auto max-h-[95vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#21262d] pb-4">
@@ -258,8 +340,9 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
             <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold">
               Coimbatore Gymkhana Club Official Pass
             </span>
-            <h3 className="text-xl font-extrabold text-slate-100 mt-0.5">
-              {customer.full_name} ({customer.customer_code})
+            <h3 className="text-xl font-extrabold text-slate-100 mt-0.5 flex items-center gap-2">
+              <span>{customer.full_name}</span>
+              <span className="text-amber-400 font-mono text-base">({customer.customer_code})</span>
             </h3>
           </div>
           <button
@@ -268,6 +351,37 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Member Quick Info Banner (Prominent Mobile Number) */}
+        <div className="bg-[#0d1117] border border-amber-500/30 rounded-2xl p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
+              <Phone className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block">
+                Registered Mobile Number
+              </span>
+              <span className="text-sm font-black font-mono text-amber-300">
+                {customer.phone || 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+              <User className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block">
+                Father / Guardian Name
+              </span>
+              <span className="text-xs font-bold text-slate-200">
+                {customer.father_guardian_name || 'N/A'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Side Selector Tabs (Front vs Back) */}
@@ -329,6 +443,71 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
           ) : null}
         </div>
 
+        {/* Additional Member Profile Details Grid */}
+        <div className="bg-[#0d1117] rounded-2xl border border-[#21262d] p-4 space-y-3">
+          <h4 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-[#21262d] pb-2">
+            <User className="w-3.5 h-3.5 text-amber-400" />
+            <span>Complete Member Registration Data</span>
+          </h4>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Occupation</span>
+              <span className="text-slate-200 font-semibold flex items-center gap-1.5 mt-0.5">
+                <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{customer.occupation || 'N/A'}</span>
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Emergency Contact</span>
+              <span className="text-rose-400 font-mono font-bold flex items-center gap-1.5 mt-0.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>{customer.emergency_contact_no || 'N/A'}</span>
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Email Address</span>
+              <span className="text-slate-200 font-semibold flex items-center gap-1.5 mt-0.5 truncate">
+                <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">{customer.email || 'N/A'}</span>
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Date of Birth & Gender</span>
+              <span className="text-slate-200 font-semibold flex items-center gap-1.5 mt-0.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{customer.date_of_birth || 'N/A'} ({customer.gender || 'Male'})</span>
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Blood Group</span>
+              <span className="text-rose-400 font-bold flex items-center gap-1.5 mt-0.5">
+                <HeartPulse className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>{customer.blood_group || 'N/A'}</span>
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Aadhaar Card No.</span>
+              <span className="text-slate-300 font-mono text-xs block mt-0.5">
+                {customer.aadhaar_card_no || 'N/A'}
+              </span>
+            </div>
+
+            <div className="sm:col-span-3">
+              <span className="text-[10px] text-slate-500 block uppercase font-bold">Residential Address</span>
+              <span className="text-slate-200 text-xs flex items-center gap-1.5 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>{customer.address || 'N/A'}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Action Buttons for Dual-Side Printing & Download */}
         <div className="space-y-3 pt-1">
           <button
@@ -364,3 +543,4 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
     </div>
   );
 };
+

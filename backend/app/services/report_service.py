@@ -83,6 +83,7 @@ class ReportService:
                 "additional_guests": row.additional_guests,
                 "total_people": row.total_people,
                 "entry_time": row.entry_time.isoformat() if row.entry_time else None,
+                "check_in_time": row.entry_time.isoformat() if row.entry_time else None,
             }
             for row in rows
         ]
@@ -99,6 +100,7 @@ class ReportService:
             "total_additional_guests": total_additional,
             "total_footfall": total_footfall,
             "items": items,
+            "details": items,
         }
 
     # ---------------------------------
@@ -115,6 +117,7 @@ class ReportService:
                 "category": row.category,
                 "volume_ml": row.volume_ml,
                 "quantity": row.quantity,
+                "transaction_type": "IN",
                 "transaction_date": row.transaction_date.isoformat() if row.transaction_date else None,
             }
             for row in rows
@@ -130,6 +133,7 @@ class ReportService:
             "total_shipments": total_shipments,
             "total_bottles_added": total_bottles_added,
             "items": items,
+            "details": items,
         }
 
     # ---------------------------------
@@ -146,9 +150,12 @@ class ReportService:
                 "category": row.category,
                 "volume_ml": row.volume_ml,
                 "quantity": row.quantity,
-                "unit_price": row.unit_price,
-                "total_amount": row.total_amount,
+                "unit_price": float(row.unit_price) if row.unit_price else 0.0,
+                "total_amount": float(row.total_amount) if row.total_amount else 0.0,
+                "total_price": float(row.total_amount) if row.total_amount else 0.0,
                 "sale_date": row.sale_date.isoformat() if row.sale_date else None,
+                "customer_code": row.customer_code,
+                "customer_name": row.customer_name,
             }
             for row in rows
         ]
@@ -165,4 +172,5 @@ class ReportService:
             "total_bottles_sold": total_bottles_sold,
             "total_revenue": total_revenue,
             "items": items,
+            "details": items,
         }

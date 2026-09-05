@@ -171,8 +171,11 @@ class ReportRepository:
                 Product.selling_price.label("unit_price"),
                 (Sale.quantity * Product.selling_price).label("total_amount"),
                 Sale.sale_date.label("sale_date"),
+                Customer.customer_code.label("customer_code"),
+                Customer.full_name.label("customer_name"),
             )
             .join(Product, Product.id == Sale.product_id)
+            .outerjoin(Customer, Customer.id == Sale.customer_id)
             .filter(
                 Sale.sale_date >= start_date,
                 Sale.sale_date < end_date,

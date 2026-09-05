@@ -65,6 +65,7 @@ export const Stock: React.FC = () => {
   const [selectedCategoryPill, setSelectedCategoryPill] = useState<string>('ALL');
   const [selectedGridCategoryPill, setSelectedGridCategoryPill] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const [hideZeroLedger, setHideZeroLedger] = useState(false);
 
   // Receive Stock Modal State
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -630,27 +631,47 @@ export const Stock: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Filter Ledger items
-  const filteredLedgerItems = ledgerData.filter((item) => {
-    const matchesSearch =
-      item.product_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase()) ||
-      `${item.volume_ml}ml`.toLowerCase().includes(search.toLowerCase());
+  // Filter Ledger items (Sort active items with values > 0 to the top, zero items to the bottom)
+  const filteredLedgerItems = ledgerData
+    .filter((item) => {
+      const matchesSearch =
+        item.product_name.toLowerCase().includes(search.toLowerCase()) ||
+        item.category.toLowerCase().includes(search.toLowerCase()) ||
+        `${item.volume_ml}ml`.toLowerCase().includes(search.toLowerCase());
 
-    const matchesPill = selectedCategoryPill === 'ALL' || item.category.toLowerCase() === selectedCategoryPill.toLowerCase();
-    return matchesSearch && matchesPill;
-  });
+      const matchesPill = selectedCategoryPill === 'ALL' || item.category.toLowerCase() === selectedCategoryPill.toLowerCase();
+      
+      const hasVal = (item.opening_stock || 0) + (item.purchase_qty || 0) + (item.sale_qty || 0) + (item.closing_stock || 0) > 0;
+      const matchesZeroFilter = !hideZeroLedger || hasVal;
+
+      return matchesSearch && matchesPill && matchesZeroFilter;
+    })
+    .sort((a, b) => {
+      const aHasVal = (a.opening_stock || 0) + (a.purchase_qty || 0) + (a.sale_qty || 0) + (a.closing_stock || 0) > 0;
+      const bHasVal = (b.opening_stock || 0) + (b.purchase_qty || 0) + (b.sale_qty || 0) + (b.closing_stock || 0) > 0;
+      if (aHasVal && !bHasVal) return -1;
+      if (!aHasVal && bHasVal) return 1;
+      return a.product_name.localeCompare(b.product_name);
+    });
 
   const ledgerCategoryPills = Array.from(new Set(ledgerData.map((i) => i.category)));
 
-  // Filter Grid List
-  const filteredStockList = stockList.filter((item) => {
-    const matchesSearch = item.product_name.toLowerCase().includes(search.toLowerCase());
-    const prod = products.find((p) => p.id === item.product_id);
-    const matchesPill =
-      selectedGridCategoryPill === 'ALL' || (prod && prod.category.toLowerCase() === selectedGridCategoryPill.toLowerCase());
-    return matchesSearch && matchesPill;
-  });
+  // Filter Grid List (Sort items with current stock > 0 to the top, zero stock items to the bottom)
+  const filteredStockList = stockList
+    .filter((item) => {
+      const matchesSearch = item.product_name.toLowerCase().includes(search.toLowerCase());
+      const prod = products.find((p) => p.id === item.product_id);
+      const matchesPill =
+        selectedGridCategoryPill === 'ALL' || (prod && prod.category.toLowerCase() === selectedGridCategoryPill.toLowerCase());
+      return matchesSearch && matchesPill;
+    })
+    .sort((a, b) => {
+      const aHasStock = (a.current_stock || 0) > 0;
+      const bHasStock = (b.current_stock || 0) > 0;
+      if (aHasStock && !bHasStock) return -1;
+      if (!aHasStock && bHasStock) return 1;
+      return a.product_name.localeCompare(b.product_name);
+    });
 
   const gridCategoryPills = Array.from(
     new Set(
@@ -831,16 +852,31 @@ export const Stock: React.FC = () => {
                 />
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search drink name..."
-                  className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-1.5 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500"
-                />
+              {/* Search & Active Toggle */}
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setHideZeroLedger(!hideZeroLedger)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 shrink-0 ${
+                    hideZeroLedger
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-[#0d1117] text-slate-400 border-[#30363d] hover:text-slate-200'
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>{hideZeroLedger ? 'Showing Active Only' : 'Active Items First'}</span>
+                </button>
+
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search drink name..."
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl pl-9 pr-3 py-1.5 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1652,16 +1688,35 @@ export const Stock: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="border-b border-[#21262d] pb-3">
-              <span className="text-[10px] font-extrabold uppercase text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 font-mono">
-                TASMAC STOCK ARRIVAL RECEIPT LOG
-              </span>
-              <h3 className="text-lg font-black text-slate-100 mt-1">
-                Invoice #{viewingReceipt.invoice_number} — {viewingReceipt.invoice_date}
+            <div className="border-b border-[#21262d] pb-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 font-mono">
+                  TASMAC STOCK ARRIVAL RECEIPT LOG
+                </span>
+                <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                  Invoice Date: {viewingReceipt.invoice_date}
+                </span>
+              </div>
+
+              <h3 className="text-lg font-black text-slate-100 font-mono tracking-wide">
+                Invoice #{viewingReceipt.invoice_number}
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Depot: {viewingReceipt.depot_name} • Supplier: {viewingReceipt.supplier_name} • Received By: {viewingReceipt.received_by}
-              </p>
+
+              {/* Line by Line Header Information Block */}
+              <div className="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-2 font-mono text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#21262d]/60 pb-1.5 gap-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Depot:</span>
+                  <span className="font-bold text-slate-100">{viewingReceipt.depot_name || 'TASMAC COIMBATORE (SOUTH)'}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#21262d]/60 pb-1.5 gap-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Supplier:</span>
+                  <span className="font-bold text-slate-100">{viewingReceipt.supplier_name || 'TASMAC LTD'}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Received By:</span>
+                  <span className="font-bold text-emerald-400">{viewingReceipt.received_by || 'Admin/Staff'}</span>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">

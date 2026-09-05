@@ -63,7 +63,7 @@ export const Sidebar: React.FC = () => {
       name: 'Reports & Downloads',
       path: '/reports',
       icon: FileText,
-      roles: ['ADMIN', 'STAFF'],
+      roles: ['ADMIN'],
     },
     {
       name: 'Staff Accounts',

@@ -422,20 +422,43 @@ export const Sales: React.FC = () => {
       'Total Amount (INR)',
     ];
 
-    const rows = detailedSales.map((s) => [
-      s.id,
-      s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
-      s.customer_code ? `"#${s.customer_code}"` : '"N/A"',
-      s.customer_name ? `"${s.customer_name}"` : '"N/A"',
-      s.phone ? `"${s.phone}"` : '"N/A"',
-      `"${s.product_name}"`,
-      `"${s.brand_name || 'N/A'}"`,
-      `"${s.category}"`,
-      s.volume_ml,
-      s.quantity,
-      s.unit_price,
-      s.total_price,
-    ]);
+    let totalBottlesSold = 0;
+    let totalSalesRevenue = 0;
+
+    const rows = detailedSales.map((s) => {
+      totalBottlesSold += s.quantity || 0;
+      totalSalesRevenue += s.total_price || 0;
+
+      return [
+        s.id,
+        s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
+        s.customer_code ? `"#${s.customer_code}"` : '"N/A"',
+        s.customer_name ? `"${s.customer_name}"` : '"N/A"',
+        s.phone ? `"${s.phone}"` : '"N/A"',
+        `"${s.product_name}"`,
+        `"${s.brand_name || 'N/A'}"`,
+        `"${s.category}"`,
+        s.volume_ml,
+        s.quantity,
+        s.unit_price,
+        s.total_price,
+      ];
+    });
+
+    const grandTotalSummaryRow = [
+      '"GRAND TOTAL SALES SUMMARY"',
+      `"Total Transactions: ${detailedSales.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '"TOTAL BOTTLES SOLD & REVENUE RATE (INR):"',
+      totalBottlesSold,
+      '""',
+      totalSalesRevenue,
+    ];
 
     const dateStr = new Date().toISOString().split('T')[0];
     const statusText =
@@ -447,6 +470,7 @@ export const Sales: React.FC = () => {
 
     const summaryRows = [
       [''],
+      grandTotalSummaryRow,
       ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', '', '', '', totalSalesLogAmount],
       [''],
       ['--- DENOMINATIONS RECEIVED & EXPENSES CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', '', '', '', ''],
@@ -502,21 +526,41 @@ export const Sales: React.FC = () => {
       'Category',
       'Volume (ml)',
       'Quantity Sold',
-      'Unit Price (INR)',
+      'Unit Price / Bottle Rate (INR)',
       'Total Sales Amount (INR)',
     ];
 
-    const rows = detailedSales.map((s) => [
-      s.id,
-      s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
-      `"${s.product_name}"`,
-      `"${s.brand_name || 'N/A'}"`,
-      `"${s.category}"`,
-      s.volume_ml,
-      s.quantity,
-      s.unit_price,
-      s.total_price,
-    ]);
+    let totalBottlesSold = 0;
+    let totalSalesRevenue = 0;
+
+    const rows = detailedSales.map((s) => {
+      totalBottlesSold += s.quantity || 0;
+      totalSalesRevenue += s.total_price || 0;
+
+      return [
+        s.id,
+        s.sale_date ? `"${new Date(s.sale_date).toLocaleString()}"` : 'N/A',
+        `"${s.product_name}"`,
+        `"${s.brand_name || 'N/A'}"`,
+        `"${s.category}"`,
+        s.volume_ml,
+        s.quantity,
+        s.unit_price,
+        s.total_price,
+      ];
+    });
+
+    const grandTotalSummaryRow = [
+      '"GRAND TOTAL SALES SUMMARY"',
+      `"Total Transactions: ${detailedSales.length}"`,
+      '""',
+      '""',
+      '""',
+      '"TOTAL BOTTLES SOLD & REVENUE RATE (INR):"',
+      totalBottlesSold,
+      '""',
+      totalSalesRevenue,
+    ];
 
     const dateStr = new Date().toISOString().split('T')[0];
     const statusText =
@@ -528,6 +572,7 @@ export const Sales: React.FC = () => {
 
     const summaryRows = [
       [''],
+      grandTotalSummaryRow,
       ['TOTAL SALES LOG AMOUNT (INR)', '', '', '', '', '', '', '', totalSalesLogAmount],
       [''],
       ['--- DENOMINATIONS RECEIVED & EXPENSES CROSS-VERIFICATION AUDIT ---', '', '', '', '', '', '', '', ''],
@@ -587,6 +632,16 @@ export const Sales: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
+            onClick={exportMemberLiquorSalesCSV}
+            disabled={detailedSales.length === 0}
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
+            title="Download Sales Log Excel Sheet"
+          >
+            <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" />
+            <span>DOWNLOAD SALES EXCEL</span>
+          </button>
+
+          <button
             onClick={() => setShowDenomModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all"
             title="Open Cash Denominations & Sales Cross-Verification Tool"
@@ -598,10 +653,10 @@ export const Sales: React.FC = () => {
           {/* Prominent Sales Log View Button */}
           <button
             onClick={() => setShowSalesLogModal(true)}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all"
+            className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-extrabold rounded-xl text-xs flex items-center gap-2 transition-all"
             title="Open Sales Log History Window"
           >
-            <Receipt className="w-4 h-4 stroke-[2.5]" />
+            <Receipt className="w-4 h-4 text-amber-400 stroke-[2.5]" />
             <span>VIEW SALES LOG ({detailedSales.length})</span>
           </button>
 
