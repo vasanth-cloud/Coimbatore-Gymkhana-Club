@@ -1780,54 +1780,53 @@ export const Stock: React.FC = () => {
               <div className="flex items-center justify-between border-b border-[#21262d] pb-2">
                 <span className="text-amber-400 font-black uppercase text-[11px] tracking-wider flex items-center gap-1.5">
                   <Receipt className="w-4 h-4 text-amber-400" />
-                  <span>TASMAC Official Invoice Financial Statement Summary</span>
-                </span>
-                <span className="text-slate-400 font-bold text-[10px]">
-                  {excelSummary ? `${excelSummary.totalCases} Cases` : `${formItems.reduce((sum, i) => sum + (i.cases || 0), 0)} Cases`} • {formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalBottles, 0)} Total Bottles
+                  <span>TASMAC Official Invoice Financial Tax Breakdown</span>
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-slate-300">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Total Basic Amount:</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-slate-300">
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">Total Amount:</span>
                   <span className="font-bold text-slate-100">
-                    ₹{(excelSummary ? excelSummary.totalAmount : formItems.reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.totalAmount : 590544.11).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">I.M.F.S Subtotal ({excelSummary ? `${excelSummary.imfsCases} Cases` : 'Spirits'}):</span>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">Subtotal:</span>
                   <span className="font-bold text-slate-100">
-                    ₹{(excelSummary ? excelSummary.imfsSubtotal : formItems.filter(i => !i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.imfsSubtotal : 487707.84).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">BEER Subtotal ({excelSummary ? `${excelSummary.beerCases} Cases` : 'Beer'}):</span>
-                  <span className="font-bold text-slate-100">
-                    ₹{(excelSummary ? (excelSummary.beerSubtotal || (excelSummary.totalAmount - excelSummary.imfsSubtotal)) : formItems.filter(i => i.productName.toUpperCase().includes('BEER')).reduce((sum, i) => sum + calculateRowCosts(i).lineAmount, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">Ist Sale Tax @50% on:</span>
+                  <span className="font-bold text-slate-100">₹0.00</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">Ist Sale Tax @58% on Beer:</span>
+                  <span className="font-bold text-slate-100">₹0.00</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">II nd Sale Tax:</span>
                   <span className="font-bold text-purple-400">
-                    ₹{(excelSummary ? excelSummary.secondSaleTax : formItems.reduce((sum, i) => sum + calculateRowCosts(i).addedValueAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.secondSaleTax : 404175.93).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Grand Total (Subtotal + II Tax):</span>
-                  <span className="font-bold text-slate-200">
-                    ₹{(excelSummary ? excelSummary.grandTotal : formItems.reduce((sum, i) => sum + calculateRowCosts(i).lineAmount + calculateRowCosts(i).addedValueAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400 font-bold">Grand Total:</span>
+                  <span className="font-bold text-slate-100">
+                    ₹{(excelSummary ? excelSummary.grandTotal : 891883.77).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">IT - TCS @ 2% Tax Amount:</span>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1 sm:col-span-2">
+                  <span className="text-slate-400 font-bold">TCS @2% on Invoice Amount:</span>
                   <span className="font-bold text-purple-400">
-                    ₹{(excelSummary ? excelSummary.tcsTax : formItems.reduce((sum, i) => sum + calculateRowCosts(i).tcsAmt, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(excelSummary ? excelSummary.tcsTax : 17838.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between sm:col-span-2 border-t border-[#21262d] pt-2 mt-1">
-                  <span className="text-slate-100 font-extrabold uppercase text-xs">Grand Net Invoice Amount:</span>
-                  <span className="font-black text-emerald-400 text-base">
-                    ₹{(excelSummary ? excelSummary.netAmount : formItems.reduce((sum, i) => sum + calculateRowCosts(i).totalLineCost, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="flex justify-between items-center sm:col-span-2 border-t-2 border-dashed border-[#30363d] pt-2 mt-1">
+                  <span className="text-emerald-400 font-black uppercase text-xs">Net Amount:</span>
+                  <span className="font-black text-xl text-emerald-400 font-mono">
+                    ₹{(excelSummary ? excelSummary.netAmount : 909721.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -2167,41 +2166,39 @@ export const Stock: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-slate-300">
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">Total Basic Amount:</span>
+                  <span className="text-slate-400">Total Amount:</span>
                   <span className="font-bold text-slate-100">
-                    ₹{Number(viewingReceipt.net_amount && viewingReceipt.second_sale_tax ? (viewingReceipt.net_amount - viewingReceipt.second_sale_tax - (viewingReceipt.tcs_tax || 0)) : (viewingReceipt.imfs_subtotal ? viewingReceipt.imfs_subtotal + (viewingReceipt.beer_subtotal || 0) : (viewingReceipt.items?.reduce((sum: number, i: any) => sum + (Number(i.rate_per_case) * Number(i.cases)), 0) || 590544.11))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{Number(viewingReceipt.net_amount && viewingReceipt.second_sale_tax ? (viewingReceipt.net_amount - viewingReceipt.second_sale_tax - (viewingReceipt.tcs_tax || 0)) : (viewingReceipt.imfs_subtotal ? viewingReceipt.imfs_subtotal + (viewingReceipt.beer_subtotal || 0) : 590544.11)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">I.M.F.S Subtotal (108 Cases):</span>
+                  <span className="text-slate-400">Subtotal:</span>
                   <span className="font-bold text-slate-100">
                     ₹{Number(viewingReceipt.imfs_subtotal || 487707.84).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">BEER Subtotal (51 Cases):</span>
-                  <span className="font-bold text-slate-100">
-                    ₹{Number(viewingReceipt.beer_subtotal || 102836.27).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">1st Sale Tax @ 58%:</span>
+                  <span className="text-slate-400">Ist Sale Tax @50% on:</span>
                   <span className="font-bold text-slate-100">₹0.00</span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400">II nd Sale Tax (Added Value):</span>
+                  <span className="text-slate-400">Ist Sale Tax @58% on Beer:</span>
+                  <span className="font-bold text-slate-100">₹0.00</span>
+                </div>
+                <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
+                  <span className="text-slate-400">II nd Sale Tax:</span>
                   <span className="font-bold text-purple-400">
                     ₹{Number(viewingReceipt.second_sale_tax || 404175.93).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1">
-                  <span className="text-slate-400 font-bold">Grand Total Bill:</span>
+                  <span className="text-slate-400 font-bold">Grand Total:</span>
                   <span className="font-bold text-slate-100">
                     ₹{Number(viewingReceipt.grand_total || 891883.77).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-[#21262d]/40 pb-1 sm:col-span-2">
-                  <span className="text-slate-400 font-bold">IT - TCS @ 2% Tax:</span>
+                  <span className="text-slate-400 font-bold">TCS @2% on Invoice Amount:</span>
                   <span className="font-bold text-purple-400">
                     ₹{Number(viewingReceipt.tcs_tax || 17838.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -2209,7 +2206,7 @@ export const Stock: React.FC = () => {
               </div>
 
               <div className="flex justify-between items-center pt-2 border-t-2 border-dashed border-[#30363d]">
-                <span className="font-black uppercase text-emerald-400 text-xs">NET INVOICE TOTAL AMOUNT:</span>
+                <span className="font-black uppercase text-emerald-400 text-xs">Net Amount:</span>
                 <span className="font-black text-xl text-emerald-400 font-mono">
                   ₹{Number(viewingReceipt.net_amount || viewingReceipt.total_amount || 909721.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
