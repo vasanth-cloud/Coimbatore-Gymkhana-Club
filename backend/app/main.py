@@ -135,9 +135,34 @@ def on_startup():
 
     try:
         from app.core.database import SessionLocal
+        from app.core.security import hash_password
+        from app.models.user import User, UserRole
         from app.models.stock_receipt import StockReceipt
         from app.models.stock_transaction import StockTransaction
+
         db = SessionLocal()
+
+        # Automatically seed default admin users if not present
+        emails_to_seed = ["admin@gymkhanaclub.com", "avasanth081@gmail.com"]
+        for target_email in emails_to_seed:
+            usr = db.query(User).filter(User.email.ilike(target_email)).first()
+            if not usr:
+                usr = User(
+                    full_name="Admin User" if "admin" in target_email else "Vasanth",
+                    email=target_email,
+                    password_hash=hash_password("admin123"),
+                    role=UserRole.ADMIN,
+                    is_active=True
+                )
+                db.add(usr)
+                print(f"Seeded admin user: {target_email} with default password 'admin123'")
+            else:
+                # Ensure password is reset to admin123 if account was inactive
+                usr.password_hash = hash_password("admin123")
+                usr.is_active = True
+                db.add(usr)
+        db.commit()
+
         rc_count = db.query(StockReceipt).count()
         if rc_count == 0:
             db.query(StockTransaction).filter(
@@ -148,7 +173,7 @@ def on_startup():
             print("Cleared orphan stock IN transactions as 0 arrival receipts exist.")
         db.close()
     except Exception as e:
-        print(f"Startup stock sync error: {e}")
+        print(f"Startup user seed / stock sync error: {e}")
 
 
 @app.get("/")
