@@ -1,7 +1,11 @@
 import secrets
 import re
+import hmac
+import hashlib
+import base64
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.customer import Customer
 from app.repositories.customer_repository import CustomerRepository
 
@@ -11,6 +15,13 @@ class CustomerService:
     def __init__(self, db: Session):
         self.db = db
         self.repository = CustomerRepository(db)
+
+    def _generate_deterministic_qr_token(self, customer_code: str) -> str:
+        code_str = str(customer_code).strip().upper().replace("#", "")
+        secret = settings.SECRET_KEY.encode()
+        msg = f"CGC_MEMBER_CARD_{code_str}".encode()
+        h = hmac.new(secret, msg, hashlib.sha256).digest()
+        return base64.urlsafe_b64encode(h).decode().rstrip("=")
 
     def create_customer(
         self,
@@ -30,6 +41,7 @@ class CustomerService:
         purpose_of_membership: str | None = None,
         declaration_accepted: bool | None = True,
         photo_url: str | None = None,
+        custom_qr_token: str | None = None,
     ) -> Customer:
 
         # Check duplicate phone number
@@ -46,8 +58,11 @@ class CustomerService:
         else:
             customer_code = self._generate_serial_customer_code()
 
-        # Generate secure QR token
-        qr_token = secrets.token_urlsafe(32)
+        # Generate secure deterministic QR token based on customer_code if custom_qr_token is not provided
+        if custom_qr_token and str(custom_qr_token).strip():
+            qr_token = str(custom_qr_token).strip()
+        else:
+            qr_token = self._generate_deterministic_qr_token(customer_code)
 
         customer = Customer(
             customer_code=customer_code,
@@ -168,6 +183,7 @@ class CustomerService:
             emergency = str(item.get("emergency_contact_no") or item.get("emergency_contact") or "").strip() or None
             purpose = str(item.get("purpose_of_membership") or item.get("purpose") or "").strip() or None
             photo_url = str(item.get("photo_url") or item.get("photo") or "").strip() or None
+            custom_qr_token = str(item.get("qr_token") or item.get("qr") or item.get("token") or "").strip() or None
 
             if not name or not phone:
                 skipped_count += 1
@@ -191,6 +207,7 @@ class CustomerService:
                     emergency_contact_no=emergency,
                     purpose_of_membership=purpose,
                     photo_url=photo_url,
+                    custom_qr_token=custom_qr_token,
                 )
                 created_count += 1
             except Exception as e:
