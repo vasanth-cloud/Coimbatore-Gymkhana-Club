@@ -81,9 +81,23 @@ app.include_router(
 
 @app.on_event("startup")
 def on_startup():
-    # Products are now created dynamically on-the-fly when bulk stock is imported
-    # from sync_master_products import sync_products
-    # sync_products()
+    try:
+        from app.core.database import engine, Base
+        import app.models.user
+        import app.models.product
+        import app.models.brand
+        import app.models.stock_receipt
+        import app.models.stock_transaction
+        import app.models.sale
+        import app.models.customer
+        import app.models.entry
+        import app.models.attendance
+        import app.models.daily_tally
+
+        # Ensure all database tables exist
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Startup create_all error: {e}")
 
     try:
         from app.core.database import engine
@@ -107,7 +121,10 @@ def on_startup():
         ]
         with engine.begin() as conn:
             for col in cols:
-                conn.execute(text(f'ALTER TABLE stock_receipts ADD COLUMN IF NOT EXISTS {col};'))
+                try:
+                    conn.execute(text(f'ALTER TABLE stock_receipts ADD COLUMN IF NOT EXISTS {col};'))
+                except Exception:
+                    pass
             for col in item_cols:
                 try:
                     conn.execute(text(f'ALTER TABLE stock_receipt_items ALTER COLUMN {col} TYPE NUMERIC(12,2);'))
