@@ -415,83 +415,70 @@ def get_stock_receipts(
     current_user: User = Depends(require_staff_or_admin),
 ):
     try:
-        # Auto-backfill receipts for unlinked IN transactions if no receipt items exist
+        # Auto-backfill receipts for active catalog products if no receipt items exist
         receipt_item_count = db.query(StockReceiptItem).count()
-        in_transactions = (
-            db.query(StockTransaction)
-            .filter(StockTransaction.transaction_type == "IN", StockTransaction.is_deleted == False)
-            .all()
-        )
+        active_products = db.query(Product).filter(Product.is_deleted == False).all()
 
-        if receipt_item_count == 0 and in_transactions:
+        if receipt_item_count == 0 and active_products:
             # Clear out any empty orphan receipts
+            db.query(StockReceiptItem).delete(synchronize_session=False)
             db.query(StockReceipt).delete(synchronize_session=False)
             db.commit()
 
-            # Group IN transactions by date
-            tx_by_date = {}
-            for tx in in_transactions:
-                d_key = tx.transaction_date.strftime("%Y-%m-%d") if tx.transaction_date else date.today().strftime("%Y-%m-%d")
-                if d_key not in tx_by_date:
-                    tx_by_date[d_key] = []
-                tx_by_date[d_key].append(tx)
+            repo = StockRepository(db)
+            receipt = StockReceipt(
+                invoice_number=f"INITIAL-CATALOG-{date.today().strftime('%Y%m%d')}",
+                invoice_date=date.today(),
+                depot_name="TASMAC COIMBATORE (SOUTH)",
+                supplier_name="TASMAC LTD / CATALOG STOCK",
+                file_name="Initial Catalog Stock Audit Sync",
+                received_by="System Admin",
+                total_cases=0,
+                total_bottles=0,
+                total_amount=0.0,
+            )
+            db.add(receipt)
+            db.flush()
 
-            for d_str, tx_list in tx_by_date.items():
-                inv_date = datetime.strptime(d_str, "%Y-%m-%d").date()
-                receipt = StockReceipt(
-                    invoice_number=f"INITIAL-STOCK-{inv_date.strftime('%Y%m%d')}",
-                    invoice_date=inv_date,
-                    depot_name="INITIAL STOCK LOAD",
-                    supplier_name="TASMAC / INITIAL CATALOG",
-                    file_name="Initial System Audit Sync",
-                    received_by="System Admin",
-                    total_cases=0,
-                    total_bottles=0,
-                    total_amount=0.0,
+            tot_cases = 0
+            tot_bottles = 0
+            tot_amt = 0.0
+
+            for prod in active_products:
+                cur_stk = repo.get_current_stock(prod.id)
+                pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+                qty = cur_stk if cur_stk > 0 else pack
+                c_qty = qty // pack
+                b_loose = qty % pack
+                line_val = round(float(prod.basic_rate or 0.0) * qty, 2)
+
+                tot_cases += c_qty if c_qty > 0 else 1
+                tot_bottles += qty
+                tot_amt += line_val
+
+                rc_item = StockReceiptItem(
+                    receipt_id=receipt.id,
+                    product_id=prod.id,
+                    product_name=prod.name,
+                    pack_size=pack,
+                    cases=c_qty if c_qty > 0 else 1,
+                    loose_bottles=b_loose,
+                    total_bottles=qty,
+                    rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+                    added_value_percent=220.0,
+                    total_line_cost=line_val,
+                    calculated_basic_cost=float(prod.basic_rate or 0.0),
+                    mrp=float(prod.mrp or 0.0),
+                    selling_price=float(prod.selling_price or 0.0),
                 )
-                db.add(receipt)
-                db.flush()
+                db.add(rc_item)
 
-                tot_cases = 0
-                tot_bottles = 0
-                tot_amt = 0.0
-
-                for tx in tx_list:
-                    prod = tx.product
-                    if not prod or prod.is_deleted:
-                        continue
-                    pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
-                    c_qty = tx.quantity // pack
-                    b_loose = tx.quantity % pack
-                    line_val = round(float(prod.basic_rate or 0.0) * tx.quantity, 2)
-
-                    tot_cases += c_qty
-                    tot_bottles += tx.quantity
-                    tot_amt += line_val
-
-                    rc_item = StockReceiptItem(
-                        receipt_id=receipt.id,
-                        product_id=prod.id,
-                        product_name=prod.name,
-                        pack_size=pack,
-                        cases=c_qty,
-                        loose_bottles=b_loose,
-                        total_bottles=tx.quantity,
-                        rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
-                        added_value_percent=220.0,
-                        total_line_cost=line_val,
-                        calculated_basic_cost=float(prod.basic_rate or 0.0),
-                        mrp=float(prod.mrp or 0.0),
-                        selling_price=float(prod.selling_price or 0.0),
-                    )
-                    db.add(rc_item)
-
-                receipt.total_cases = tot_cases
-                receipt.total_bottles = tot_bottles
-                receipt.total_amount = tot_amt
-                receipt.net_amount = tot_amt
-                receipt.grand_total = tot_amt
-                db.commit()
+            receipt.total_cases = tot_cases
+            receipt.total_bottles = tot_bottles
+            receipt.total_amount = round(tot_amt, 2)
+            receipt.net_amount = round(tot_amt, 2)
+            receipt.grand_total = round(tot_amt, 2)
+            db.commit()
 
         receipts = db.query(StockReceipt).order_by(StockReceipt.invoice_date.desc(), StockReceipt.id.desc()).all()
         res = []
