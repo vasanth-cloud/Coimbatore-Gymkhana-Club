@@ -35,10 +35,12 @@ class CurrentStockResponse(BaseModel):
 class TASMACImportItem(BaseModel):
     product_id: int | None = None
     product_name: str
+    volume_ml: int | None = None
     pack_size: int = 24
     cases: int = 0
     loose_bottles: int = 0
     rate_per_case: float = 0.0
+    added_value_rs: float | None = 0.0
     added_value_percent: float = 220.0
     mrp: float | None = 0.0
     selling_price: float | None = 0.0

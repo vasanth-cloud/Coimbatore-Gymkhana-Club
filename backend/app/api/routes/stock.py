@@ -145,13 +145,29 @@ def import_tasmac_stock(
             rate_case = max(0.0, item.rate_per_case or 0.0)
             added_val_pct = max(0.0, item.added_value_percent or 220.0)
 
-            # TASMAC Invoice Exact Calculations (Matches Printed Bill)
+            # TASMAC Invoice Exact Calculations & Basic Rate Formula
             line_amount = (rate_case * c_qty) + ((rate_case / pack) * b_loose if pack > 0 else 0.0)
-            calc_basic_cost = round(rate_case / pack, 2) if pack > 0 else 0.0
-            tcs_amt = line_amount * 0.02
-            total_line_cost = round(line_amount, 2)
+
+            # User's Step-by-Step Formula:
+            # 1. output1 = added_value_rs * (added_value_percent / 100)
+            # 2. output2 = output1 + line_amount
+            # 3. output3 = output2 * 0.02
+            # 4. output4 = output2 + output3
+            # 5. basic_rate_per_bottle = output4 / total_bottles
+            added_val_rs = item.added_value_rs if (item.added_value_rs and item.added_value_rs > 0) else (line_amount * 0.3697)
+            out1 = added_val_rs * (added_val_pct / 100.0)
+            out2 = out1 + line_amount
+            out3 = out2 * 0.02
+            out4 = out2 + out3
+
+            calc_basic_cost = round(out4 / t_bottles, 2) if t_bottles > 0 else 0.0
+            tcs_amt = out3
+            total_line_cost = round(out4, 2)
 
             grand_total_amount += total_line_cost
+
+            # Determine volume and pack size
+            item_vol = item.volume_ml if (item.volume_ml and item.volume_ml > 0) else (180 if pack == 48 else (375 if pack == 24 else 750))
 
             # Multi-tier bulletproof product matcher
             prod = None
@@ -160,52 +176,71 @@ def import_tasmac_stock(
 
             clean_pname = p_name.replace(" 48pack", "").replace(" 24pack", "").replace(" 12pack", "").strip()
 
-            if not prod and clean_pname:
-                # 1. Exact name match (case-insensitive)
-                prod = db.query(Product).filter(func.lower(Product.name) == clean_pname.lower(), Product.is_deleted == False).first()
+            # Format product name with volume specifier if not present to ensure size distinctness
+            if any(v in clean_pname.lower() for v in ["180", "375", "750", "1000", "650", "ml"]):
+                formatted_name = clean_pname
+            else:
+                formatted_name = f"{clean_pname} {item_vol}ml"
 
             if not prod and clean_pname:
-                # 2. Exact name match with ML / Pack variations
+                # 1. Exact formatted name match
+                prod = db.query(Product).filter(func.lower(Product.name) == formatted_name.lower(), Product.is_deleted == False).first()
+
+            if not prod and clean_pname:
+                # 2. Match clean name with exact volume_ml
                 prod = db.query(Product).filter(
-                    (Product.name.ilike(clean_pname)) |
-                    (Product.name.ilike(f"{clean_pname}%")) |
-                    (Product.name.ilike(f"%{clean_pname}%")),
+                    func.lower(Product.name) == clean_pname.lower(),
+                    Product.volume_ml == item_vol,
                     Product.is_deleted == False
                 ).first()
 
             if not prod and clean_pname:
-                # 3. Token-based match across active catalog
-                p_tokens = set(clean_pname.lower().replace("quarter", "180ml").replace("half", "375ml").replace("full", "750ml").split())
-                all_prods = db.query(Product).filter(Product.is_deleted == False, Product.is_active == True).all()
-                best_match = None
-                best_score = 0
-                for existing in all_prods:
-                    e_tokens = set(existing.name.lower().replace("quarter", "180ml").replace("half", "375ml").replace("full", "750ml").split())
-                    common = p_tokens.intersection(e_tokens)
-                    if len(common) > best_score and len(common) >= 1:
-                        best_score = len(common)
-                        best_match = existing
-                if best_match:
-                    prod = best_match
+                # 3. Match parenthesized volume format
+                prod = db.query(Product).filter(
+                    func.lower(Product.name) == f"{clean_pname.lower()} ({item_vol}ml)",
+                    Product.is_deleted == False
+                ).first()
 
             if not prod:
-                # 4. Create product with clean_pname (WITHOUT adding 48pack suffix)
+                # 4. Create new distinct product for this exact brand and size
                 from app.models.brand import Brand
-                brand = db.query(Brand).first()
+                
+                # Category detection
+                c_upper = clean_pname.upper()
+                if "BEER" in c_upper:
+                    cat = "Beer"
+                elif "WINE" in c_upper:
+                    cat = "Wine"
+                elif "VODKA" in c_upper:
+                    cat = "Vodka"
+                elif "RUM" in c_upper:
+                    cat = "Rum"
+                elif "WHISKY" in c_upper:
+                    cat = "Whisky"
+                elif "BRANDY" in c_upper:
+                    cat = "Brandy"
+                else:
+                    cat = "Spirits"
+
+                brand = db.query(Brand).filter(Brand.name.ilike("TASMAC")).first()
                 if not brand:
                     brand = Brand(name="TASMAC", category="Liquor")
                     db.add(brand)
                     db.flush()
                 b_id = brand.id
-                
+
+                # Default MRP & Selling Price to 0.0 unless specified so user can add in edit modal
+                calc_mrp = item.mrp if (item.mrp and item.mrp > 0) else 0.0
+                calc_sp = item.selling_price if (item.selling_price and item.selling_price > 0) else 0.0
+
                 prod = Product(
                     brand_id=b_id,
-                    name=clean_pname,
-                    category="Liquor",
-                    volume_ml=180 if pack == 48 else (375 if pack == 24 else 750),
+                    name=formatted_name,
+                    category=cat,
+                    volume_ml=item_vol,
                     unit="bottle",
-                    selling_price=item.selling_price if item.selling_price and item.selling_price > 0 else (item.mrp if item.mrp and item.mrp > 0 else (calc_basic_cost * 1.2 if calc_basic_cost > 0 else 100.0)),
-                    mrp=item.mrp or calc_basic_cost or 100.0,
+                    selling_price=calc_sp,
+                    mrp=calc_mrp,
                     basic_rate=calc_basic_cost,
                     pack_size=pack,
                     is_active=True,
@@ -234,7 +269,7 @@ def import_tasmac_stock(
             rc_item = StockReceiptItem(
                 receipt_id=receipt.id,
                 product_id=prod.id if prod else None,
-                product_name=p_name,
+                product_name=prod.name if prod else (f"{p_name} {item_vol}ml" if "ml" not in p_name.lower() else p_name),
                 pack_size=pack,
                 cases=c_qty,
                 loose_bottles=b_loose,
@@ -285,9 +320,12 @@ def get_stock_receipts(
     for r in receipts:
         items_data = []
         for i in r.items:
+            v_ml = i.product.volume_ml if (i.product and i.product.volume_ml) else (180 if i.pack_size == 48 else (375 if i.pack_size == 24 else 750))
+            p_displayName = i.product_name if any(v in i.product_name.lower() for v in ["ml", "180", "375", "750", "1000", "650"]) else f"{i.product_name} {v_ml}ml"
             items_data.append({
                 "id": i.id,
-                "product_name": i.product_name,
+                "product_name": p_displayName,
+                "volume_ml": v_ml,
                 "pack_size": i.pack_size,
                 "cases": i.cases,
                 "loose_bottles": i.loose_bottles,

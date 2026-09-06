@@ -40,6 +40,7 @@ interface TasmacFormItem {
   id: string;
   productId: number;
   productName: string;
+  volumeMl?: number;
   packSize: number;
   cases: number;
   looseBottles: number;
@@ -572,20 +573,19 @@ export const Stock: React.FC = () => {
           else if (volNum === 375) defaultPack = 24;
           else defaultPack = 12;
 
-          // Fuzzy Match with Products DB
-          const rawTokens = normalizeTokens(rawItemName);
+          // Match with Products DB (Require exact name match AND exact volume match)
           let matchedProd: Product | null = null;
-          let bestScore = 0;
+          const cleanNameLower = rawItemName.toLowerCase().trim();
+          const targetNameWithVol = `${rawItemName} ${volNum}ml`.toLowerCase().trim();
 
           for (const p of products) {
-            const pTokens = normalizeTokens(p.name);
-            let score = 0;
-            rawTokens.forEach((tok) => {
-              if (pTokens.has(tok)) score += 1;
-            });
-            if (score > bestScore) {
-              bestScore = score;
+            const pNameLower = p.name.toLowerCase().trim();
+            if (
+              (pNameLower === cleanNameLower || pNameLower === targetNameWithVol) &&
+              (p.volume_ml === volNum || (p.volume_ml <= 180 && volNum <= 180))
+            ) {
               matchedProd = p;
+              break;
             }
           }
 
@@ -593,6 +593,7 @@ export const Stock: React.FC = () => {
             id: Math.random().toString(),
             productId: matchedProd ? matchedProd.id : 0,
             productName: matchedProd ? matchedProd.name : rawItemName,
+            volumeMl: volNum,
             packSize: matchedProd ? (matchedProd.volume_ml <= 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12) : defaultPack,
             cases: casesNum,
             looseBottles: looseNum,
@@ -909,10 +910,12 @@ export const Stock: React.FC = () => {
         items: validItems.map((item) => ({
           product_id: Number(item.productId) > 0 ? Number(item.productId) : undefined,
           product_name: String(item.productName || '').trim() || 'UNNAMED PRODUCT',
+          volume_ml: item.volumeMl || (item.packSize === 48 ? 180 : item.packSize === 24 ? 375 : 750),
           pack_size: Number(item.packSize) > 0 ? Number(item.packSize) : 24,
           cases: Math.max(0, Number(item.cases) || 0),
           loose_bottles: Math.max(0, Number(item.looseBottles) || 0),
           rate_per_case: Math.max(0, Number(item.ratePerCase) || 0),
+          added_value_rs: Number(item.addedValueRs || 0),
           added_value_percent: Number(item.addedValuePercent) || 220,
           mrp: Math.max(0, Number(item.mrp) || 0),
           selling_price: Math.max(0, Number(item.sellingPrice) || 0),
@@ -2336,7 +2339,9 @@ export const Stock: React.FC = () => {
                     <tr key={item.id} className="hover:bg-[#161b22]/50">
                       <td className="py-2 px-2 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
                       <td className="py-2 px-3 font-bold text-slate-100">{item.product_name}</td>
-                      <td className="py-2 px-2 text-center text-slate-400">{item.pack_size}</td>
+                      <td className="py-2 px-2 text-center text-amber-400 font-mono font-bold">
+                        {item.volume_ml ? `${item.volume_ml} ml` : (item.pack_size === 48 ? '180 ml' : (item.pack_size === 24 ? '375 ml' : '750 ml'))}
+                      </td>
                       <td className="py-2 px-2 text-center text-amber-400 font-bold">{item.cases}</td>
                       <td className="py-2 px-2 text-center text-slate-300">{item.loose_bottles}</td>
                       <td className="py-2 px-2 text-center font-bold">{item.total_bottles}</td>
