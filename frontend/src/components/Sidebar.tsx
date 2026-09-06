@@ -11,9 +11,15 @@ import {
   FileText,
   UserCheck,
   ClipboardList,
+  X,
 } from 'lucide-react';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) => {
   const { user } = useAuth();
 
   const navItems = [
@@ -77,18 +83,32 @@ export const Sidebar: React.FC = () => {
     user ? item.roles.includes(user.role) : false
   );
 
-  return (
-    <aside className="w-64 bg-[#161b22] border-r border-[#21262d] flex flex-col justify-between shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-20">
+  const sidebarContent = (
+    <div className="flex flex-col justify-between h-full">
       <nav className="p-4 space-y-1.5">
-        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">
-          Main Navigation
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">
+            Main Navigation
+          </span>
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#21262d]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
+
         {allowedItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={() => {
+                if (onCloseMobile) onCloseMobile();
+              }}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
                   isActive
@@ -105,10 +125,32 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="p-4 m-4 rounded-xl bg-[#0d1117] border border-[#21262d] text-xs text-slate-400">
-        <p className="font-semibold text-slate-300 mb-1">System Info</p>
+        <p className="font-semibold text-slate-300 mb-1">Coimbatore Gymkhana</p>
         <p>API v1.0.0 • Connected</p>
         <p className="mt-2 text-[11px] text-slate-500">FastAPI + PostgreSQL Backend</p>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex w-64 bg-[#161b22] border-r border-[#21262d] flex-col justify-between shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-20">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative w-72 max-w-[85vw] bg-[#161b22] border-r border-[#21262d] h-full shadow-2xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 };
