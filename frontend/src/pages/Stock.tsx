@@ -44,9 +44,11 @@ interface TasmacFormItem {
   cases: number;
   looseBottles: number;
   ratePerCase: number;
+  addedValueRs?: number;
   addedValuePercent: number;
   mrp: number;
   sellingPrice: number;
+  amountRs?: number;
 }
 
 export const Stock: React.FC = () => {
@@ -555,8 +557,14 @@ export const Stock: React.FC = () => {
           const rateCaseRaw = parseFloat(String(r[colMap.rateCase] || '0'));
           const rateCaseNum = !isNaN(rateCaseRaw) ? rateCaseRaw : 0;
 
+          const addedValRsRaw = parseFloat(String(r[colMap.addedValRs] || '0'));
+          const addedValRsNum = !isNaN(addedValRsRaw) && addedValRsRaw > 0 ? addedValRsRaw : undefined;
+
           const addedValPctRaw = String(r[colMap.addedValPct] || '220').replace('%', '').trim();
           const addedValPctNum = parseFloat(addedValPctRaw) || 220;
+
+          const amountRsRaw = parseFloat(String(r[colMap.amount] || '0'));
+          const amountRsNum = !isNaN(amountRsRaw) && amountRsRaw > 0 ? amountRsRaw : undefined;
 
           // Default pack size by volume
           let defaultPack = 12;
@@ -589,9 +597,11 @@ export const Stock: React.FC = () => {
             cases: casesNum,
             looseBottles: looseNum,
             ratePerCase: rateCaseNum,
+            addedValueRs: addedValRsNum,
             addedValuePercent: addedValPctNum,
             mrp: matchedProd ? matchedProd.mrp || 0 : 0,
             sellingPrice: matchedProd ? matchedProd.selling_price || 0 : 0,
+            amountRs: amountRsNum,
           });
         }
 
@@ -842,15 +852,20 @@ export const Stock: React.FC = () => {
     );
   };
 
-  // TASMAC EXACT INVOICE COST CALCULATOR PER ROW (MATCHES PRINTED BILL EXACTLY)
   const calculateRowCosts = (item: TasmacFormItem) => {
     const pack = item.packSize > 0 ? item.packSize : 24;
-    const totalBottles = item.cases * pack + item.looseBottles;
-    const lineAmount = item.cases * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * item.looseBottles : 0);
+    const totalBottles = (item.cases || 0) * pack + (item.looseBottles || 0);
+    const lineAmount = (item.cases || 0) * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * (item.looseBottles || 0) : 0);
     const isBeer = item.productName.toUpperCase().includes('BEER');
-    const addedValueAmt = lineAmount * (isBeer ? 0.49169 : 0.495);
-    const tcsAmt = (lineAmount + addedValueAmt) * 0.02;
-    const totalLineCost = lineAmount + addedValueAmt + tcsAmt;
+
+    const addedValueAmt = item.addedValueRs !== undefined && item.addedValueRs > 0
+      ? item.addedValueRs
+      : lineAmount * (isBeer ? 0.49169 : 0.495);
+
+    const totalLineCost = item.amountRs !== undefined && item.amountRs > 0
+      ? item.amountRs
+      : lineAmount;
+
     const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
 
     return {
@@ -859,7 +874,7 @@ export const Stock: React.FC = () => {
       lineAmount,
       addedValueRate: item.ratePerCase * (isBeer ? 0.49169 : 0.495),
       addedValueAmt,
-      tcsAmt,
+      tcsAmt: (lineAmount + addedValueAmt) * 0.02,
       totalLineCost,
       perBottleBasic,
     };
@@ -1940,7 +1955,7 @@ export const Stock: React.FC = () => {
                             className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-purple-400 focus:outline-none"
                           />
                         </td>
-                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.lineAmount.toFixed(2)}</td>
+                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-100">₹{costs.totalLineCost.toFixed(2)}</td>
                         <td className="py-2.5 px-2 text-center">
                           <button
                             type="button"
