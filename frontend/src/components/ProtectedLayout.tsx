@@ -39,20 +39,8 @@ export const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({ allowedRoles }
       <div className="flex flex-1 min-w-0">
         <Sidebar mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
         
-        <main className="flex-1 min-w-0 p-3 sm:p-6 overflow-y-auto overflow-x-hidden w-full max-w-full flex flex-col justify-between">
-          <div className="flex-1">
-            <Outlet />
-          </div>
-
-          {/* Footer branding */}
-          <footer className="mt-8 pt-4 border-t border-[#21262d]/60 text-center text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5 flex-wrap">
-            <span>Powered by</span>
-            <span className="text-amber-400 font-bold">Harvid Technologies</span>
-            <span>•</span>
-            <a href="tel:6381901759" className="text-slate-400 hover:text-amber-400 font-mono transition-colors">
-              Ph: 6381901759
-            </a>
-          </footer>
+        <main className="flex-1 min-w-0 p-3 sm:p-6 overflow-y-auto overflow-x-hidden w-full max-w-full">
+          <Outlet />
         </main>
       </div>
 
