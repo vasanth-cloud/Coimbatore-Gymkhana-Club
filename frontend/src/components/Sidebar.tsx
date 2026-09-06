@@ -124,12 +124,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
         })}
       </nav>
 
-      <div className="p-4 m-4 rounded-xl bg-[#0d1117] border border-[#21262d] text-xs text-slate-400 space-y-1">
-        <p className="font-bold text-amber-400">Harvid Technologies</p>
-        <p className="text-[11px] text-slate-300">Coimbatore Gymkhana System</p>
-        <p className="pt-1 text-[11px] font-mono text-slate-400">
-          <a href="tel:6381901759" className="hover:text-amber-400 transition-colors">Ph: 6381901759</a>
+      <div className="p-4 m-4 rounded-2xl bg-slate-100/80 dark:bg-[#0d1117] border border-slate-200 dark:border-[#21262d] text-left select-none shadow-sm">
+        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 lowercase tracking-wider leading-none mb-1">
+          powered by
         </p>
+        <p className="text-sm sm:text-base font-black tracking-wider text-slate-800 dark:text-slate-200 uppercase leading-none font-sans">
+          HARVID TECH
+        </p>
+        <div className="mt-2.5 space-y-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 font-mono">
+          <p>
+            e-mail :{' '}
+            <a href="mailto:harvidtech@gmail.com" className="hover:text-amber-400 transition-colors">
+              harvidtech@gmail.com
+            </a>
+          </p>
+          <p>
+            Contact :{' '}
+            <a href="tel:6381901759" className="hover:text-amber-400 transition-colors">
+              6381901759
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

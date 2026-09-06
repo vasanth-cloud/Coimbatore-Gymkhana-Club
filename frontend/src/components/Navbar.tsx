@@ -46,19 +46,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
         </div>
       </div>
 
-      {/* TOP MIDDLE BRANDING FORMAT: powered by HARVID TECHNOLOGIES */}
-      <div className="flex flex-col items-center justify-center text-center px-2 py-0.5 mx-auto shrink-0 select-none">
-        <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-400 lowercase tracking-wider leading-none mb-0.5">
-          powered by
-        </span>
-        <span className="text-xs sm:text-sm md:text-base font-black tracking-widest text-amber-400 font-sans uppercase leading-none">
-          HARVID TECHNOLOGIES
-        </span>
-        <span className="text-[9px] font-mono font-bold text-slate-400 leading-none mt-1">
-          Ph: 6381901759
-        </span>
-      </div>
-
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Theme Toggle Button */}
         <button
