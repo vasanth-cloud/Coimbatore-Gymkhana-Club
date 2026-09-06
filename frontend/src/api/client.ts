@@ -1,7 +1,19 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+  const envApi = (import.meta as any).env?.VITE_API_URL;
+  if (envApi) return envApi;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'cgcltd.in' || host === 'www.cgcltd.in' || host.includes('cgc-frontend')) {
+      return 'https://cgc-bbd0.onrender.com/api';
+    }
+  }
+  return '/api';
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
