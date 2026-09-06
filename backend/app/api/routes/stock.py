@@ -143,7 +143,7 @@ def import_tasmac_stock(
             total_bottles += t_bottles
 
             rate_case = max(0.0, item.rate_per_case or 0.0)
-            added_val_pct = max(0.0, item.added_value_percent or 220.0)
+            added_val_pct = float(item.added_value_percent) if (item.added_value_percent is not None and float(item.added_value_percent) > 0) else 220.0
 
             # TASMAC Invoice Exact Calculations & Basic Rate Formula
             line_amount = (rate_case * c_qty) + ((rate_case / pack) * b_loose if pack > 0 else 0.0)

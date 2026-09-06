@@ -857,25 +857,36 @@ export const Stock: React.FC = () => {
     const pack = item.packSize > 0 ? item.packSize : 24;
     const totalBottles = (item.cases || 0) * pack + (item.looseBottles || 0);
     const lineAmount = (item.cases || 0) * item.ratePerCase + (pack > 0 ? (item.ratePerCase / pack) * (item.looseBottles || 0) : 0);
-    const isBeer = item.productName.toUpperCase().includes('BEER');
 
+    const addedValPct = item.addedValuePercent !== undefined && item.addedValuePercent > 0 ? item.addedValuePercent : 220.0;
     const addedValueAmt = item.addedValueRs !== undefined && item.addedValueRs > 0
       ? item.addedValueRs
-      : lineAmount * (isBeer ? 0.49169 : 0.495);
+      : (lineAmount * 0.3697);
+
+    // Dynamic 5-Step Landed Cost Formula:
+    // 1. taxAmount = addedValueAmt * (addedValPct / 100)
+    // 2. subtotal = taxAmount + lineAmount
+    // 3. tcsAmt = subtotal * 0.02
+    // 4. totalLandedCost = subtotal + tcsAmt
+    // 5. perBottleBasic = totalLandedCost / totalBottles
+    const taxAmount = addedValueAmt * (addedValPct / 100.0);
+    const subtotal = taxAmount + lineAmount;
+    const tcsAmt = subtotal * 0.02;
+    const totalLandedCost = subtotal + tcsAmt;
 
     const totalLineCost = item.amountRs !== undefined && item.amountRs > 0
       ? item.amountRs
-      : lineAmount;
+      : totalLandedCost;
 
-    const perBottleBasic = pack > 0 ? item.ratePerCase / pack : 0;
+    const perBottleBasic = totalBottles > 0 ? totalLandedCost / totalBottles : 0;
 
     return {
       totalBottles,
       baseAmount: lineAmount,
       lineAmount,
-      addedValueRate: item.ratePerCase * (isBeer ? 0.49169 : 0.495),
+      addedValueRate: taxAmount,
       addedValueAmt,
-      tcsAmt: (lineAmount + addedValueAmt) * 0.02,
+      tcsAmt,
       totalLineCost,
       perBottleBasic,
     };
