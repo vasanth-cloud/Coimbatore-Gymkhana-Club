@@ -78,7 +78,7 @@ export const customerApi = {
     return response.data;
   },
   getQRUrl: (customerId: number): string => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     return `/api/customers/${customerId}/qr`;
   },
   getQRBlob: async (customerId: number): Promise<Blob> => {
