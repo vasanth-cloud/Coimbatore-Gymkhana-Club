@@ -124,10 +124,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
         })}
       </nav>
 
-      <div className="p-4 m-4 rounded-xl bg-[#0d1117] border border-[#21262d] text-xs text-slate-400">
-        <p className="font-semibold text-slate-300 mb-1">Coimbatore Gymkhana</p>
-        <p>API v1.0.0 • Connected</p>
-        <p className="mt-2 text-[11px] text-slate-500">FastAPI + PostgreSQL Backend</p>
+      <div className="p-4 m-4 rounded-xl bg-[#0d1117] border border-[#21262d] text-xs text-slate-400 space-y-1">
+        <p className="font-bold text-amber-400">Harvid Technologies</p>
+        <p className="text-[11px] text-slate-300">Coimbatore Gymkhana System</p>
+        <p className="pt-1 text-[11px] font-mono text-slate-400">
+          <a href="tel:6381901759" className="hover:text-amber-400 transition-colors">Ph: 6381901759</a>
+        </p>
       </div>
     </div>
   );

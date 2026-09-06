@@ -19,19 +19,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const cachedUserStr = localStorage.getItem('cgc_user') || sessionStorage.getItem('cgc_user');
+
+    if (cachedUserStr) {
+      try {
+        const cached = JSON.parse(cachedUserStr);
+        setUser(cached);
+        setLoading(false);
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
     if (!token) {
       setUser(null);
       setLoading(false);
       return;
     }
+
     try {
       const userData = await authApi.getMe();
       setUser(userData);
-    } catch (err) {
-      console.error('Failed to fetch user context', err);
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
-      setUser(null);
+      localStorage.setItem('cgc_user', JSON.stringify(userData));
+      sessionStorage.setItem('cgc_user', JSON.stringify(userData));
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        console.error('Failed to fetch user context', err);
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        localStorage.removeItem('cgc_user');
+        sessionStorage.removeItem('cgc_user');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -47,12 +66,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sessionStorage.setItem('token', response.access_token);
     const userData = await authApi.getMe();
     setUser(userData);
+    localStorage.setItem('cgc_user', JSON.stringify(userData));
+    sessionStorage.setItem('cgc_user', JSON.stringify(userData));
     return userData;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
+    localStorage.removeItem('cgc_user');
+    sessionStorage.removeItem('cgc_user');
     setUser(null);
     window.location.href = '/login';
   };

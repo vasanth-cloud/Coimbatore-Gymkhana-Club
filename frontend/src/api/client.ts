@@ -36,6 +36,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
+      localStorage.removeItem('cgc_user');
+      sessionStorage.removeItem('cgc_user');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

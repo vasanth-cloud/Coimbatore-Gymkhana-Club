@@ -114,8 +114,11 @@ export const Login: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-[#21262d] text-center text-xs text-slate-500 font-semibold">
-          Coimbatore Gymkhana Club • Estd. 2024
+        <div className="mt-8 pt-6 border-t border-[#21262d] text-center text-xs text-slate-500 font-semibold space-y-1">
+          <div>Coimbatore Gymkhana Club • Estd. 1928</div>
+          <div className="text-[11px] text-slate-400">
+            Powered by <span className="text-amber-400 font-bold">Harvid Technologies</span> • <a href="tel:6381901759" className="hover:text-amber-400 font-mono transition-colors">Ph: 6381901759</a>
+          </div>
         </div>
       </div>
     </div>
