@@ -471,6 +471,54 @@ export const Stock: React.FC = () => {
           }
         }
 
+        // Dynamic Column Header Mapping for exact 9 TASMAC bill headers
+        let colMap = {
+          sno: 0,
+          itemDesc: 1,
+          packSize: 2,
+          cases: 3,
+          bottles: 4,
+          rateCase: 5,
+          addedValRs: 6,
+          addedValPct: 7,
+          amount: 8,
+        };
+
+        for (let i = 0; i < Math.min(15, rows.length); i++) {
+          const r = rows[i];
+          if (!r || !Array.isArray(r)) continue;
+          let matchCount = 0;
+          r.forEach((cellVal: any, colIdx: number) => {
+            const txt = String(cellVal || '').toLowerCase().trim();
+            if (txt.includes('item description') || txt.includes('liquor item') || txt.includes('product name')) {
+              colMap.itemDesc = colIdx;
+              matchCount++;
+            } else if (txt.includes('pack size') || txt.includes('vol') || txt.includes('ml')) {
+              colMap.packSize = colIdx;
+              matchCount++;
+            } else if (txt.includes('quantity cases') || txt.includes('cases (c)') || txt.includes('cases')) {
+              colMap.cases = colIdx;
+              matchCount++;
+            } else if (txt.includes('quantity bottles') || txt.includes('bottles (b)') || txt.includes('loose')) {
+              colMap.bottles = colIdx;
+              matchCount++;
+            } else if (txt.includes('rate per case') || txt.includes('rate/case')) {
+              colMap.rateCase = colIdx;
+              matchCount++;
+            } else if (txt.includes('added value rs') || txt.includes('added value (rs)') || txt.includes('added val rs')) {
+              colMap.addedValRs = colIdx;
+              matchCount++;
+            } else if (txt.includes('added value %') || txt.includes('added value percent') || txt.includes('added val %')) {
+              colMap.addedValPct = colIdx;
+              matchCount++;
+            } else if (txt === 'amount (rs.)' || txt === 'amount(rs.)' || txt.includes('amount')) {
+              colMap.amount = colIdx;
+              matchCount++;
+            }
+          });
+          if (matchCount >= 3) break;
+        }
+
         // Helper for Token Normalization
         const normalizeTokens = (txt: string) => {
           let t = String(txt || '').toLowerCase();
@@ -485,30 +533,30 @@ export const Stock: React.FC = () => {
         // 2. Scan Table Rows
         for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
-          if (!r || r.length < 4) continue;
+          if (!r || r.length < 3) continue;
 
           // Check if row has S.No
-          const snoRaw = r[0];
+          const snoRaw = r[colMap.sno];
           const snoNum = typeof snoRaw === 'number' ? snoRaw : parseInt(String(snoRaw || ''), 10);
           if (isNaN(snoNum) || snoNum <= 0) continue;
 
-          const rawItemName = String(r[1] || '').trim();
-          if (!rawItemName || ['item', 'product', 'subproduct', 'total', 's.no'].some((k) => rawItemName.toLowerCase().includes(k))) continue;
+          const rawItemName = String(r[colMap.itemDesc] || '').trim();
+          if (!rawItemName || ['item description', 'product', 'subproduct', 'total', 's.no'].some((k) => rawItemName.toLowerCase().includes(k))) continue;
 
-          const volRaw = parseFloat(String(r[2] || '750'));
+          const volRaw = parseFloat(String(r[colMap.packSize] || '750'));
           const volNum = !isNaN(volRaw) && volRaw > 0 ? volRaw : 750;
 
-          const casesRaw = parseFloat(String(r[3] || '0'));
+          const casesRaw = parseFloat(String(r[colMap.cases] || '0'));
           const casesNum = !isNaN(casesRaw) ? casesRaw : 0;
 
-          const looseRaw = parseFloat(String(r[4] || '0'));
+          const looseRaw = parseFloat(String(r[colMap.bottles] || '0'));
           const looseNum = !isNaN(looseRaw) ? looseRaw : 0;
 
-          const rateCaseRaw = parseFloat(String(r[5] || '0'));
+          const rateCaseRaw = parseFloat(String(r[colMap.rateCase] || '0'));
           const rateCaseNum = !isNaN(rateCaseRaw) ? rateCaseRaw : 0;
 
-          const addedValRaw = String(r[6] || '220').replace('%', '').trim();
-          const addedValNum = parseFloat(addedValRaw) || 220;
+          const addedValPctRaw = String(r[colMap.addedValPct] || '220').replace('%', '').trim();
+          const addedValPctNum = parseFloat(addedValPctRaw) || 220;
 
           // Default pack size by volume
           let defaultPack = 12;
@@ -522,7 +570,6 @@ export const Stock: React.FC = () => {
           let bestScore = 0;
 
           for (const p of products) {
-            if (p.volume_ml !== volNum && Math.abs(p.volume_ml - volNum) > 50) continue;
             const pTokens = normalizeTokens(p.name);
             let score = 0;
             rawTokens.forEach((tok) => {
@@ -538,11 +585,11 @@ export const Stock: React.FC = () => {
             id: Math.random().toString(),
             productId: matchedProd ? matchedProd.id : 0,
             productName: matchedProd ? matchedProd.name : rawItemName,
-            packSize: matchedProd ? matchedProd.volume_ml <= 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12 : defaultPack,
+            packSize: matchedProd ? (matchedProd.volume_ml <= 180 ? 48 : matchedProd.volume_ml === 375 ? 24 : 12) : defaultPack,
             cases: casesNum,
             looseBottles: looseNum,
             ratePerCase: rateCaseNum,
-            addedValuePercent: addedValNum,
+            addedValuePercent: addedValPctNum,
             mrp: matchedProd ? matchedProd.mrp || 0 : 0,
             sellingPrice: matchedProd ? matchedProd.selling_price || 0 : 0,
           });
@@ -1781,15 +1828,14 @@ export const Stock: React.FC = () => {
                 <thead>
                   <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
                     <th className="py-3 px-2 text-center w-12">S.No.</th>
-                    <th className="py-3 px-3 min-w-[220px]">Liquor Item Name</th>
-                    <th className="py-3 px-2 text-center w-24">Pack Size</th>
-                    <th className="py-3 px-2 text-center w-24">Cases (C)</th>
-                    <th className="py-3 px-2 text-center w-24">Loose (B)</th>
-                    <th className="py-3 px-2 text-center w-28">Total Bottles</th>
-                    <th className="py-3 px-2 text-right min-w-[120px]">Rate per Case (₹)</th>
-                    <th className="py-3 px-2 text-right min-w-[110px]">Added Val (₹)</th>
-                    <th className="py-3 px-2 text-center w-24">Added Val %</th>
-                    <th className="py-3 px-2 text-right min-w-[120px]">Amount (₹)</th>
+                    <th className="py-3 px-3 min-w-[220px]">Item Description</th>
+                    <th className="py-3 px-2 text-center w-28">Pack Size (ml)</th>
+                    <th className="py-3 px-2 text-center w-28">Quantity Cases (C)</th>
+                    <th className="py-3 px-2 text-center w-28">Quantity Bottles (B)</th>
+                    <th className="py-3 px-2 text-right min-w-[130px]">Rate per Case (RS.)</th>
+                    <th className="py-3 px-2 text-right min-w-[120px]">Added Value RS.</th>
+                    <th className="py-3 px-2 text-center w-28">Added Value %</th>
+                    <th className="py-3 px-2 text-right min-w-[130px]">Amount (RS.)</th>
                     <th className="py-3 px-2 text-center w-12">Action</th>
                   </tr>
                 </thead>
@@ -2237,15 +2283,14 @@ export const Stock: React.FC = () => {
                 <thead>
                   <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d]">
                     <th className="py-2.5 px-2 text-center w-12">S.No.</th>
-                    <th className="py-2.5 px-3">Item Name</th>
-                    <th className="py-2.5 px-2 text-center">Pack</th>
-                    <th className="py-2.5 px-2 text-center">Cases</th>
-                    <th className="py-2.5 px-2 text-center">Loose</th>
-                    <th className="py-2.5 px-2 text-center">Total</th>
-                    <th className="py-2.5 px-2 text-right">Rate/Case</th>
-                    <th className="py-2.5 px-2 text-right">Added Val (₹)</th>
-                    <th className="py-2.5 px-2 text-center">Added Val %</th>
-                    <th className="py-2.5 px-2 text-right">Amount (₹)</th>
+                    <th className="py-2.5 px-3">Item Description</th>
+                    <th className="py-2.5 px-2 text-center">Pack Size (ml)</th>
+                    <th className="py-2.5 px-2 text-center">Quantity Cases (C)</th>
+                    <th className="py-2.5 px-2 text-center">Quantity Bottles (B)</th>
+                    <th className="py-2.5 px-2 text-right">Rate per Case (RS.)</th>
+                    <th className="py-2.5 px-2 text-right">Added Value RS.</th>
+                    <th className="py-2.5 px-2 text-center">Added Value %</th>
+                    <th className="py-2.5 px-2 text-right">Amount (RS.)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
