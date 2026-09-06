@@ -1,3 +1,4 @@
+import re
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
@@ -81,37 +82,95 @@ class CustomerRepository:
     def lookup_customer(self, query_str: str) -> Customer | None:
         if not query_str:
             return None
-        q = str(query_str).strip()
+
+        # Clean non-printable / control chars (e.g. \r, \n, \t, STX, ETX) and leading/trailing whitespace
+        raw_q = str(query_str).strip()
+        q = "".join(ch for ch in raw_q if ord(ch) >= 32 and ord(ch) != 127).strip()
+        if not q:
+            return None
+
+        # Base clean strings
         clean_q = q.replace("#", "").strip()
 
-        # 1. Match exact qr_token
-        cust = self.db.query(Customer).filter(Customer.qr_token == q, Customer.is_deleted == False).first()
-        if cust:
-            return cust
+        # Build ordered list of candidate strings
+        candidates = [q]
+        if clean_q and clean_q not in candidates:
+            candidates.append(clean_q)
 
-        # 2. Case-insensitive qr_token
-        cust = self.db.query(Customer).filter(Customer.qr_token.ilike(q), Customer.is_deleted == False).first()
-        if cust:
-            return cust
+        # Extract path/query parameters if q is a URL (e.g., https://cgcltd.in/entry-scanner?token=XYZ)
+        if "/" in q or "?" in q or "=" in q:
+            parts = re.split(r'[/?&=#]', q)
+            for part in parts:
+                p = part.strip()
+                if p and len(p) >= 1 and p not in candidates:
+                    candidates.append(p)
 
-        # 3. Match customer_code (exact or with/without #)
-        cust = self.db.query(Customer).filter(
-            (Customer.customer_code == q) | (Customer.customer_code == clean_q) | (Customer.customer_code == f"#{clean_q}"),
-            Customer.is_deleted == False
-        ).first()
-        if cust:
-            return cust
+        # Handle Caps Lock key inverted case / shift key swap from hardware USB gun scanners
+        inverted = q.swapcase()
+        if inverted not in candidates:
+            candidates.append(inverted)
+        inverted_clean = clean_q.swapcase()
+        if inverted_clean and inverted_clean not in candidates:
+            candidates.append(inverted_clean)
 
-        # 4. Match phone
-        cust = self.db.query(Customer).filter(Customer.phone == q, Customer.is_deleted == False).first()
-        if cust:
-            return cust
+        # Stage 1: Exact & case-insensitive matching across candidates
+        for cand in candidates:
+            if not cand:
+                continue
 
-        # 5. Partial/URL match on qr_token or customer_code
-        return self.db.query(Customer).filter(
-            (Customer.qr_token.ilike(f"%{q}%")) | (Customer.qr_token.ilike(f"%{clean_q}%")) | (Customer.customer_code.ilike(f"%{clean_q}%")),
-            Customer.is_deleted == False
-        ).first()
+            # A. Exact qr_token
+            cust = self.db.query(Customer).filter(Customer.qr_token == cand, Customer.is_deleted == False).first()
+            if cust:
+                return cust
+
+            # B. Case-insensitive qr_token
+            cust = self.db.query(Customer).filter(Customer.qr_token.ilike(cand), Customer.is_deleted == False).first()
+            if cust:
+                return cust
+
+            # C. Match customer_code (exact, clean, or with #)
+            cand_clean = cand.replace("#", "").strip()
+            cust = self.db.query(Customer).filter(
+                (Customer.customer_code == cand) | 
+                (Customer.customer_code == cand_clean) | 
+                (Customer.customer_code == f"#{cand_clean}") |
+                (Customer.customer_code.ilike(cand_clean)),
+                Customer.is_deleted == False
+            ).first()
+            if cust:
+                return cust
+
+            # D. Match phone
+            cust = self.db.query(Customer).filter(
+                (Customer.phone == cand) | (Customer.phone == cand_clean),
+                Customer.is_deleted == False
+            ).first()
+            if cust:
+                return cust
+
+        # Stage 2: Partial substring match in database
+        for cand in candidates:
+            if not cand or len(cand) < 2:
+                continue
+            cust = self.db.query(Customer).filter(
+                (Customer.qr_token.ilike(f"%{cand}%")) | (Customer.customer_code.ilike(f"%{cand}%")),
+                Customer.is_deleted == False
+            ).first()
+            if cust:
+                return cust
+
+        # Stage 3: Reverse lookup (check if any active customer's token/code/phone is embedded inside q)
+        all_customers = self.db.query(Customer).filter(Customer.is_deleted == False).all()
+        q_lower = q.lower()
+        for cust in all_customers:
+            if cust.qr_token and cust.qr_token.lower() in q_lower:
+                return cust
+            if cust.customer_code and (cust.customer_code.lower() in q_lower or f"#{cust.customer_code.lower()}" in q_lower):
+                return cust
+            if cust.phone and cust.phone in q_lower:
+                return cust
+
+        return None
 
     def delete(self, customer: Customer) -> bool:
         # Delete associated entries first then hard-delete customer to free constraints

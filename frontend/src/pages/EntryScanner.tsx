@@ -61,18 +61,42 @@ export const EntryScanner: React.FC = () => {
     fetchRecentEntries();
   }, []);
 
-  // Auto-focus input field for hardware USB / Bluetooth scanners
+  // Auto-focus input field for hardware USB / Bluetooth scanners & listen for Enter key in guest modal
   useEffect(() => {
-    if (activeTab === 'hardware' && inputRef.current) {
+    if (activeTab === 'hardware' && !showGuestModal && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [activeTab, showGuestModal]);
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // If guest modal is open and Enter key is pressed, trigger confirm and admit
+      if (showGuestModal && e.key === 'Enter') {
+        e.preventDefault();
+        handleConfirmAndAdmit();
+        return;
+      }
+
+      // If in hardware scanner tab, refocus input if user is not in another input box
+      if (activeTab === 'hardware' && !showGuestModal) {
+        const active = document.activeElement;
+        const isInputField = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+        if (!isInputField && inputRef.current) {
+          inputRef.current.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [activeTab, showGuestModal, pendingToken, additionalGuests, isScanning]);
 
   // Step 1: Triggered on QR scan / manual submit -> Opens Accompanying Guests Modal
   const handleInitiateScan = (token: string) => {
     if (!token) return;
     setError('');
-    setPendingToken(token.trim());
+    // Clean non-printable ASCII control characters (e.g. \r, \n, \t, STX, ETX)
+    const cleaned = token.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+    if (!cleaned) return;
+    setPendingToken(cleaned);
     setAdditionalGuests(0);
     setShowGuestModal(true);
   };
