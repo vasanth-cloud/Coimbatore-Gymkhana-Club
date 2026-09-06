@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats, Html5Qrcode } from 'html5-qrcode';
+import { useAuth } from '../context/AuthContext';
 import { productApi, saleApi, customerApi, stockApi } from '../api/services';
 import { DailyProductSale, Product, DetailedSale, Customer } from '../types';
 import {
@@ -31,6 +32,7 @@ interface CartItem {
 }
 
 export const Sales: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [detailedSales, setDetailedSales] = useState<DetailedSale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -631,24 +633,28 @@ export const Sales: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <button
-            onClick={exportMemberLiquorSalesCSV}
-            disabled={detailedSales.length === 0}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
-            title="Download Sales Log Excel Sheet"
-          >
-            <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" />
-            <span>DOWNLOAD SALES EXCEL</span>
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={exportMemberLiquorSalesCSV}
+                disabled={detailedSales.length === 0}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
+                title="Download Sales Log Excel Sheet"
+              >
+                <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" />
+                <span>DOWNLOAD SALES EXCEL</span>
+              </button>
 
-          <button
-            onClick={() => setShowDenomModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all"
-            title="Open Cash Denominations & Sales Cross-Verification Tool"
-          >
-            <Calculator className="w-4 h-4 stroke-[2.5]" />
-            <span>CASH DENOMINATIONS & VERIFY</span>
-          </button>
+              <button
+                onClick={() => setShowDenomModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all"
+                title="Open Cash Denominations & Sales Cross-Verification Tool"
+              >
+                <Calculator className="w-4 h-4 stroke-[2.5]" />
+                <span>CASH DENOMINATIONS & VERIFY</span>
+              </button>
+            </>
+          )}
 
           {/* Prominent Sales Log View Button */}
           <button
@@ -1182,34 +1188,36 @@ export const Sales: React.FC = () => {
                 <p className="text-xs text-slate-400 mt-0.5">Live itemized liquor sales linked to member cards</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setShowDenomModal(true)}
-                  className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
-                  title="Open Cash Denominations & Sales Verification Modal"
-                >
-                  <Calculator className="w-4 h-4 stroke-[2.5]" />
-                  <span>Denominations & Verify</span>
-                </button>
+              {isAdmin && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowDenomModal(true)}
+                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                    title="Open Cash Denominations & Sales Verification Modal"
+                  >
+                    <Calculator className="w-4 h-4 stroke-[2.5]" />
+                    <span>Denominations & Verify</span>
+                  </button>
 
-                <button
-                  onClick={exportMemberLiquorSalesCSV}
-                  disabled={detailedSales.length === 0}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span>Member Excel</span>
-                </button>
+                  <button
+                    onClick={exportMemberLiquorSalesCSV}
+                    disabled={detailedSales.length === 0}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Member Excel</span>
+                  </button>
 
-                <button
-                  onClick={exportGeneralBottleSalesCSV}
-                  disabled={detailedSales.length === 0}
-                  className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4 text-amber-400" />
-                  <span>Bottle Excel</span>
-                </button>
-              </div>
+                  <button
+                    onClick={exportGeneralBottleSalesCSV}
+                    disabled={detailedSales.length === 0}
+                    className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4 text-amber-400" />
+                    <span>Bottle Excel</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {loading ? (
@@ -1353,7 +1361,7 @@ export const Sales: React.FC = () => {
       )}
 
       {/* CASH DENOMINATIONS & CROSS-VERIFICATION MODAL */}
-      {showDenomModal && (
+      {isAdmin && showDenomModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#161b22] border border-amber-500/40 rounded-2xl p-6 max-w-3xl w-full relative shadow-2xl animate-in fade-in zoom-in duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
             <button
