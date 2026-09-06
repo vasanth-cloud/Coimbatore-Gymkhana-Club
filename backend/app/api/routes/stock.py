@@ -414,125 +414,136 @@ def get_stock_receipts(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff_or_admin),
 ):
-    # Auto-backfill receipts for unlinked IN transactions if any exist
-    existing_receipt_count = db.query(StockReceipt).count()
-    in_transactions = (
-        db.query(StockTransaction)
-        .filter(StockTransaction.transaction_type == "IN", StockTransaction.is_deleted == False)
-        .all()
-    )
+    try:
+        # Auto-backfill receipts for unlinked IN transactions if no receipt items exist
+        receipt_item_count = db.query(StockReceiptItem).count()
+        in_transactions = (
+            db.query(StockTransaction)
+            .filter(StockTransaction.transaction_type == "IN", StockTransaction.is_deleted == False)
+            .all()
+        )
 
-    if existing_receipt_count == 0 and in_transactions:
-        # Group IN transactions by date
-        tx_by_date = {}
-        for tx in in_transactions:
-            d_key = tx.transaction_date.strftime("%Y-%m-%d") if tx.transaction_date else date.today().strftime("%Y-%m-%d")
-            if d_key not in tx_by_date:
-                tx_by_date[d_key] = []
-            tx_by_date[d_key].append(tx)
-
-        for d_str, tx_list in tx_by_date.items():
-            inv_date = datetime.strptime(d_str, "%Y-%m-%d").date()
-            receipt = StockReceipt(
-                invoice_number=f"INITIAL-STOCK-{inv_date.strftime('%Y%m%d')}",
-                invoice_date=inv_date,
-                depot_name="INITIAL STOCK LOAD",
-                supplier_name="TASMAC / INITIAL CATALOG",
-                file_name="Initial System Audit Sync",
-                received_by="System Admin",
-                total_cases=0,
-                total_bottles=0,
-                total_amount=0.0,
-            )
-            db.add(receipt)
-            db.flush()
-
-            tot_cases = 0
-            tot_bottles = 0
-            tot_amt = 0.0
-
-            for tx in tx_list:
-                prod = tx.product
-                if not prod or prod.is_deleted:
-                    continue
-                pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
-                c_qty = tx.quantity // pack
-                b_loose = tx.quantity % pack
-                line_val = round(float(prod.basic_rate or 0.0) * tx.quantity, 2)
-
-                tot_cases += c_qty
-                tot_bottles += tx.quantity
-                tot_amt += line_val
-
-                rc_item = StockReceiptItem(
-                    receipt_id=receipt.id,
-                    product_id=prod.id,
-                    product_name=prod.name,
-                    pack_size=pack,
-                    cases=c_qty,
-                    loose_bottles=b_loose,
-                    total_bottles=tx.quantity,
-                    rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
-                    added_value_percent=220.0,
-                    total_line_cost=line_val,
-                    calculated_basic_cost=float(prod.basic_rate or 0.0),
-                    mrp=float(prod.mrp or 0.0),
-                    selling_price=float(prod.selling_price or 0.0),
-                )
-                db.add(rc_item)
-
-            receipt.total_cases = tot_cases
-            receipt.total_bottles = tot_bottles
-            receipt.total_amount = tot_amt
-            receipt.net_amount = tot_amt
-            receipt.grand_total = tot_amt
+        if receipt_item_count == 0 and in_transactions:
+            # Clear out any empty orphan receipts
+            db.query(StockReceipt).delete(synchronize_session=False)
             db.commit()
 
-    receipts = db.query(StockReceipt).order_by(StockReceipt.invoice_date.desc(), StockReceipt.id.desc()).all()
-    res = []
-    for r in receipts:
-        items_data = []
-        for i in r.items:
-            v_ml = i.product.volume_ml if (i.product and i.product.volume_ml) else (180 if i.pack_size == 48 else (375 if i.pack_size == 24 else 750))
-            p_displayName = i.product_name if any(v in i.product_name.lower() for v in ["ml", "180", "375", "750", "1000", "650"]) else f"{i.product_name} {v_ml}ml"
-            items_data.append({
-                "id": i.id,
-                "product_name": p_displayName,
-                "volume_ml": v_ml,
-                "pack_size": i.pack_size,
-                "cases": i.cases,
-                "loose_bottles": i.loose_bottles,
-                "total_bottles": i.total_bottles,
-                "rate_per_case": float(i.rate_per_case or 0),
-                "added_value_percent": float(i.added_value_percent or 0),
-                "tcs_amount": float(i.tcs_amount or 0),
-                "total_line_cost": float(i.total_line_cost or 0),
-                "calculated_basic_cost": float(i.calculated_basic_cost or 0),
-                "mrp": float(i.mrp or 0),
-                "selling_price": float(i.selling_price or 0),
-            })
+            # Group IN transactions by date
+            tx_by_date = {}
+            for tx in in_transactions:
+                d_key = tx.transaction_date.strftime("%Y-%m-%d") if tx.transaction_date else date.today().strftime("%Y-%m-%d")
+                if d_key not in tx_by_date:
+                    tx_by_date[d_key] = []
+                tx_by_date[d_key].append(tx)
 
-        res.append({
-            "id": r.id,
-            "invoice_number": r.invoice_number,
-            "invoice_date": r.invoice_date.strftime("%Y-%m-%d") if r.invoice_date else None,
-            "depot_name": r.depot_name,
-            "supplier_name": r.supplier_name,
-            "total_cases": r.total_cases,
-            "total_bottles": r.total_bottles,
-            "total_amount": float(r.net_amount or r.total_amount or 0),
-            "imfs_subtotal": float(r.imfs_subtotal or 0),
-            "beer_subtotal": float(r.beer_subtotal or 0),
-            "second_sale_tax": float(r.second_sale_tax or 0),
-            "grand_total": float(r.grand_total or 0),
-            "tcs_tax": float(r.tcs_tax or 0),
-            "net_amount": float(r.net_amount or r.total_amount or 0),
-            "file_name": r.file_name,
-            "received_by": r.received_by,
-            "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else None,
-            "items": items_data,
-        })
-    return res
+            for d_str, tx_list in tx_by_date.items():
+                inv_date = datetime.strptime(d_str, "%Y-%m-%d").date()
+                receipt = StockReceipt(
+                    invoice_number=f"INITIAL-STOCK-{inv_date.strftime('%Y%m%d')}",
+                    invoice_date=inv_date,
+                    depot_name="INITIAL STOCK LOAD",
+                    supplier_name="TASMAC / INITIAL CATALOG",
+                    file_name="Initial System Audit Sync",
+                    received_by="System Admin",
+                    total_cases=0,
+                    total_bottles=0,
+                    total_amount=0.0,
+                )
+                db.add(receipt)
+                db.flush()
+
+                tot_cases = 0
+                tot_bottles = 0
+                tot_amt = 0.0
+
+                for tx in tx_list:
+                    prod = tx.product
+                    if not prod or prod.is_deleted:
+                        continue
+                    pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+                    c_qty = tx.quantity // pack
+                    b_loose = tx.quantity % pack
+                    line_val = round(float(prod.basic_rate or 0.0) * tx.quantity, 2)
+
+                    tot_cases += c_qty
+                    tot_bottles += tx.quantity
+                    tot_amt += line_val
+
+                    rc_item = StockReceiptItem(
+                        receipt_id=receipt.id,
+                        product_id=prod.id,
+                        product_name=prod.name,
+                        pack_size=pack,
+                        cases=c_qty,
+                        loose_bottles=b_loose,
+                        total_bottles=tx.quantity,
+                        rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+                        added_value_percent=220.0,
+                        total_line_cost=line_val,
+                        calculated_basic_cost=float(prod.basic_rate or 0.0),
+                        mrp=float(prod.mrp or 0.0),
+                        selling_price=float(prod.selling_price or 0.0),
+                    )
+                    db.add(rc_item)
+
+                receipt.total_cases = tot_cases
+                receipt.total_bottles = tot_bottles
+                receipt.total_amount = tot_amt
+                receipt.net_amount = tot_amt
+                receipt.grand_total = tot_amt
+                db.commit()
+
+        receipts = db.query(StockReceipt).order_by(StockReceipt.invoice_date.desc(), StockReceipt.id.desc()).all()
+        res = []
+        for r in receipts:
+            items_data = []
+            for i in r.items:
+                p_raw = str(i.product_name or (i.product.name if i.product else "UNNAMED ITEM"))
+                v_ml = i.product.volume_ml if (i.product and i.product.volume_ml) else (180 if i.pack_size == 48 else (375 if i.pack_size == 24 else 750))
+                p_displayName = p_raw if any(v in p_raw.lower() for v in ["ml", "180", "375", "750", "1000", "650"]) else f"{p_raw} {v_ml}ml"
+                items_data.append({
+                    "id": i.id,
+                    "product_name": p_displayName,
+                    "volume_ml": v_ml,
+                    "pack_size": i.pack_size,
+                    "cases": i.cases,
+                    "loose_bottles": i.loose_bottles,
+                    "total_bottles": i.total_bottles,
+                    "rate_per_case": float(i.rate_per_case or 0),
+                    "added_value_percent": float(i.added_value_percent or 0),
+                    "tcs_amount": float(i.tcs_amount or 0),
+                    "total_line_cost": float(i.total_line_cost or 0),
+                    "calculated_basic_cost": float(i.calculated_basic_cost or 0),
+                    "mrp": float(i.mrp or 0),
+                    "selling_price": float(i.selling_price or 0),
+                })
+
+            res.append({
+                "id": r.id,
+                "invoice_number": r.invoice_number or f"INV-{r.id}",
+                "invoice_date": r.invoice_date.strftime("%Y-%m-%d") if r.invoice_date else date.today().strftime("%Y-%m-%d"),
+                "depot_name": r.depot_name or "TASMAC DEPOT",
+                "supplier_name": r.supplier_name or "TASMAC LTD",
+                "total_cases": r.total_cases or 0,
+                "total_bottles": r.total_bottles or 0,
+                "total_amount": float(r.net_amount or r.total_amount or 0),
+                "imfs_subtotal": float(r.imfs_subtotal or 0),
+                "beer_subtotal": float(r.beer_subtotal or 0),
+                "second_sale_tax": float(r.second_sale_tax or 0),
+                "grand_total": float(r.grand_total or 0),
+                "tcs_tax": float(r.tcs_tax or 0),
+                "net_amount": float(r.net_amount or r.total_amount or 0),
+                "file_name": r.file_name or "Stock Arrival Log",
+                "received_by": r.received_by or "Staff",
+                "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else None,
+                "items": items_data,
+            })
+        return res
+    except Exception as e:
+        print("Error in get_stock_receipts:", e)
+        import traceback
+        traceback.print_exc()
+        return []
 
 
 @router.get(
