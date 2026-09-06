@@ -81,25 +81,37 @@ class CustomerRepository:
     def lookup_customer(self, query_str: str) -> Customer | None:
         if not query_str:
             return None
-        q = query_str.strip()
+        q = str(query_str).strip()
+        clean_q = q.replace("#", "").strip()
 
         # 1. Match exact qr_token
         cust = self.db.query(Customer).filter(Customer.qr_token == q, Customer.is_deleted == False).first()
         if cust:
             return cust
 
-        # 2. Match customer_code
-        cust = self.db.query(Customer).filter(Customer.customer_code == q, Customer.is_deleted == False).first()
+        # 2. Case-insensitive qr_token
+        cust = self.db.query(Customer).filter(Customer.qr_token.ilike(q), Customer.is_deleted == False).first()
         if cust:
             return cust
 
-        # 3. Match phone
+        # 3. Match customer_code (exact or with/without #)
+        cust = self.db.query(Customer).filter(
+            (Customer.customer_code == q) | (Customer.customer_code == clean_q) | (Customer.customer_code == f"#{clean_q}"),
+            Customer.is_deleted == False
+        ).first()
+        if cust:
+            return cust
+
+        # 4. Match phone
         cust = self.db.query(Customer).filter(Customer.phone == q, Customer.is_deleted == False).first()
         if cust:
             return cust
 
-        # 4. Partial match on qr_token
-        return self.db.query(Customer).filter(Customer.qr_token.ilike(f"%{q}%"), Customer.is_deleted == False).first()
+        # 5. Partial/URL match on qr_token or customer_code
+        return self.db.query(Customer).filter(
+            (Customer.qr_token.ilike(f"%{q}%")) | (Customer.qr_token.ilike(f"%{clean_q}%")) | (Customer.customer_code.ilike(f"%{clean_q}%")),
+            Customer.is_deleted == False
+        ).first()
 
     def delete(self, customer: Customer) -> bool:
         # Delete associated entries first then hard-delete customer to free constraints
