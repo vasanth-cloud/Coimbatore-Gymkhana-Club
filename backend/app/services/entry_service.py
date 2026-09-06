@@ -24,12 +24,12 @@ class EntryService:
 
         customer = (
             self.customer_repository
-            .get_by_qr_token(qr_token)
+            .lookup_customer(qr_token)
         )
 
         if not customer:
             raise ValueError(
-                "Invalid QR code"
+                "Invalid QR code or Member Card #"
             )
 
         if not customer.is_active:
