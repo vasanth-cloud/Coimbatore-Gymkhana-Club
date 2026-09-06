@@ -1209,6 +1209,27 @@ export const Stock: React.FC = () => {
 
           <button
             onClick={async () => {
+              if (!window.confirm('⚠️ ARE YOU SURE YOU WANT TO DELETE ALL PRODUCTS & STOCKS?\n\nThis will completely wipe all catalog products, arrival logs, and bottle stocks so you can build your product list purely from incoming bulk stock bills.')) return;
+              try {
+                await stockApi.clearCatalogAndStock();
+                await loadStockData();
+                await loadLedgerData();
+                await loadReceiptsData();
+                setActiveTab('tasmac_import');
+                alert('Catalog & stock inventory wiped clean! You can now import your first bulk stock bill to create products dynamically.');
+              } catch (err: any) {
+                alert(err.response?.data?.detail || 'Failed to clear catalog and stock');
+              }
+            }}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-rose-600/20"
+            title="Wipe all products and stocks to build catalog dynamically from bills"
+          >
+            <Trash2 className="w-4 h-4 text-slate-950" />
+            <span>WIPE CATALOG & START FRESH</span>
+          </button>
+
+          <button
+            onClick={async () => {
               if (!window.confirm('⚠️ Are you sure you want to RESET ALL STOCK INVENTORY to 0?\n\nThis will soft-delete all stock records and reset available bottle counts for all products to 0.')) return;
               try {
                 await stockApi.resetInventory();

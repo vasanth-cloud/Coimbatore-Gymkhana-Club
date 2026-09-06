@@ -226,6 +226,9 @@ export const stockApi = {
   resetInventory: async (): Promise<void> => {
     await api.post('/stock/reset-inventory');
   },
+  clearCatalogAndStock: async (): Promise<void> => {
+    await api.post('/stock/clear-catalog-and-stock');
+  },
 };
 
 export const saleApi = {

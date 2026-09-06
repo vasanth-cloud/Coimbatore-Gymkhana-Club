@@ -407,6 +407,28 @@ def reset_all_inventory(
     return {"message": "All stock arrival logs and available bottle inventory have been completely reset to 0."}
 
 
+@router.post(
+    "/clear-catalog-and-stock",
+    status_code=status.HTTP_200_OK,
+)
+def clear_catalog_and_stock(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    """
+    Completely deletes all products, arrival logs, receipt items, transactions, and sales.
+    Allows creating products dynamically purely from imported bulk stock bills.
+    """
+    from app.models.sale import Sale
+    db.query(Sale).delete(synchronize_session=False)
+    db.query(StockTransaction).delete(synchronize_session=False)
+    db.query(StockReceiptItem).delete(synchronize_session=False)
+    db.query(StockReceipt).delete(synchronize_session=False)
+    db.query(Product).delete(synchronize_session=False)
+    db.commit()
+    return {"message": "Successfully cleared all products and stock inventory. You can now import your first bulk stock bill to create products dynamically!"}
+
+
 @router.delete(
     "/receipts",
     status_code=status.HTTP_200_OK,
