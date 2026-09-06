@@ -41,11 +41,55 @@ def receive_stock(
     service = StockService(db)
 
     try:
-        return service.receive_stock(
+        tx = service.receive_stock(
             product_id=request.product_id,
             quantity=request.quantity,
             transaction_date=request.transaction_date,
         )
+
+        # Log Arrival Audit Receipt for Quick Receive
+        prod = db.query(Product).filter(Product.id == request.product_id).first()
+        if prod:
+            pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+            c_qty = request.quantity // pack
+            b_loose = request.quantity % pack
+            inv_date = request.transaction_date.date() if request.transaction_date else date.today()
+
+            receipt = StockReceipt(
+                invoice_number=f"RCV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                invoice_date=inv_date,
+                depot_name="DIRECT RECEIPT",
+                supplier_name="DIRECT SUPPLIER",
+                file_name="Quick Receive",
+                received_by=getattr(current_user, "full_name", "Staff"),
+                total_cases=c_qty,
+                total_bottles=request.quantity,
+                total_amount=round(float(prod.basic_rate or 0.0) * request.quantity, 2),
+                grand_total=round(float(prod.basic_rate or 0.0) * request.quantity, 2),
+                net_amount=round(float(prod.basic_rate or 0.0) * request.quantity, 2),
+            )
+            db.add(receipt)
+            db.flush()
+
+            rc_item = StockReceiptItem(
+                receipt_id=receipt.id,
+                product_id=prod.id,
+                product_name=prod.name,
+                pack_size=pack,
+                cases=c_qty,
+                loose_bottles=b_loose,
+                total_bottles=request.quantity,
+                rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+                added_value_percent=220.0,
+                total_line_cost=round(float(prod.basic_rate or 0.0) * request.quantity, 2),
+                calculated_basic_cost=float(prod.basic_rate or 0.0),
+                mrp=float(prod.mrp or 0.0),
+                selling_price=float(prod.selling_price or 0.0),
+            )
+            db.add(rc_item)
+            db.commit()
+
+        return tx
 
     except ValueError as e:
         raise HTTPException(
@@ -65,6 +109,25 @@ def bulk_receive_stock(
 ):
     service = StockService(db)
     received_count = 0
+
+    receipt = StockReceipt(
+        invoice_number=f"BLK-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        invoice_date=date.today(),
+        depot_name="BULK RECEIPT",
+        supplier_name="DIRECT SUPPLIER",
+        file_name="Bulk Receive",
+        received_by=getattr(current_user, "full_name", "Staff"),
+        total_cases=0,
+        total_bottles=0,
+        total_amount=0.0,
+    )
+    db.add(receipt)
+    db.flush()
+
+    tot_cases = 0
+    tot_bottles = 0
+    tot_amount = 0.0
+
     for item in items:
         try:
             service.receive_stock(
@@ -73,8 +136,44 @@ def bulk_receive_stock(
                 transaction_date=item.transaction_date,
             )
             received_count += 1
+
+            prod = db.query(Product).filter(Product.id == item.product_id).first()
+            if prod:
+                pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+                c_qty = item.quantity // pack
+                b_loose = item.quantity % pack
+                line_val = round(float(prod.basic_rate or 0.0) * item.quantity, 2)
+
+                tot_cases += c_qty
+                tot_bottles += item.quantity
+                tot_amount += line_val
+
+                rc_item = StockReceiptItem(
+                    receipt_id=receipt.id,
+                    product_id=prod.id,
+                    product_name=prod.name,
+                    pack_size=pack,
+                    cases=c_qty,
+                    loose_bottles=b_loose,
+                    total_bottles=item.quantity,
+                    rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+                    added_value_percent=220.0,
+                    total_line_cost=line_val,
+                    calculated_basic_cost=float(prod.basic_rate or 0.0),
+                    mrp=float(prod.mrp or 0.0),
+                    selling_price=float(prod.selling_price or 0.0),
+                )
+                db.add(rc_item)
         except Exception as e:
             print(f"Bulk receive error for product {item.product_id}:", e)
+
+    receipt.total_cases = tot_cases
+    receipt.total_bottles = tot_bottles
+    receipt.total_amount = tot_amount
+    receipt.net_amount = tot_amount
+    receipt.grand_total = tot_amount
+    db.commit()
+
     return {"message": f"Successfully imported incoming stock for {received_count} items"}
 
 
@@ -315,6 +414,80 @@ def get_stock_receipts(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff_or_admin),
 ):
+    # Auto-backfill receipts for unlinked IN transactions if any exist
+    existing_receipt_count = db.query(StockReceipt).count()
+    in_transactions = (
+        db.query(StockTransaction)
+        .filter(StockTransaction.transaction_type == "IN", StockTransaction.is_deleted == False)
+        .all()
+    )
+
+    if existing_receipt_count == 0 and in_transactions:
+        # Group IN transactions by date
+        tx_by_date = {}
+        for tx in in_transactions:
+            d_key = tx.transaction_date.strftime("%Y-%m-%d") if tx.transaction_date else date.today().strftime("%Y-%m-%d")
+            if d_key not in tx_by_date:
+                tx_by_date[d_key] = []
+            tx_by_date[d_key].append(tx)
+
+        for d_str, tx_list in tx_by_date.items():
+            inv_date = datetime.strptime(d_str, "%Y-%m-%d").date()
+            receipt = StockReceipt(
+                invoice_number=f"INITIAL-STOCK-{inv_date.strftime('%Y%m%d')}",
+                invoice_date=inv_date,
+                depot_name="INITIAL STOCK LOAD",
+                supplier_name="TASMAC / INITIAL CATALOG",
+                file_name="Initial System Audit Sync",
+                received_by="System Admin",
+                total_cases=0,
+                total_bottles=0,
+                total_amount=0.0,
+            )
+            db.add(receipt)
+            db.flush()
+
+            tot_cases = 0
+            tot_bottles = 0
+            tot_amt = 0.0
+
+            for tx in tx_list:
+                prod = tx.product
+                if not prod or prod.is_deleted:
+                    continue
+                pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+                c_qty = tx.quantity // pack
+                b_loose = tx.quantity % pack
+                line_val = round(float(prod.basic_rate or 0.0) * tx.quantity, 2)
+
+                tot_cases += c_qty
+                tot_bottles += tx.quantity
+                tot_amt += line_val
+
+                rc_item = StockReceiptItem(
+                    receipt_id=receipt.id,
+                    product_id=prod.id,
+                    product_name=prod.name,
+                    pack_size=pack,
+                    cases=c_qty,
+                    loose_bottles=b_loose,
+                    total_bottles=tx.quantity,
+                    rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+                    added_value_percent=220.0,
+                    total_line_cost=line_val,
+                    calculated_basic_cost=float(prod.basic_rate or 0.0),
+                    mrp=float(prod.mrp or 0.0),
+                    selling_price=float(prod.selling_price or 0.0),
+                )
+                db.add(rc_item)
+
+            receipt.total_cases = tot_cases
+            receipt.total_bottles = tot_bottles
+            receipt.total_amount = tot_amt
+            receipt.net_amount = tot_amt
+            receipt.grand_total = tot_amt
+            db.commit()
+
     receipts = db.query(StockReceipt).order_by(StockReceipt.invoice_date.desc(), StockReceipt.id.desc()).all()
     res = []
     for r in receipts:

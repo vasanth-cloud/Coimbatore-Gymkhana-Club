@@ -260,6 +260,7 @@ export const Stock: React.FC = () => {
 
       setMsg({ type: 'success', text: `Successfully added ${quantity} bottles to inventory!` });
       await loadStockData();
+      await loadReceiptsData();
       if (activeTab === 'ledger') await loadLedgerData();
 
       setTimeout(() => {
@@ -1002,6 +1003,7 @@ export const Stock: React.FC = () => {
       await stockApi.bulkReceiveStock(payload);
       setMsg({ type: 'success', text: `Bulk imported stock for ${matched.length} drinks!` });
       await loadStockData();
+      await loadReceiptsData();
       if (activeTab === 'ledger') await loadLedgerData();
 
       setTimeout(() => {
