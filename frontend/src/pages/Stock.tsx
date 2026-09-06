@@ -1853,6 +1853,7 @@ export const Stock: React.FC = () => {
                     <th className="py-3 px-2 text-center w-28">Pack Size (ml)</th>
                     <th className="py-3 px-2 text-center w-28">Quantity Cases (C)</th>
                     <th className="py-3 px-2 text-center w-28">Quantity Bottles (B)</th>
+                    <th className="py-3 px-2 text-center w-28">Total Bottles</th>
                     <th className="py-3 px-2 text-right min-w-[130px]">Rate per Case (RS.)</th>
                     <th className="py-3 px-2 text-right min-w-[120px]">Added Value RS.</th>
                     <th className="py-3 px-2 text-center w-28">Added Value %</th>
@@ -2308,6 +2309,7 @@ export const Stock: React.FC = () => {
                     <th className="py-2.5 px-2 text-center">Pack Size (ml)</th>
                     <th className="py-2.5 px-2 text-center">Quantity Cases (C)</th>
                     <th className="py-2.5 px-2 text-center">Quantity Bottles (B)</th>
+                    <th className="py-2.5 px-2 text-center">Total Bottles</th>
                     <th className="py-2.5 px-2 text-right">Rate per Case (RS.)</th>
                     <th className="py-2.5 px-2 text-right">Added Value RS.</th>
                     <th className="py-2.5 px-2 text-center">Added Value %</th>
