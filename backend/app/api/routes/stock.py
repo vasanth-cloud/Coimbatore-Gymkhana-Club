@@ -485,8 +485,9 @@ def get_stock_receipts(
         for r in receipts:
             items_data = []
             for i in r.items:
-                p_raw = str(i.product_name or (i.product.name if i.product else "UNNAMED ITEM"))
-                v_ml = i.product.volume_ml if (i.product and i.product.volume_ml) else (180 if i.pack_size == 48 else (375 if i.pack_size == 24 else 750))
+                prod_obj = getattr(i, "product", None)
+                p_raw = str(i.product_name or (prod_obj.name if prod_obj else "UNNAMED ITEM"))
+                v_ml = prod_obj.volume_ml if (prod_obj and prod_obj.volume_ml) else (180 if i.pack_size == 48 else (375 if i.pack_size == 24 else 750))
                 p_displayName = p_raw if any(v in p_raw.lower() for v in ["ml", "180", "375", "750", "1000", "650"]) else f"{p_raw} {v_ml}ml"
                 items_data.append({
                     "id": i.id,

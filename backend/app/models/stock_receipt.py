@@ -70,3 +70,4 @@ class StockReceiptItem(BaseModel):
     selling_price = Column(Numeric(12, 2), nullable=False, default=0.0)
 
     receipt = relationship("StockReceipt", back_populates="items")
+    product = relationship("Product")
