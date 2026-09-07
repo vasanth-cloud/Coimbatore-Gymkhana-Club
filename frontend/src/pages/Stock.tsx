@@ -141,6 +141,7 @@ export const Stock: React.FC = () => {
   const [editSellingPrice, setEditSellingPrice] = useState<number>(0);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [dangerModal, setDangerModal] = useState<{ type: 'wipe' | 'reset'; confirmText: string } | null>(null);
 
   const handleOpenEditModal = (item: any) => {
     setEditingItem(item);
@@ -1236,47 +1237,6 @@ export const Stock: React.FC = () => {
           >
             <FileSpreadsheet className="w-4 h-4 text-amber-400" />
             <span>EXPORT LEDGER EXCEL</span>
-          </button>
-
-          <button
-            onClick={async () => {
-              if (!window.confirm('⚠️ ARE YOU SURE YOU WANT TO DELETE ALL PRODUCTS & STOCKS?\n\nThis will completely wipe all catalog products, arrival logs, and bottle stocks so you can build your product list purely from incoming bulk stock bills.')) return;
-              try {
-                await stockApi.clearCatalogAndStock();
-                await loadStockData();
-                await loadLedgerData();
-                await loadReceiptsData();
-                setActiveTab('tasmac_import');
-                alert('Catalog & stock inventory wiped clean! You can now import your first bulk stock bill to create products dynamically.');
-              } catch (err: any) {
-                alert(err.response?.data?.detail || 'Failed to clear catalog and stock');
-              }
-            }}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-rose-600/20"
-            title="Wipe all products and stocks to build catalog dynamically from bills"
-          >
-            <Trash2 className="w-4 h-4 text-slate-950" />
-            <span>WIPE CATALOG & START FRESH</span>
-          </button>
-
-          <button
-            onClick={async () => {
-              if (!window.confirm('⚠️ Are you sure you want to RESET ALL STOCK INVENTORY to 0?\n\nThis will soft-delete all stock records and reset available bottle counts for all products to 0.')) return;
-              try {
-                await stockApi.resetInventory();
-                await loadStockData();
-                await loadLedgerData();
-                await loadReceiptsData();
-                alert('Stock inventory has been completely reset to 0.');
-              } catch (err: any) {
-                alert(err.response?.data?.detail || 'Failed to reset inventory');
-              }
-            }}
-            className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
-            title="Reset available bottle inventory to 0"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>RESET INVENTORY (0 BOTTLES)</span>
           </button>
         </div>
       </div>
@@ -2755,6 +2715,38 @@ export const Stock: React.FC = () => {
                 </div>
               </div>
 
+              {/* Admin Danger Zone Controls Inside Edit Modal */}
+              <div className="pt-4 border-t border-[#21262d] space-y-2">
+                <span className="text-[10px] font-extrabold uppercase text-rose-400/80 tracking-wider block">
+                  ⚠️ Admin Advanced Reset Controls
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setDangerModal({ type: 'reset', confirmText: '' });
+                    }}
+                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-extrabold rounded-xl text-[11px] flex items-center gap-1.5 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Reset Inventory (0 Bottles)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setDangerModal({ type: 'wipe', confirmText: '' });
+                    }}
+                    className="px-3 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-600/40 font-extrabold rounded-xl text-[11px] flex items-center gap-1.5 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Wipe Catalog & Start Fresh</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#21262d]">
                 <button
                   type="button"
@@ -2773,6 +2765,98 @@ export const Stock: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SAFETY TYPED-CONFIRMATION MODAL FOR RESET & WIPE ACTIONS */}
+      {dangerModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-rose-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#21262d] pb-3">
+              <div className="flex items-center gap-2 text-rose-400 font-extrabold text-sm">
+                <AlertTriangle className="w-5 h-5 text-rose-500 animate-pulse" />
+                <span>{dangerModal.type === 'wipe' ? 'Wipe Catalog & Reset All Data' : 'Reset Inventory (0 Bottles)'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDangerModal(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-[#21262d]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <p className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-3 rounded-xl font-bold leading-relaxed">
+                {dangerModal.type === 'wipe'
+                  ? '⚠️ CRITICAL DANGER: This will permanently delete ALL catalog products, sales history, arrival audit logs, and bottle stocks from the database!'
+                  : '⚠️ DANGER: This will soft-delete all stock receipt records and reset available bottle inventory for ALL products back to 0.'}
+              </p>
+
+              <p className="text-slate-400">
+                To prevent accidental deletion, please type{' '}
+                <strong className="text-amber-400 font-mono underline">
+                  {dangerModal.type === 'wipe' ? 'DELETE CATALOG' : 'RESET STOCK'}
+                </strong>{' '}
+                in the box below to enable confirmation:
+              </p>
+
+              <input
+                type="text"
+                value={dangerModal.confirmText}
+                onChange={(e) => setDangerModal({ ...dangerModal, confirmText: e.target.value })}
+                placeholder={dangerModal.type === 'wipe' ? 'Type DELETE CATALOG' : 'Type RESET STOCK'}
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-amber-400 focus:outline-none focus:border-rose-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#21262d]">
+              <button
+                type="button"
+                onClick={() => setDangerModal(null)}
+                className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={
+                  (dangerModal.type === 'wipe' && dangerModal.confirmText.trim() !== 'DELETE CATALOG') ||
+                  (dangerModal.type === 'reset' && dangerModal.confirmText.trim() !== 'RESET STOCK')
+                }
+                onClick={async () => {
+                  if (dangerModal.type === 'wipe') {
+                    try {
+                      await stockApi.clearCatalogAndStock();
+                      await loadStockData();
+                      await loadLedgerData();
+                      await loadReceiptsData();
+                      setDangerModal(null);
+                      setActiveTab('tasmac_import');
+                      alert('Catalog & stock inventory wiped clean! You can now import your first bulk stock bill.');
+                    } catch (err: any) {
+                      alert(err.response?.data?.detail || 'Failed to wipe catalog');
+                    }
+                  } else {
+                    try {
+                      await stockApi.resetInventory();
+                      await loadStockData();
+                      await loadLedgerData();
+                      await loadReceiptsData();
+                      setDangerModal(null);
+                      alert('Stock inventory has been completely reset to 0.');
+                    } catch (err: any) {
+                      alert(err.response?.data?.detail || 'Failed to reset inventory');
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all"
+              >
+                {dangerModal.type === 'wipe' ? 'CONFIRM & WIPE CATALOG' : 'CONFIRM & RESET INVENTORY'}
+              </button>
+            </div>
           </div>
         </div>
       )}
