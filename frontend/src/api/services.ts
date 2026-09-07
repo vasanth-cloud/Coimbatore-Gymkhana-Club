@@ -182,6 +182,10 @@ export const stockApi = {
     const response = await api.post<StockTransaction>('/stock/receive', data);
     return response.data;
   },
+  adjustStock: async (data: { product_id: number; target_bottles: number }): Promise<any> => {
+    const response = await api.post('/stock/adjust', data);
+    return response.data;
+  },
   bulkReceiveStock: async (items: any[]): Promise<any> => {
     const response = await api.post('/stock/bulk-receive', items);
     return response.data;

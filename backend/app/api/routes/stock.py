@@ -13,6 +13,7 @@ from app.repositories.stock_repository import StockRepository
 
 from app.schemas.stock import (
     StockReceiveRequest,
+    StockAdjustmentRequest,
     StockBulkReceiveItem,
     StockTransactionResponse,
     CurrentStockResponse,
@@ -96,6 +97,42 @@ def receive_stock(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.post(
+    "/adjust",
+    status_code=status.HTTP_200_OK,
+)
+def adjust_stock(
+    request: StockAdjustmentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    repo = StockRepository(db)
+    cur_stock = repo.get_current_stock(request.product_id)
+    diff = request.target_bottles - cur_stock
+
+    if diff > 0:
+        repo.create_transaction(
+            product_id=request.product_id,
+            quantity=diff,
+            transaction_type="IN",
+            transaction_date=datetime.now(),
+        )
+    elif diff < 0:
+        repo.create_transaction(
+            product_id=request.product_id,
+            quantity=abs(diff),
+            transaction_type="OUT",
+            transaction_date=datetime.now(),
+        )
+
+    db.commit()
+    return {
+        "message": f"Successfully adjusted stock for product #{request.product_id} to {request.target_bottles} bottles",
+        "product_id": request.product_id,
+        "new_stock": request.target_bottles,
+    }
 
 
 @router.post(

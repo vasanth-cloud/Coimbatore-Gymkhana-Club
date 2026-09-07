@@ -139,6 +139,9 @@ export const Stock: React.FC = () => {
   const [editMrp, setEditMrp] = useState<number>(0);
   const [editBasicRate, setEditBasicRate] = useState<number>(0);
   const [editSellingPrice, setEditSellingPrice] = useState<number>(0);
+  const [editCases, setEditCases] = useState<number>(0);
+  const [editLoose, setEditLoose] = useState<number>(0);
+  const [editCbUnits, setEditCbUnits] = useState<number>(0);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [dangerModal, setDangerModal] = useState<{ type: 'wipe' | 'reset'; confirmText: string } | null>(null);
@@ -146,13 +149,59 @@ export const Stock: React.FC = () => {
   const handleOpenEditModal = (item: any) => {
     setEditingItem(item);
     setEditName(item.product_name || item.name || '');
-    setEditCategory(item.category || 'SPIRITS');
-    setEditVolume(item.volume_ml || 750);
-    setEditPackSize(item.pack_size || 12);
+    const cat = item.category || 'SPIRITS';
+    const vol = item.volume_ml || 750;
+    const pack = item.pack_size || 12;
+    setEditCategory(cat);
+    setEditVolume(vol);
+    setEditPackSize(pack);
     setEditMrp(item.mrp || 0);
     setEditBasicRate(item.basic_rate || 0);
     setEditSellingPrice(item.selling_price || 0);
+
+    const cCases = item.closing_cases !== undefined ? item.closing_cases : Math.floor((item.closing_stock || item.current_stock || 0) / pack);
+    const cLoose = item.closing_bottles !== undefined ? item.closing_bottles : ((item.closing_stock || item.current_stock || 0) % pack);
+    const totB = cCases * pack + cLoose;
+    const uVal = calculateItemUnits(cat, vol, pack, totB);
+
+    setEditCases(cCases);
+    setEditLoose(cLoose);
+    setEditCbUnits(uVal);
     setEditMsg(null);
+  };
+
+  const handleUpdateEditCases = (c: number) => {
+    const cases = Math.max(0, c);
+    setEditCases(cases);
+    const totB = cases * editPackSize + editLoose;
+    const uVal = calculateItemUnits(editCategory, editVolume, editPackSize, totB);
+    setEditCbUnits(uVal);
+  };
+
+  const handleUpdateEditLoose = (b: number) => {
+    const loose = Math.max(0, b);
+    setEditLoose(loose);
+    const totB = editCases * editPackSize + loose;
+    const uVal = calculateItemUnits(editCategory, editVolume, editPackSize, totB);
+    setEditCbUnits(uVal);
+  };
+
+  const handleUpdateEditCbUnits = (u: number) => {
+    const uVal = Math.max(0, u);
+    setEditCbUnits(uVal);
+
+    const catLower = (editCategory || '').toLowerCase();
+    let totB = 0;
+    if (catLower.includes('beer')) {
+      totB = Math.round(uVal * editPackSize);
+    } else if (catLower.includes('wine')) {
+      totB = Math.round((uVal * 2250) / editVolume);
+    } else {
+      totB = Math.round((uVal * 750) / editVolume);
+    }
+
+    setEditCases(Math.floor(totB / editPackSize));
+    setEditLoose(totB % editPackSize);
   };
 
   const handleSaveProductEdit = async (e: React.FormEvent) => {
@@ -175,8 +224,15 @@ export const Stock: React.FC = () => {
         selling_price: editSellingPrice,
       });
 
-      setEditMsg({ type: 'success', text: 'Product rates & specs updated successfully!' });
+      const newTotalBottles = editCases * editPackSize + editLoose;
+      await stockApi.adjustStock({
+        product_id: prodId,
+        target_bottles: newTotalBottles,
+      });
+
+      setEditMsg({ type: 'success', text: 'Product specs, rates & CB stock units updated successfully!' });
       await loadStockData();
+      await loadReceiptsData();
       if (activeTab === 'ledger') await loadLedgerData();
 
       setTimeout(() => {
@@ -2712,6 +2768,55 @@ export const Stock: React.FC = () => {
                     className="w-full bg-[#0d1117] border border-amber-500/30 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Closing Stock (CB Cases, Loose Bottles & CB Units) Edit Section */}
+              <div className="pt-3 border-t border-[#21262d] space-y-2">
+                <span className="text-[11px] font-extrabold uppercase text-purple-400 tracking-wider flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Closing Inventory & CB Units Edit</span>
+                </span>
+
+                <div className="grid grid-cols-3 gap-3 bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+                  <div>
+                    <label className="block text-[10px] font-bold text-amber-400 uppercase mb-1">CB Cases (C)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editCases}
+                      onChange={(e) => handleUpdateEditCases(parseInt(e.target.value) || 0)}
+                      className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">CB Loose (B)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editLoose}
+                      onChange={(e) => handleUpdateEditLoose(parseInt(e.target.value) || 0)}
+                      className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-purple-300 uppercase mb-1">CB Units (U)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editCbUnits}
+                      onChange={(e) => handleUpdateEditCbUnits(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-[#161b22] border border-purple-500/40 rounded-xl px-2.5 py-1.5 text-xs font-mono font-black text-purple-300 focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-mono font-bold px-1 text-slate-400">
+                  <span>Total Closing Bottles: <span className="text-amber-400 font-black">{editCases * editPackSize + editLoose} Bottles</span></span>
+                  <span>Calculated CB Units: <span className="text-purple-300 font-black">{editCbUnits.toFixed(2)} U</span></span>
                 </div>
               </div>
 

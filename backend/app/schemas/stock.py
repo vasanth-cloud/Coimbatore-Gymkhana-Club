@@ -8,6 +8,11 @@ class StockReceiveRequest(BaseModel):
     transaction_date: datetime | None = None
 
 
+class StockAdjustmentRequest(BaseModel):
+    product_id: int
+    target_bottles: int = Field(ge=0)
+
+
 class StockBulkReceiveItem(BaseModel):
     product_id: int
     quantity: int = Field(gt=0)
