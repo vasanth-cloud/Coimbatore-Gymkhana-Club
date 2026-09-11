@@ -167,7 +167,7 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
 
         brand = db.query(Brand).filter(func.lower(Brand.name) == "generic", Brand.is_deleted == False).first()
         if not brand:
-            brand = Brand(name="GENERIC", is_active=True)
+            brand = Brand(name="GENERIC", category=cat or "SPIRITS", is_active=True)
             db.add(brand)
             db.flush()
 
@@ -335,19 +335,24 @@ def bulk_record_daily_stock(
     current_user: User = Depends(require_staff_or_admin),
 ):
     recorded_count = 0
+    errors = []
     for item in request.items:
         try:
             item.target_date = request.target_date
             process_single_daily_entry(db, item, current_user)
+            db.commit()
             recorded_count += 1
         except Exception as e:
-            print(f"Error processing daily stock entry for product #{item.product_id}:", e)
+            db.rollback()
+            err_msg = f"Error processing {item.product_name or item.product_id}: {str(e)}"
+            print(err_msg)
+            errors.append(err_msg)
 
-    db.commit()
     return {
         "message": f"Successfully recorded daily stock for {recorded_count} items on {request.target_date}",
         "target_date": request.target_date,
         "count": recorded_count,
+        "errors": errors if errors else None,
     }
 
 
