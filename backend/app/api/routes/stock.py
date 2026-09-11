@@ -146,11 +146,50 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
 
     t_date_str = t_date.strftime("%Y-%m-%d")
 
-    prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+    # Multi-tier product lookup & auto-creation
+    prod = None
+    if item.product_id and item.product_id > 0:
+        prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+
+    if not prod and item.product_name and item.product_name.strip():
+        p_name = item.product_name.strip()
+        prod = db.query(Product).filter(
+            func.lower(Product.name) == p_name.lower(),
+            Product.is_deleted == False
+        ).first()
+
+    if not prod and item.product_name and item.product_name.strip():
+        from app.models.brand import Brand
+        p_name = item.product_name.strip()
+        vol = item.volume_ml if (item.volume_ml and item.volume_ml > 0) else 750
+        pack = item.pack_size if (item.pack_size and item.pack_size > 0) else (48 if vol <= 180 else (24 if vol == 375 else 12))
+        cat = (item.category or "SPIRITS").upper()
+
+        brand = db.query(Brand).filter(func.lower(Brand.name) == "generic", Brand.is_deleted == False).first()
+        if not brand:
+            brand = Brand(name="GENERIC", is_active=True)
+            db.add(brand)
+            db.flush()
+
+        prod = Product(
+            brand_id=brand.id,
+            name=p_name,
+            category=cat,
+            volume_ml=vol,
+            pack_size=pack,
+            mrp=item.mrp or 0.0,
+            basic_rate=item.basic_rate or 0.0,
+            selling_price=item.selling_price or item.mrp or 0.0,
+            is_active=True
+        )
+        db.add(prod)
+        db.flush()
+
     if not prod:
-        raise ValueError(f"Product #{item.product_id} not found")
+        raise ValueError(f"Product not found and could not be created.")
 
     pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+
 
     # 1. Prior stock before target_date
     prior_in = db.query(func.coalesce(func.sum(StockTransaction.quantity), 0)).filter(

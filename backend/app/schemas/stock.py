@@ -14,12 +14,20 @@ class StockAdjustmentRequest(BaseModel):
 
 
 class DailyLedgerEntryRequest(BaseModel):
-    product_id: int
+    product_id: int | None = 0
+    product_name: str | None = None
+    category: str | None = "SPIRITS"
+    volume_ml: int | None = 750
+    pack_size: int | None = 12
+    mrp: float | None = 0.0
+    basic_rate: float | None = 0.0
+    selling_price: float | None = 0.0
     target_date: str  # YYYY-MM-DD
     opening_bottles: int | None = None
     purchase_bottles: int = Field(ge=0, default=0)
     sale_bottles: int = Field(ge=0, default=0)
     closing_bottles: int | None = None
+
 
 
 class BulkDailyLedgerEntryRequest(BaseModel):

@@ -143,12 +143,12 @@ def on_startup():
         db = SessionLocal()
 
         # Automatically seed default admin users if not present
-        emails_to_seed = ["admin@gymkhanaclub.com", "avasanth081@gmail.com"]
+        emails_to_seed = ["admin@gymkhanaclub.com", "avasanth081@gmail.com", "padmeshskmr@gmail.com"]
         for target_email in emails_to_seed:
             usr = db.query(User).filter(User.email.ilike(target_email)).first()
             if not usr:
                 usr = User(
-                    full_name="Admin User" if "admin" in target_email else "Vasanth",
+                    full_name="Admin User" if "admin" in target_email else ("Padmesh" if "padmesh" in target_email else "Vasanth"),
                     email=target_email,
                     password_hash=hash_password("admin123"),
                     role=UserRole.ADMIN,
@@ -162,6 +162,7 @@ def on_startup():
                 usr.is_active = True
                 db.add(usr)
         db.commit()
+
 
         rc_count = db.query(StockReceipt).count()
         if rc_count == 0:

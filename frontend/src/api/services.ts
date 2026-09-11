@@ -187,7 +187,14 @@ export const stockApi = {
     return response.data;
   },
   recordDailyLedger: async (data: {
-    product_id: number;
+    product_id?: number;
+    product_name?: string;
+    category?: string;
+    volume_ml?: number;
+    pack_size?: number;
+    mrp?: number;
+    basic_rate?: number;
+    selling_price?: number;
     target_date: string;
     opening_bottles?: number | null;
     purchase_bottles?: number;
@@ -200,7 +207,14 @@ export const stockApi = {
   bulkRecordDailyLedger: async (data: {
     target_date: string;
     items: Array<{
-      product_id: number;
+      product_id?: number;
+      product_name?: string;
+      category?: string;
+      volume_ml?: number;
+      pack_size?: number;
+      mrp?: number;
+      basic_rate?: number;
+      selling_price?: number;
       opening_bottles?: number | null;
       purchase_bottles?: number;
       sale_bottles?: number;
@@ -210,6 +224,7 @@ export const stockApi = {
     const response = await api.post('/stock/bulk-record-daily', data);
     return response.data;
   },
+
   bulkReceiveStock: async (items: any[]): Promise<any> => {
 
     const response = await api.post('/stock/bulk-receive', items);

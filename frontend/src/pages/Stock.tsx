@@ -164,12 +164,20 @@ export const Stock: React.FC = () => {
   // Bulk Daily Entry Sheet State
   const [showBulkDailyModal, setShowBulkDailyModal] = useState(false);
   const [bulkDailyDate, setBulkDailyDate] = useState<string>(ledgerDate || '2026-09-01');
+  const [showDailyPasteModal, setShowDailyPasteModal] = useState(false);
+  const [dailyPasteText, setDailyPasteText] = useState('');
+  const [dailyFileName, setDailyFileName] = useState('');
+
   const [bulkDailyItems, setBulkDailyItems] = useState<Array<{
+    id: string;
     product_id: number;
     product_name: string;
     category: string;
     volume_ml: number;
     pack_size: number;
+    mrp?: number;
+    basic_rate?: number;
+    selling_price?: number;
     ob_cases: number;
     ob_loose: number;
     pur_cases: number;
@@ -178,8 +186,176 @@ export const Stock: React.FC = () => {
     sale_loose: number;
     cb_cases: number;
     cb_loose: number;
+    isNew?: boolean;
   }>>([]);
   const [bulkDailySubmitting, setBulkDailySubmitting] = useState<boolean>(false);
+
+  // DOWNLOAD SAMPLE DAILY STOCK TEMPLATE
+  const downloadDailyStockTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Product Name', 'Volume (ml)', 'Pack Size', 'Category', 'OB (Cases)', 'OB (Loose)', 'PUR (Cases)', 'PUR (Loose)', 'SALE (Cases)', 'SALE (Loose)', 'CB (Cases)', 'CB (Loose)'],
+      ['BACARDI CARTA BLANCA RUM 750ml', 750, 12, 'RUM', 2, 5, 1, 0, 0, 8, 3, 0],
+      ['ROYAL CHALLENGE WHISKY 180ml', 180, 48, 'WHISKY', 5, 12, 2, 0, 1, 24, 6, 36],
+      ['HEINEKEN BEER 650ml', 650, 12, 'BEER', 10, 0, 5, 0, 4, 6, 11, 6],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daily_Stock_Register');
+    XLSX.writeFile(wb, `Daily_Stock_Register_Template.xlsx`);
+  };
+
+  const handleAddBulkDailyRow = () => {
+    setBulkDailyItems((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        product_id: products.length > 0 ? products[0].id : 0,
+        product_name: products.length > 0 ? products[0].name : '',
+        category: products.length > 0 ? products[0].category : 'SPIRITS',
+        volume_ml: products.length > 0 ? products[0].volume_ml : 750,
+        pack_size: products.length > 0 ? products[0].pack_size || 12 : 12,
+        ob_cases: 0,
+        ob_loose: 0,
+        pur_cases: 0,
+        pur_loose: 0,
+        sale_cases: 0,
+        sale_loose: 0,
+        cb_cases: 0,
+        cb_loose: 0,
+        isNew: false,
+      },
+    ]);
+  };
+
+  const handleRemoveBulkDailyRow = (id: string) => {
+    setBulkDailyItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleDailyStockFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setDailyFileName(file.name);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+
+        if (rows.length < 2) return;
+
+        const newItems: any[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || !r[0] || String(r[0]).trim() === '') continue;
+
+          const pName = String(r[0]).trim();
+          const vol = parseInt(r[1]) || 750;
+          const pack = parseInt(r[2]) || (vol <= 180 ? 48 : vol === 375 ? 24 : 12);
+          const cat = String(r[3] || 'SPIRITS').trim().toUpperCase();
+
+          const obC = parseInt(r[4]) || 0;
+          const obB = parseInt(r[5]) || 0;
+          const purC = parseInt(r[6]) || 0;
+          const purB = parseInt(r[7]) || 0;
+          const saleC = parseInt(r[8]) || 0;
+          const saleB = parseInt(r[9]) || 0;
+          const cbC = parseInt(r[10]) || 0;
+          const cbB = parseInt(r[11]) || 0;
+
+          const matched = products.find((p) => p.name.toLowerCase() === pName.toLowerCase() || (p.volume_ml === vol && p.name.toLowerCase().includes(pName.toLowerCase())));
+
+          newItems.push({
+            id: Math.random().toString(),
+            product_id: matched ? matched.id : 0,
+            product_name: matched ? matched.name : pName,
+            category: matched ? matched.category : cat,
+            volume_ml: matched ? matched.volume_ml : vol,
+            pack_size: matched ? matched.pack_size || pack : pack,
+            mrp: matched ? matched.mrp || 0 : 0,
+            basic_rate: matched ? matched.basic_rate || 0 : 0,
+            selling_price: matched ? matched.selling_price || 0 : 0,
+            ob_cases: obC,
+            ob_loose: obB,
+            pur_cases: purC,
+            pur_loose: purB,
+            sale_cases: saleC,
+            sale_loose: saleB,
+            cb_cases: cbC,
+            cb_loose: cbB,
+            isNew: !matched,
+          });
+        }
+
+        if (newItems.length > 0) {
+          setBulkDailyItems(newItems);
+          alert(`Loaded ${newItems.length} items from ${file.name}! (${newItems.filter((i) => i.isNew).length} new products to auto-create)`);
+        }
+      } catch (err) {
+        console.error('File parse error:', err);
+        alert('Could not parse Daily Stock file. Please ensure it matches the spreadsheet template.');
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  const handleParseDailyPasteText = () => {
+    if (!dailyPasteText.trim()) return;
+
+    const lines = dailyPasteText.split('\n');
+    const newItems: any[] = [];
+
+    lines.forEach((line) => {
+      if (!line.trim()) return;
+      const parts = line.split(/[\t,;|]/).map((p) => p.trim());
+      if (parts.length >= 1 && parts[0]) {
+        const pName = parts[0];
+        const vol = parseInt(parts[1]) || 750;
+        const pack = parseInt(parts[2]) || (vol <= 180 ? 48 : vol === 375 ? 24 : 12);
+        const cat = (parts[3] || 'SPIRITS').toUpperCase();
+
+        const obC = parseInt(parts[4]) || 0;
+        const obB = parseInt(parts[5]) || 0;
+        const purC = parseInt(parts[6]) || 0;
+        const purB = parseInt(parts[7]) || 0;
+        const saleC = parseInt(parts[8]) || 0;
+        const saleB = parseInt(parts[9]) || 0;
+        const cbC = parseInt(parts[10]) || 0;
+        const cbB = parseInt(parts[11]) || 0;
+
+        const matched = products.find((p) => p.name.toLowerCase() === pName.toLowerCase() || (p.volume_ml === vol && p.name.toLowerCase().includes(pName.toLowerCase())));
+
+        newItems.push({
+          id: Math.random().toString(),
+          product_id: matched ? matched.id : 0,
+          product_name: matched ? matched.name : pName,
+          category: matched ? matched.category : cat,
+          volume_ml: matched ? matched.volume_ml : vol,
+          pack_size: matched ? matched.pack_size || pack : pack,
+          ob_cases: obC,
+          ob_loose: obB,
+          pur_cases: purC,
+          pur_loose: purB,
+          sale_cases: saleC,
+          sale_loose: saleB,
+          cb_cases: cbC,
+          cb_loose: cbB,
+          isNew: !matched,
+        });
+      }
+    });
+
+    if (newItems.length > 0) {
+      setBulkDailyItems(newItems);
+      setShowDailyPasteModal(false);
+      setDailyPasteText('');
+      alert(`Parsed ${newItems.length} daily stock items from text paste!`);
+    }
+  };
 
   const handleOpenDailyRecordModal = (item?: any) => {
     setDailyRecordDate(ledgerDate || '2026-09-01');
@@ -319,11 +495,15 @@ export const Stock: React.FC = () => {
   const handleOpenBulkDailyModal = () => {
     setBulkDailyDate(ledgerDate || '2026-09-01');
     const items = ledgerData.map((item) => ({
+      id: Math.random().toString(),
       product_id: item.product_id,
       product_name: item.product_name,
       category: item.category,
       volume_ml: item.volume_ml,
       pack_size: item.pack_size || 12,
+      mrp: item.mrp || 0,
+      basic_rate: item.basic_rate || 0,
+      selling_price: item.selling_price || 0,
       ob_cases: item.opening_cases || 0,
       ob_loose: item.opening_bottles || 0,
       pur_cases: item.purchase_cases || 0,
@@ -332,23 +512,38 @@ export const Stock: React.FC = () => {
       sale_loose: item.sale_bottles || 0,
       cb_cases: item.closing_cases || 0,
       cb_loose: item.closing_bottles || 0,
+      isNew: false,
     }));
     setBulkDailyItems(items);
     setShowBulkDailyModal(true);
   };
 
   const handleUpdateBulkRow = (
-    productId: number,
-    field: 'ob_cases' | 'ob_loose' | 'pur_cases' | 'pur_loose' | 'sale_cases' | 'sale_loose' | 'cb_cases' | 'cb_loose',
-    val: number
+    rowId: string,
+    field: string,
+    val: any
   ) => {
-    const num = Math.max(0, val);
     setBulkDailyItems((prev) =>
       prev.map((item) => {
-        if (item.product_id !== productId) return item;
+        if (item.id !== rowId) return item;
+        const num = typeof val === 'number' ? Math.max(0, val) : val;
         const updated = { ...item, [field]: num };
-        const pack = item.pack_size || 12;
 
+        if (field === 'product_id') {
+          const matched = products.find((p) => p.id === Number(val));
+          if (matched) {
+            updated.product_name = matched.name;
+            updated.category = matched.category;
+            updated.volume_ml = matched.volume_ml;
+            updated.pack_size = matched.pack_size || 12;
+            updated.mrp = matched.mrp || 0;
+            updated.basic_rate = matched.basic_rate || 0;
+            updated.selling_price = matched.selling_price || 0;
+            updated.isNew = false;
+          }
+        }
+
+        const pack = updated.pack_size || 12;
         const obBottles = updated.ob_cases * pack + updated.ob_loose;
         const purBottles = updated.pur_cases * pack + updated.pur_loose;
 
@@ -381,7 +576,14 @@ export const Stock: React.FC = () => {
         const cbBottles = item.cb_cases * pack + item.cb_loose;
 
         return {
-          product_id: item.product_id,
+          product_id: item.product_id || 0,
+          product_name: item.product_name,
+          category: item.category || 'SPIRITS',
+          volume_ml: item.volume_ml || 750,
+          pack_size: pack,
+          mrp: item.mrp || 0,
+          basic_rate: item.basic_rate || 0,
+          selling_price: item.selling_price || item.mrp || 0,
           opening_bottles: obBottles,
           purchase_bottles: purBottles,
           sale_bottles: saleBottles,
@@ -394,7 +596,8 @@ export const Stock: React.FC = () => {
         items: payloadItems,
       });
 
-      alert(`Successfully saved daily stock ledger for ${bulkDailyItems.length} drinks on ${bulkDailyDate}!`);
+      const newCreatedCount = bulkDailyItems.filter((i) => i.isNew).length;
+      alert(`Successfully saved daily stock ledger for ${bulkDailyItems.length} drinks on ${bulkDailyDate}! ${newCreatedCount > 0 ? `(${newCreatedCount} new products created in catalog)` : ''}`);
       setShowBulkDailyModal(false);
       await loadLedgerData();
       await loadStockData();
@@ -405,6 +608,7 @@ export const Stock: React.FC = () => {
       setBulkDailySubmitting(false);
     }
   };
+
 
 
 
@@ -3486,7 +3690,7 @@ export const Stock: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-100">Bulk Daily Stock Entry Sheet (Sept 1 Onwards)</h3>
-                  <p className="text-xs text-slate-400">Record OB, PUR, SALE, and CB for all drinks on target date</p>
+                  <p className="text-xs text-slate-400">Record OB, PUR, SALE, and CB for all drinks on target date — Auto-creates missing catalog drinks</p>
                 </div>
               </div>
 
@@ -3499,8 +3703,8 @@ export const Stock: React.FC = () => {
               </button>
             </div>
 
-            {/* Target Date Picker Header */}
-            <div className="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d] shrink-0">
+            {/* Target Date Picker & Quick Actions Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0d1117] p-3 rounded-xl border border-[#30363d] shrink-0">
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-bold text-slate-300 uppercase">Target Ledger Date:</span>
@@ -3513,9 +3717,47 @@ export const Stock: React.FC = () => {
                 />
               </div>
 
-              <span className="text-xs font-mono font-bold text-emerald-400">
-                Total {bulkDailyItems.length} Products Loaded
-              </span>
+              {/* Upload, Paste, Download Template & Add Row Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 transition-all">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File (.XLSX/.CSV)</span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleDailyStockFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDailyPasteModal(true)}
+                  className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-sky-400 border border-sky-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Paste Sheet Text</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={downloadDailyStockTemplate}
+                  className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                  title="Download Daily Stock Excel Template"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Template</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddBulkDailyRow}
+                  className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Row</span>
+                </button>
+              </div>
             </div>
 
             {/* Bulk Sheet Table */}
@@ -3523,7 +3765,7 @@ export const Stock: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d] sticky top-0 z-10">
-                    <th className="py-3 px-3 min-w-[200px]">Product Name</th>
+                    <th className="py-3 px-3 min-w-[220px]">Product Name & Status</th>
                     <th className="py-3 px-2 text-center">Pack</th>
 
                     {/* OB C + B */}
@@ -3541,15 +3783,44 @@ export const Stock: React.FC = () => {
                     {/* CB C + B */}
                     <th className="py-3 px-2 text-center bg-amber-500/10 border-l border-[#30363d] text-amber-400">CB (C)</th>
                     <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400">CB (B)</th>
+
+                    <th className="py-3 px-2 text-center w-12">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
                   {bulkDailyItems.map((item) => (
-                    <tr key={item.product_id} className="hover:bg-[#161b22]/60">
-                      <td className="py-2 px-3 font-bold text-slate-100">
-                        {item.product_name} <span className="text-[10px] text-slate-400">({item.volume_ml}ml)</span>
+                    <tr key={item.id || item.product_id} className="hover:bg-[#161b22]/60">
+                      <td className="py-2 px-3">
+                        <div className="space-y-1">
+                          {item.product_id > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-100">{item.product_name}</span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Catalog</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <input
+                                type="text"
+                                value={item.product_name}
+                                onChange={(e) => handleUpdateBulkRow(item.id, 'product_name', e.target.value)}
+                                placeholder="Enter drink name..."
+                                className="w-full bg-[#161b22] border border-amber-500/40 rounded-lg py-1 px-2 text-xs font-bold text-amber-300 focus:outline-none"
+                              />
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Auto-Create Product</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="py-2 px-2 text-center text-slate-400">{item.pack_size}</td>
+                      <td className="py-2 px-2 text-center text-slate-400">
+                        <input
+                          type="number"
+                          value={item.pack_size || 12}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'pack_size', parseInt(e.target.value) || 12)}
+                          className="w-12 bg-[#161b22] border border-[#30363d] rounded text-center text-xs text-slate-300 py-0.5"
+                        />
+                      </td>
 
                       {/* OB */}
                       <td className="py-1.5 px-1 text-center border-l border-[#30363d]">
@@ -3557,7 +3828,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.ob_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'ob_cases', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_cases', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
                         />
                       </td>
@@ -3566,7 +3837,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.ob_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'ob_loose', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_loose', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
                         />
                       </td>
@@ -3577,7 +3848,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.pur_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'pur_cases', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_cases', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
                         />
                       </td>
@@ -3586,7 +3857,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.pur_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'pur_loose', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_loose', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
                         />
                       </td>
@@ -3597,7 +3868,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.sale_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'sale_cases', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_cases', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
                         />
                       </td>
@@ -3606,7 +3877,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.sale_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'sale_loose', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_loose', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
                         />
                       </td>
@@ -3617,7 +3888,7 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.cb_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'cb_cases', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_cases', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
                         />
                       </td>
@@ -3626,9 +3897,19 @@ export const Stock: React.FC = () => {
                           type="number"
                           min="0"
                           value={item.cb_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'cb_loose', parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_loose', parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
                         />
+                      </td>
+
+                      <td className="py-1.5 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBulkDailyRow(item.id)}
+                          className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -3636,22 +3917,88 @@ export const Stock: React.FC = () => {
               </table>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2 shrink-0">
+            <div className="flex items-center justify-between pt-2 shrink-0 border-t border-[#21262d]">
+              <span className="text-xs font-mono font-bold text-slate-400">
+                {bulkDailyItems.filter((i) => i.isNew).length > 0 && (
+                  <span className="text-amber-400 font-bold">
+                    ✨ {bulkDailyItems.filter((i) => i.isNew).length} new products will be automatically created in catalog upon saving.
+                  </span>
+                )}
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDailyModal(false)}
+                  className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBulkDaily}
+                  disabled={bulkDailySubmitting || bulkDailyItems.length === 0}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                >
+                  {bulkDailySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>SAVE ALL DAILY RECORDS ({bulkDailyDate})</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PASTE DAILY STOCK SHEET TEXT MODAL */}
+      {showDailyPasteModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#21262d] pb-3">
+              <div className="flex items-center gap-2.5 text-sky-400 font-extrabold text-sm">
+                <Sparkles className="w-5 h-5 text-sky-400" />
+                <span>Paste Daily Stock Sheet Text</span>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowBulkDailyModal(false)}
+                onClick={() => setShowDailyPasteModal(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-[#21262d]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-slate-300 font-bold">
+                Paste copied Excel or tab/comma separated rows:
+              </p>
+              <p className="text-[11px] font-mono text-slate-400">
+                Format: <code className="text-amber-400 font-bold">Product Name | Volume | Pack | Category | OB (C) | OB (B) | PUR (C) | PUR (B) | SALE (C) | SALE (B) | CB (C) | CB (B)</code>
+              </p>
+              <textarea
+                rows={8}
+                value={dailyPasteText}
+                onChange={(e) => setDailyPasteText(e.target.value)}
+                placeholder="BACARDI CARTA BLANCA RUM 750ml	750	12	RUM	2	5	1	0	0	8	3	0"
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#21262d]">
+              <button
+                type="button"
+                onClick={() => setShowDailyPasteModal(false)}
                 className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleSaveBulkDaily}
-                disabled={bulkDailySubmitting}
-                className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                onClick={handleParseDailyPasteText}
+                disabled={!dailyPasteText.trim()}
+                className="px-5 py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all"
               >
-                {bulkDailySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                <span>SAVE ALL DAILY RECORDS ({bulkDailyDate})</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Parse & Add to Daily Sheet</span>
               </button>
             </div>
           </div>
