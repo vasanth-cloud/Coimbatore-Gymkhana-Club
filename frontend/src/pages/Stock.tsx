@@ -584,6 +584,7 @@ export const Stock: React.FC = () => {
           mrp: item.mrp || 0,
           basic_rate: item.basic_rate || 0,
           selling_price: item.selling_price || item.mrp || 0,
+          target_date: bulkDailyDate,
           opening_bottles: obBottles,
           purchase_bottles: purBottles,
           sale_bottles: saleBottles,
@@ -603,7 +604,16 @@ export const Stock: React.FC = () => {
       await loadStockData();
       await loadReceiptsData();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to save bulk daily stock ledger');
+      const detail = err.response?.data?.detail;
+      let errMsg = 'Failed to save bulk daily stock ledger';
+      if (typeof detail === 'string') {
+        errMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errMsg = detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || d}`).join('\n');
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      alert(errMsg);
     } finally {
       setBulkDailySubmitting(false);
     }

@@ -22,10 +22,10 @@ class DailyLedgerEntryRequest(BaseModel):
     mrp: float | None = 0.0
     basic_rate: float | None = 0.0
     selling_price: float | None = 0.0
-    target_date: str  # YYYY-MM-DD
+    target_date: str | None = None  # YYYY-MM-DD
     opening_bottles: int | None = None
-    purchase_bottles: int = Field(ge=0, default=0)
-    sale_bottles: int = Field(ge=0, default=0)
+    purchase_bottles: int | None = 0
+    sale_bottles: int | None = 0
     closing_bottles: int | None = None
 
 
