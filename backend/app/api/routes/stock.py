@@ -212,14 +212,13 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
     # 2. Handle Opening Stock adjustment for target_date if specified
     if item.opening_bottles is not None and item.opening_bottles != prior_stock:
         diff = item.opening_bottles - prior_stock
-        adj_dt = datetime.combine(t_date, datetime.min.time()) + timedelta(seconds=1)
+        adj_dt = datetime.combine(t_date - timedelta(days=1), datetime.strptime("23:59:59", "%H:%M:%S").time())
         if diff > 0:
             db.add(StockTransaction(
                 product_id=prod.id,
                 quantity=diff,
                 transaction_type="IN",
                 transaction_date=adj_dt,
-                note=f"Opening Balance Baseline Adjustment for {t_date_str}"
             ))
         elif diff < 0:
             db.add(StockTransaction(
@@ -227,7 +226,6 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
                 quantity=abs(diff),
                 transaction_type="OUT",
                 transaction_date=adj_dt,
-                note=f"Opening Balance Baseline Adjustment for {t_date_str}"
             ))
 
     # 3. Soft-delete existing non-baseline transactions recorded on target_date for this product
@@ -238,8 +236,7 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
     ).all()
 
     for tx in existing_txs:
-        if "Opening Balance Baseline Adjustment" not in (tx.note or ""):
-            tx.is_deleted = True
+        tx.is_deleted = True
 
     # Calculate actual purchase & sale bottles
     eff_opening = item.opening_bottles if item.opening_bottles is not None else prior_stock
@@ -256,7 +253,6 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
             quantity=pur_qty,
             transaction_type="IN",
             transaction_date=pur_dt,
-            note=f"Daily Stock Purchase for {t_date_str}"
         ))
 
         # Create StockReceipt arrival log for audit history
@@ -304,7 +300,6 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
             quantity=sale_qty,
             transaction_type="OUT",
             transaction_date=sale_dt,
-            note=f"Daily Stock Sale for {t_date_str}"
         ))
 
 
