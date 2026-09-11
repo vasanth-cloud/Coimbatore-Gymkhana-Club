@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -18,9 +18,12 @@ from app.schemas.stock import (
     StockTransactionResponse,
     CurrentStockResponse,
     TASMACImportRequest,
+    DailyLedgerEntryRequest,
+    BulkDailyLedgerEntryRequest,
 )
 
 from app.services.stock_service import StockService
+
 
 
 router = APIRouter(
@@ -133,6 +136,181 @@ def adjust_stock(
         "product_id": request.product_id,
         "new_stock": request.target_bottles,
     }
+
+
+def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, current_user: User):
+    try:
+        t_date = datetime.strptime(item.target_date, "%Y-%m-%d").date()
+    except Exception:
+        raise ValueError("Invalid target date format. Must be YYYY-MM-DD.")
+
+    t_date_str = t_date.strftime("%Y-%m-%d")
+
+    prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+    if not prod:
+        raise ValueError(f"Product #{item.product_id} not found")
+
+    pack = prod.pack_size or (48 if (prod.volume_ml and prod.volume_ml <= 180) else (24 if prod.volume_ml == 375 else 12))
+
+    # 1. Prior stock before target_date
+    prior_in = db.query(func.coalesce(func.sum(StockTransaction.quantity), 0)).filter(
+        StockTransaction.product_id == prod.id,
+        func.date(StockTransaction.transaction_date) < t_date_str,
+        StockTransaction.transaction_type == "IN",
+        StockTransaction.is_deleted == False
+    ).scalar() or 0
+
+    prior_out = db.query(func.coalesce(func.sum(StockTransaction.quantity), 0)).filter(
+        StockTransaction.product_id == prod.id,
+        func.date(StockTransaction.transaction_date) < t_date_str,
+        StockTransaction.transaction_type == "OUT",
+        StockTransaction.is_deleted == False
+    ).scalar() or 0
+
+    prior_stock = max(0, prior_in - prior_out)
+
+    # 2. Handle Opening Stock adjustment for target_date if specified
+    if item.opening_bottles is not None and item.opening_bottles != prior_stock:
+        diff = item.opening_bottles - prior_stock
+        adj_dt = datetime.combine(t_date, datetime.min.time()) + timedelta(seconds=1)
+        if diff > 0:
+            db.add(StockTransaction(
+                product_id=prod.id,
+                quantity=diff,
+                transaction_type="IN",
+                transaction_date=adj_dt,
+                note=f"Opening Balance Baseline Adjustment for {t_date_str}"
+            ))
+        elif diff < 0:
+            db.add(StockTransaction(
+                product_id=prod.id,
+                quantity=abs(diff),
+                transaction_type="OUT",
+                transaction_date=adj_dt,
+                note=f"Opening Balance Baseline Adjustment for {t_date_str}"
+            ))
+
+    # 3. Soft-delete existing non-baseline transactions recorded on target_date for this product
+    existing_txs = db.query(StockTransaction).filter(
+        StockTransaction.product_id == prod.id,
+        func.date(StockTransaction.transaction_date) == t_date_str,
+        StockTransaction.is_deleted == False
+    ).all()
+
+    for tx in existing_txs:
+        if "Opening Balance Baseline Adjustment" not in (tx.note or ""):
+            tx.is_deleted = True
+
+    # Calculate actual purchase & sale bottles
+    eff_opening = item.opening_bottles if item.opening_bottles is not None else prior_stock
+    pur_qty = item.purchase_bottles or 0
+    sale_qty = item.sale_bottles or 0
+    if item.closing_bottles is not None and item.sale_bottles == 0:
+        sale_qty = max(0, eff_opening + pur_qty - item.closing_bottles)
+
+    # 4. Add Purchase (IN) transaction for target_date
+    if pur_qty > 0:
+        pur_dt = datetime.combine(t_date, datetime.strptime("10:00:00", "%H:%M:%S").time())
+        db.add(StockTransaction(
+            product_id=prod.id,
+            quantity=pur_qty,
+            transaction_type="IN",
+            transaction_date=pur_dt,
+            note=f"Daily Stock Purchase for {t_date_str}"
+        ))
+
+        # Create StockReceipt arrival log for audit history
+        c_qty = pur_qty // pack
+        b_loose = pur_qty % pack
+        line_cost = round(float(prod.basic_rate or 0.0) * pur_qty, 2)
+
+        receipt = StockReceipt(
+            invoice_number=f"DAILY-PUR-{t_date_str.replace('-', '')}-{prod.id}",
+            invoice_date=t_date,
+            depot_name="DAILY RECORD",
+            supplier_name="TASMAC LTD",
+            file_name="Daily Ledger Recording",
+            received_by=getattr(current_user, "full_name", "Staff"),
+            total_cases=c_qty,
+            total_bottles=pur_qty,
+            total_amount=line_cost,
+            grand_total=line_cost,
+            net_amount=line_cost
+        )
+        db.add(receipt)
+        db.flush()
+
+        db.add(StockReceiptItem(
+            receipt_id=receipt.id,
+            product_id=prod.id,
+            product_name=prod.name,
+            pack_size=pack,
+            cases=c_qty,
+            loose_bottles=b_loose,
+            total_bottles=pur_qty,
+            rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+            added_value_percent=220.0,
+            total_line_cost=line_cost,
+            calculated_basic_cost=float(prod.basic_rate or 0.0),
+            mrp=float(prod.mrp or 0.0),
+            selling_price=float(prod.selling_price or 0.0)
+        ))
+
+    # 5. Add Sale (OUT) transaction for target_date
+    if sale_qty > 0:
+        sale_dt = datetime.combine(t_date, datetime.strptime("20:00:00", "%H:%M:%S").time())
+        db.add(StockTransaction(
+            product_id=prod.id,
+            quantity=sale_qty,
+            transaction_type="OUT",
+            transaction_date=sale_dt,
+            note=f"Daily Stock Sale for {t_date_str}"
+        ))
+
+
+@router.post(
+    "/record-daily",
+    status_code=status.HTTP_200_OK,
+)
+def record_daily_stock(
+    request: DailyLedgerEntryRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    process_single_daily_entry(db, request, current_user)
+    db.commit()
+    return {
+        "message": f"Successfully recorded daily stock figures for product #{request.product_id} on {request.target_date}",
+        "target_date": request.target_date,
+        "product_id": request.product_id,
+    }
+
+
+@router.post(
+    "/bulk-record-daily",
+    status_code=status.HTTP_200_OK,
+)
+def bulk_record_daily_stock(
+    request: BulkDailyLedgerEntryRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    recorded_count = 0
+    for item in request.items:
+        try:
+            item.target_date = request.target_date
+            process_single_daily_entry(db, item, current_user)
+            recorded_count += 1
+        except Exception as e:
+            print(f"Error processing daily stock entry for product #{item.product_id}:", e)
+
+    db.commit()
+    return {
+        "message": f"Successfully recorded daily stock for {recorded_count} items on {request.target_date}",
+        "target_date": request.target_date,
+        "count": recorded_count,
+    }
+
 
 
 @router.post(

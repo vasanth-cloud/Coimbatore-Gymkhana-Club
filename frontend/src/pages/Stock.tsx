@@ -146,6 +146,268 @@ export const Stock: React.FC = () => {
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [dangerModal, setDangerModal] = useState<{ type: 'wipe' | 'reset'; confirmText: string } | null>(null);
 
+  // Daily Stock Entry State (Single Item & Bulk)
+  const [showDailyRecordModal, setShowDailyRecordModal] = useState(false);
+  const [dailyRecordDate, setDailyRecordDate] = useState<string>(ledgerDate || '2026-09-01');
+  const [dailyProductId, setDailyProductId] = useState<number>(0);
+  const [dailyObCases, setDailyObCases] = useState<number>(0);
+  const [dailyObLoose, setDailyObLoose] = useState<number>(0);
+  const [dailyPurCases, setDailyPurCases] = useState<number>(0);
+  const [dailyPurLoose, setDailyPurLoose] = useState<number>(0);
+  const [dailySaleCases, setDailySaleCases] = useState<number>(0);
+  const [dailySaleLoose, setDailySaleLoose] = useState<number>(0);
+  const [dailyCbCases, setDailyCbCases] = useState<number>(0);
+  const [dailyCbLoose, setDailyCbLoose] = useState<number>(0);
+  const [dailySubmitting, setDailySubmitting] = useState<boolean>(false);
+  const [dailyMsg, setDailyMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Bulk Daily Entry Sheet State
+  const [showBulkDailyModal, setShowBulkDailyModal] = useState(false);
+  const [bulkDailyDate, setBulkDailyDate] = useState<string>(ledgerDate || '2026-09-01');
+  const [bulkDailyItems, setBulkDailyItems] = useState<Array<{
+    product_id: number;
+    product_name: string;
+    category: string;
+    volume_ml: number;
+    pack_size: number;
+    ob_cases: number;
+    ob_loose: number;
+    pur_cases: number;
+    pur_loose: number;
+    sale_cases: number;
+    sale_loose: number;
+    cb_cases: number;
+    cb_loose: number;
+  }>>([]);
+  const [bulkDailySubmitting, setBulkDailySubmitting] = useState<boolean>(false);
+
+  const handleOpenDailyRecordModal = (item?: any) => {
+    setDailyRecordDate(ledgerDate || '2026-09-01');
+    setDailyMsg(null);
+
+    const targetItem = item || (ledgerData.length > 0 ? ledgerData[0] : null);
+    if (targetItem) {
+      setDailyProductId(targetItem.product_id);
+      setDailyObCases(targetItem.opening_cases || 0);
+      setDailyObLoose(targetItem.opening_bottles || 0);
+      setDailyPurCases(targetItem.purchase_cases || 0);
+      setDailyPurLoose(targetItem.purchase_bottles || 0);
+      setDailySaleCases(targetItem.sale_cases || 0);
+      setDailySaleLoose(targetItem.sale_bottles || 0);
+      setDailyCbCases(targetItem.closing_cases || 0);
+      setDailyCbLoose(targetItem.closing_bottles || 0);
+    } else if (products.length > 0) {
+      setDailyProductId(products[0].id);
+      setDailyObCases(0);
+      setDailyObLoose(0);
+      setDailyPurCases(0);
+      setDailyPurLoose(0);
+      setDailySaleCases(0);
+      setDailySaleLoose(0);
+      setDailyCbCases(0);
+      setDailyCbLoose(0);
+    }
+    setShowDailyRecordModal(true);
+  };
+
+  const handleSelectDailyProduct = (pId: number) => {
+    setDailyProductId(pId);
+    const existing = ledgerData.find((l) => l.product_id === pId);
+    if (existing) {
+      setDailyObCases(existing.opening_cases || 0);
+      setDailyObLoose(existing.opening_bottles || 0);
+      setDailyPurCases(existing.purchase_cases || 0);
+      setDailyPurLoose(existing.purchase_bottles || 0);
+      setDailySaleCases(existing.sale_cases || 0);
+      setDailySaleLoose(existing.sale_bottles || 0);
+      setDailyCbCases(existing.closing_cases || 0);
+      setDailyCbLoose(existing.closing_bottles || 0);
+    }
+  };
+
+  const handleUpdateDailyValues = (
+    field: 'ob_c' | 'ob_b' | 'pur_c' | 'pur_b' | 'sale_c' | 'sale_b' | 'cb_c' | 'cb_b',
+    val: number
+  ) => {
+    const num = Math.max(0, val);
+    const prod = products.find((p) => p.id === dailyProductId);
+    const pack = prod ? (prod.pack_size || (prod.volume_ml === 180 ? 48 : prod.volume_ml === 375 ? 24 : 12)) : 12;
+
+    let newObC = dailyObCases;
+    let newObB = dailyObLoose;
+    let newPurC = dailyPurCases;
+    let newPurB = dailyPurLoose;
+    let newSaleC = dailySaleCases;
+    let newSaleB = dailySaleLoose;
+    let newCbC = dailyCbCases;
+    let newCbB = dailyCbLoose;
+
+    if (field === 'ob_c') newObC = num;
+    if (field === 'ob_b') newObB = num;
+    if (field === 'pur_c') newPurC = num;
+    if (field === 'pur_b') newPurB = num;
+    if (field === 'sale_c') newSaleC = num;
+    if (field === 'sale_b') newSaleB = num;
+    if (field === 'cb_c') newCbC = num;
+    if (field === 'cb_b') newCbB = num;
+
+    const obBottles = newObC * pack + newObB;
+    const purBottles = newPurC * pack + newPurB;
+
+    if (field === 'ob_c' || field === 'ob_b' || field === 'pur_c' || field === 'pur_b' || field === 'sale_c' || field === 'sale_b') {
+      const saleBottles = newSaleC * pack + newSaleB;
+      const cbBottles = Math.max(0, obBottles + purBottles - saleBottles);
+      newCbC = Math.floor(cbBottles / pack);
+      newCbB = cbBottles % pack;
+    } else if (field === 'cb_c' || field === 'cb_b') {
+      const cbBottles = newCbC * pack + newCbB;
+      const saleBottles = Math.max(0, obBottles + purBottles - cbBottles);
+      newSaleC = Math.floor(saleBottles / pack);
+      newSaleB = saleBottles % pack;
+    }
+
+    setDailyObCases(newObC);
+    setDailyObLoose(newObB);
+    setDailyPurCases(newPurC);
+    setDailyPurLoose(newPurB);
+    setDailySaleCases(newSaleC);
+    setDailySaleLoose(newSaleB);
+    setDailyCbCases(newCbC);
+    setDailyCbLoose(newCbB);
+  };
+
+  const handleSaveDailyRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dailyProductId) return;
+    setDailySubmitting(true);
+    setDailyMsg(null);
+
+    const prod = products.find((p) => p.id === dailyProductId);
+    const pack = prod ? (prod.pack_size || (prod.volume_ml === 180 ? 48 : prod.volume_ml === 375 ? 24 : 12)) : 12;
+
+    const obBottles = dailyObCases * pack + dailyObLoose;
+    const purBottles = dailyPurCases * pack + dailyPurLoose;
+    const saleBottles = dailySaleCases * pack + dailySaleLoose;
+    const cbBottles = dailyCbCases * pack + dailyCbLoose;
+
+    try {
+      await stockApi.recordDailyLedger({
+        product_id: dailyProductId,
+        target_date: dailyRecordDate,
+        opening_bottles: obBottles,
+        purchase_bottles: purBottles,
+        sale_bottles: saleBottles,
+        closing_bottles: cbBottles,
+      });
+
+      setDailyMsg({ type: 'success', text: `Saved daily figures for ${prod?.name || 'Drink'} on ${dailyRecordDate}!` });
+      await loadLedgerData();
+      await loadStockData();
+      await loadReceiptsData();
+
+      setTimeout(() => {
+        setShowDailyRecordModal(false);
+        setDailyMsg(null);
+      }, 1500);
+    } catch (err: any) {
+      setDailyMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to record daily stock entry' });
+    } finally {
+      setDailySubmitting(false);
+    }
+  };
+
+  const handleOpenBulkDailyModal = () => {
+    setBulkDailyDate(ledgerDate || '2026-09-01');
+    const items = ledgerData.map((item) => ({
+      product_id: item.product_id,
+      product_name: item.product_name,
+      category: item.category,
+      volume_ml: item.volume_ml,
+      pack_size: item.pack_size || 12,
+      ob_cases: item.opening_cases || 0,
+      ob_loose: item.opening_bottles || 0,
+      pur_cases: item.purchase_cases || 0,
+      pur_loose: item.purchase_bottles || 0,
+      sale_cases: item.sale_cases || 0,
+      sale_loose: item.sale_bottles || 0,
+      cb_cases: item.closing_cases || 0,
+      cb_loose: item.closing_bottles || 0,
+    }));
+    setBulkDailyItems(items);
+    setShowBulkDailyModal(true);
+  };
+
+  const handleUpdateBulkRow = (
+    productId: number,
+    field: 'ob_cases' | 'ob_loose' | 'pur_cases' | 'pur_loose' | 'sale_cases' | 'sale_loose' | 'cb_cases' | 'cb_loose',
+    val: number
+  ) => {
+    const num = Math.max(0, val);
+    setBulkDailyItems((prev) =>
+      prev.map((item) => {
+        if (item.product_id !== productId) return item;
+        const updated = { ...item, [field]: num };
+        const pack = item.pack_size || 12;
+
+        const obBottles = updated.ob_cases * pack + updated.ob_loose;
+        const purBottles = updated.pur_cases * pack + updated.pur_loose;
+
+        if (field.startsWith('ob_') || field.startsWith('pur_') || field.startsWith('sale_')) {
+          const saleBottles = updated.sale_cases * pack + updated.sale_loose;
+          const cbBottles = Math.max(0, obBottles + purBottles - saleBottles);
+          updated.cb_cases = Math.floor(cbBottles / pack);
+          updated.cb_loose = cbBottles % pack;
+        } else if (field.startsWith('cb_')) {
+          const cbBottles = updated.cb_cases * pack + updated.cb_loose;
+          const saleBottles = Math.max(0, obBottles + purBottles - cbBottles);
+          updated.sale_cases = Math.floor(saleBottles / pack);
+          updated.sale_loose = saleBottles % pack;
+        }
+
+        return updated;
+      })
+    );
+  };
+
+  const handleSaveBulkDaily = async () => {
+    if (bulkDailyItems.length === 0) return;
+    setBulkDailySubmitting(true);
+    try {
+      const payloadItems = bulkDailyItems.map((item) => {
+        const pack = item.pack_size || 12;
+        const obBottles = item.ob_cases * pack + item.ob_loose;
+        const purBottles = item.pur_cases * pack + item.pur_loose;
+        const saleBottles = item.sale_cases * pack + item.sale_loose;
+        const cbBottles = item.cb_cases * pack + item.cb_loose;
+
+        return {
+          product_id: item.product_id,
+          opening_bottles: obBottles,
+          purchase_bottles: purBottles,
+          sale_bottles: saleBottles,
+          closing_bottles: cbBottles,
+        };
+      });
+
+      await stockApi.bulkRecordDailyLedger({
+        target_date: bulkDailyDate,
+        items: payloadItems,
+      });
+
+      alert(`Successfully saved daily stock ledger for ${bulkDailyItems.length} drinks on ${bulkDailyDate}!`);
+      setShowBulkDailyModal(false);
+      await loadLedgerData();
+      await loadStockData();
+      await loadReceiptsData();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to save bulk daily stock ledger');
+    } finally {
+      setBulkDailySubmitting(false);
+    }
+  };
+
+
+
   const handleOpenEditModal = (item: any) => {
     setEditingItem(item);
     setEditName(item.product_name || item.name || '');
@@ -1366,16 +1628,38 @@ export const Stock: React.FC = () => {
           {/* Filter Bar */}
           <div className="bg-[#161b22] border border-[#21262d] rounded-2xl p-4 shadow-lg space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-slate-300">Report Date:</span>
-                <input
-                  type="date"
-                  value={ledgerDate}
-                  onChange={(e) => setLedgerDate(e.target.value)}
-                  className="bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
-                />
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-slate-300">Report Date:</span>
+                  <input
+                    type="date"
+                    min="2026-09-01"
+                    value={ledgerDate}
+                    onChange={(e) => setLedgerDate(e.target.value)}
+                    className="bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLedgerDate('2026-09-01')}
+                    className="px-2.5 py-1.5 text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-xl hover:bg-amber-500 hover:text-slate-950 transition-all font-mono shrink-0"
+                    title="Jump to September 1st Baseline Date"
+                  >
+                    📅 Sept 1 Baseline
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenBulkDailyModal}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all shrink-0"
+                  title="Bulk record/backdate daily stock figures for all drinks on selected date"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Record Daily Stock (Sept 1 Onwards)</span>
+                </button>
               </div>
+
 
               {/* Search & Active Toggle */}
               <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -1569,16 +1853,28 @@ export const Stock: React.FC = () => {
                           </td>
 
                           <td className="py-2.5 px-2 text-center border-l border-[#30363d]">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(item)}
-                              className="px-2.5 py-1 text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-slate-950 transition-all flex items-center gap-1 mx-auto shadow-sm"
-                              title="Edit Product Rates & Specs"
-                            >
-                              <Pencil className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDailyRecordModal(item)}
+                                className="px-2 py-1 text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-500 hover:text-slate-950 transition-all flex items-center gap-1 shadow-sm shrink-0"
+                                title="Record Daily Stock Figures (PUR, OPEN, SALE, CLOSE)"
+                              >
+                                <Calendar className="w-3 h-3" />
+                                <span>Record</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditModal(item)}
+                                className="px-2 py-1 text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-slate-950 transition-all flex items-center gap-1 shadow-sm shrink-0"
+                                title="Edit Product Rates & Specs"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span>Specs</span>
+                              </button>
+                            </div>
                           </td>
+
                         </tr>
                       );
                     })}
@@ -2965,6 +3261,403 @@ export const Stock: React.FC = () => {
           </div>
         </div>
       )}
+      {/* SINGLE ITEM DAILY RECORD MODAL */}
+      {showDailyRecordModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#21262d] pb-4">
+              <div className="flex items-center gap-2.5 text-emerald-400 font-extrabold text-sm">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <span>Record Daily Stock (PUR, OPEN, CLOSE, SALE)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDailyRecordModal(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-[#21262d] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {dailyMsg && (
+              <div
+                className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                  dailyMsg.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                }`}
+              >
+                {dailyMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                <span>{dailyMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveDailyRecord} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-amber-400 uppercase mb-1">Target Date</label>
+                  <input
+                    type="date"
+                    min="2026-09-01"
+                    value={dailyRecordDate}
+                    onChange={(e) => setDailyRecordDate(e.target.value)}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Select Drink</label>
+                  <select
+                    value={dailyProductId}
+                    onChange={(e) => handleSelectDailyProduct(Number(e.target.value))}
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-3 py-2 text-xs text-slate-100 font-bold focus:outline-none focus:border-amber-500"
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.volume_ml}ml)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* OB, PUR, SALE, CLOSE GRID */}
+              <div className="space-y-3 pt-2 border-t border-[#21262d]">
+                {/* OPENING STOCK (OB) */}
+                <div className="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-200">
+                    <span>1. OPENING STOCK (OB)</span>
+                    <span className="font-mono text-slate-400">
+                      Total: {dailyObCases * (products.find((p) => p.id === dailyProductId)?.pack_size || 12) + dailyObLoose} Bottles
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cases (C)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyObCases}
+                        onChange={(e) => handleUpdateDailyValues('ob_c', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Loose Bottles (B)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyObLoose}
+                        onChange={(e) => handleUpdateDailyValues('ob_b', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PURCHASES (PUR) */}
+                <div className="bg-[#0d1117] p-3 rounded-xl border border-emerald-500/30 space-y-1.5 bg-emerald-500/5">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-emerald-400">
+                    <span>2. PURCHASES / ARRIVALS (PUR)</span>
+                    <span className="font-mono text-emerald-300">
+                      Total: {dailyPurCases * (products.find((p) => p.id === dailyProductId)?.pack_size || 12) + dailyPurLoose} Bottles
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-400 uppercase mb-1">Cases (C)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyPurCases}
+                        onChange={(e) => handleUpdateDailyValues('pur_c', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-emerald-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-emerald-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-emerald-400 uppercase mb-1">Loose Bottles (B)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyPurLoose}
+                        onChange={(e) => handleUpdateDailyValues('pur_b', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-emerald-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-emerald-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SALES (SALE) */}
+                <div className="bg-[#0d1117] p-3 rounded-xl border border-rose-500/30 space-y-1.5 bg-rose-500/5">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-rose-400">
+                    <span>3. SALES QTY (SALE)</span>
+                    <span className="font-mono text-rose-300">
+                      Total: {dailySaleCases * (products.find((p) => p.id === dailyProductId)?.pack_size || 12) + dailySaleLoose} Bottles
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-400 uppercase mb-1">Cases (C)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailySaleCases}
+                        onChange={(e) => handleUpdateDailyValues('sale_c', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-rose-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-rose-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-400 uppercase mb-1">Loose Bottles (B)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailySaleLoose}
+                        onChange={(e) => handleUpdateDailyValues('sale_b', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-rose-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-rose-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* CLOSING STOCK (CB) */}
+                <div className="bg-[#0d1117] p-3 rounded-xl border border-amber-500/30 space-y-1.5 bg-amber-500/5">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-400">
+                    <span>4. CLOSING STOCK (CB)</span>
+                    <span className="font-mono text-amber-300">
+                      Total: {dailyCbCases * (products.find((p) => p.id === dailyProductId)?.pack_size || 12) + dailyCbLoose} Bottles
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-400 uppercase mb-1">Cases (C)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyCbCases}
+                        onChange={(e) => handleUpdateDailyValues('cb_c', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-amber-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-amber-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-400 uppercase mb-1">Loose Bottles (B)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={dailyCbLoose}
+                        onChange={(e) => handleUpdateDailyValues('cb_b', parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#161b22] border border-amber-500/30 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-amber-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#21262d]">
+                <button
+                  type="button"
+                  onClick={() => setShowDailyRecordModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={dailySubmitting}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {dailySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Save Daily Record</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DAILY ENTRY SHEET MODAL */}
+      {showBulkDailyModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-6xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-[#21262d] pb-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-100">Bulk Daily Stock Entry Sheet (Sept 1 Onwards)</h3>
+                  <p className="text-xs text-slate-400">Record OB, PUR, SALE, and CB for all drinks on target date</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowBulkDailyModal(false)}
+                className="text-slate-400 hover:text-slate-200 p-1.5 rounded-xl hover:bg-[#21262d]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Target Date Picker Header */}
+            <div className="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d] shrink-0">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold text-slate-300 uppercase">Target Ledger Date:</span>
+                <input
+                  type="date"
+                  min="2026-09-01"
+                  value={bulkDailyDate}
+                  onChange={(e) => setBulkDailyDate(e.target.value)}
+                  className="bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <span className="text-xs font-mono font-bold text-emerald-400">
+                Total {bulkDailyItems.length} Products Loaded
+              </span>
+            </div>
+
+            {/* Bulk Sheet Table */}
+            <div className="overflow-x-auto overflow-y-auto border border-[#30363d] rounded-2xl bg-[#0d1117] flex-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#161b22] text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-[#30363d] sticky top-0 z-10">
+                    <th className="py-3 px-3 min-w-[200px]">Product Name</th>
+                    <th className="py-3 px-2 text-center">Pack</th>
+
+                    {/* OB C + B */}
+                    <th className="py-3 px-2 text-center bg-[#0d1117] border-l border-[#30363d] text-slate-300">OB (C)</th>
+                    <th className="py-3 px-2 text-center bg-[#0d1117] text-slate-300">OB (B)</th>
+
+                    {/* PUR C + B */}
+                    <th className="py-3 px-2 text-center bg-emerald-500/10 border-l border-[#30363d] text-emerald-400">PUR (C)</th>
+                    <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-400">PUR (B)</th>
+
+                    {/* SALE C + B */}
+                    <th className="py-3 px-2 text-center bg-rose-500/10 border-l border-[#30363d] text-rose-400">SALE (C)</th>
+                    <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400">SALE (B)</th>
+
+                    {/* CB C + B */}
+                    <th className="py-3 px-2 text-center bg-amber-500/10 border-l border-[#30363d] text-amber-400">CB (C)</th>
+                    <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400">CB (B)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#21262d] text-slate-200 font-mono">
+                  {bulkDailyItems.map((item) => (
+                    <tr key={item.product_id} className="hover:bg-[#161b22]/60">
+                      <td className="py-2 px-3 font-bold text-slate-100">
+                        {item.product_name} <span className="text-[10px] text-slate-400">({item.volume_ml}ml)</span>
+                      </td>
+                      <td className="py-2 px-2 text-center text-slate-400">{item.pack_size}</td>
+
+                      {/* OB */}
+                      <td className="py-1.5 px-1 text-center border-l border-[#30363d]">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.ob_cases || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'ob_cases', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.ob_loose || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'ob_loose', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
+                        />
+                      </td>
+
+                      {/* PUR */}
+                      <td className="py-1.5 px-1 text-center border-l border-[#30363d] bg-emerald-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.pur_cases || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'pur_cases', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1 text-center bg-emerald-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.pur_loose || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'pur_loose', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
+                        />
+                      </td>
+
+                      {/* SALE */}
+                      <td className="py-1.5 px-1 text-center border-l border-[#30363d] bg-rose-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.sale_cases || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'sale_cases', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1 text-center bg-rose-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.sale_loose || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'sale_loose', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
+                        />
+                      </td>
+
+                      {/* CB */}
+                      <td className="py-1.5 px-1 text-center border-l border-[#30363d] bg-amber-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.cb_cases || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'cb_cases', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1 text-center bg-amber-500/5">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.cb_loose || ''}
+                          onChange={(e) => handleUpdateBulkRow(item.product_id, 'cb_loose', parseInt(e.target.value) || 0)}
+                          className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowBulkDailyModal(false)}
+                className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBulkDaily}
+                disabled={bulkDailySubmitting}
+                className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+              >
+                {bulkDailySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                <span>SAVE ALL DAILY RECORDS ({bulkDailyDate})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

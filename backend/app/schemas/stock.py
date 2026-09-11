@@ -13,6 +13,21 @@ class StockAdjustmentRequest(BaseModel):
     target_bottles: int = Field(ge=0)
 
 
+class DailyLedgerEntryRequest(BaseModel):
+    product_id: int
+    target_date: str  # YYYY-MM-DD
+    opening_bottles: int | None = None
+    purchase_bottles: int = Field(ge=0, default=0)
+    sale_bottles: int = Field(ge=0, default=0)
+    closing_bottles: int | None = None
+
+
+class BulkDailyLedgerEntryRequest(BaseModel):
+    target_date: str  # YYYY-MM-DD
+    items: list[DailyLedgerEntryRequest]
+
+
+
 class StockBulkReceiveItem(BaseModel):
     product_id: int
     quantity: int = Field(gt=0)

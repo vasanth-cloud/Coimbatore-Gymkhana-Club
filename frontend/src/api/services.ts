@@ -186,7 +186,32 @@ export const stockApi = {
     const response = await api.post('/stock/adjust', data);
     return response.data;
   },
+  recordDailyLedger: async (data: {
+    product_id: number;
+    target_date: string;
+    opening_bottles?: number | null;
+    purchase_bottles?: number;
+    sale_bottles?: number;
+    closing_bottles?: number | null;
+  }): Promise<any> => {
+    const response = await api.post('/stock/record-daily', data);
+    return response.data;
+  },
+  bulkRecordDailyLedger: async (data: {
+    target_date: string;
+    items: Array<{
+      product_id: number;
+      opening_bottles?: number | null;
+      purchase_bottles?: number;
+      sale_bottles?: number;
+      closing_bottles?: number | null;
+    }>;
+  }): Promise<any> => {
+    const response = await api.post('/stock/bulk-record-daily', data);
+    return response.data;
+  },
   bulkReceiveStock: async (items: any[]): Promise<any> => {
+
     const response = await api.post('/stock/bulk-receive', items);
     return response.data;
   },
