@@ -239,20 +239,33 @@ export const Stock: React.FC = () => {
 
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
 
-        if (rows.length < 2) return;
+        if (!rows || rows.length === 0) {
+          alert('Uploaded file is empty.');
+          return;
+        }
+
+        let startRow = 1;
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const r = rows[i];
+          if (r && r.some((cell: any) => String(cell).toLowerCase().includes('product') || String(cell).toLowerCase().includes('name'))) {
+            startRow = i + 1;
+            break;
+          }
+        }
 
         const newItems: any[] = [];
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = startRow; i < rows.length; i++) {
           const r = rows[i];
-          if (!r || !r[0] || String(r[0]).trim() === '') continue;
+          if (!r || r.length === 0) continue;
+          const rawName = String(r[0] || '').trim();
+          if (!rawName || rawName.toLowerCase() === 'product name' || rawName.toLowerCase() === 'product') continue;
 
-          const pName = String(r[0]).trim();
           const vol = parseInt(r[1]) || 750;
           const pack = parseInt(r[2]) || (vol <= 180 ? 48 : vol === 375 ? 24 : 12);
           const cat = String(r[3] || 'SPIRITS').trim().toUpperCase();
@@ -266,12 +279,12 @@ export const Stock: React.FC = () => {
           const cbC = parseInt(r[10]) || 0;
           const cbB = parseInt(r[11]) || 0;
 
-          const matched = products.find((p) => p.name.toLowerCase() === pName.toLowerCase() || (p.volume_ml === vol && p.name.toLowerCase().includes(pName.toLowerCase())));
+          const matched = products.find((p) => p.name.toLowerCase() === rawName.toLowerCase() || (p.volume_ml === vol && p.name.toLowerCase().includes(rawName.toLowerCase())));
 
           newItems.push({
             id: Math.random().toString(),
             product_id: matched ? matched.id : 0,
-            product_name: matched ? matched.name : pName,
+            product_name: matched ? matched.name : rawName,
             category: matched ? matched.category : cat,
             volume_ml: matched ? matched.volume_ml : vol,
             pack_size: matched ? matched.pack_size || pack : pack,
@@ -292,7 +305,9 @@ export const Stock: React.FC = () => {
 
         if (newItems.length > 0) {
           setBulkDailyItems(newItems);
-          alert(`Loaded ${newItems.length} items from ${file.name}! (${newItems.filter((i) => i.isNew).length} new products to auto-create)`);
+          alert(`Loaded ${newItems.length} daily stock items from ${file.name}! (${newItems.filter((i) => i.isNew).length} new products to auto-create)`);
+        } else {
+          alert('No valid drink items found in the file.');
         }
       } catch (err) {
         console.error('File parse error:', err);
@@ -300,7 +315,8 @@ export const Stock: React.FC = () => {
       }
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   };
 
   const handleParseDailyPasteText = () => {
@@ -3837,8 +3853,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.ob_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_cases', parseInt(e.target.value) || 0)}
+                          value={item.ob_cases ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_cases', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
                         />
                       </td>
@@ -3846,8 +3862,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.ob_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_loose', parseInt(e.target.value) || 0)}
+                          value={item.ob_loose ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'ob_loose', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-[#30363d] rounded-lg py-1 text-center text-xs font-bold text-slate-200 focus:outline-none"
                         />
                       </td>
@@ -3857,8 +3873,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.pur_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_cases', parseInt(e.target.value) || 0)}
+                          value={item.pur_cases ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_cases', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
                         />
                       </td>
@@ -3866,8 +3882,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.pur_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_loose', parseInt(e.target.value) || 0)}
+                          value={item.pur_loose ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'pur_loose', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-emerald-500/30 rounded-lg py-1 text-center text-xs font-bold text-emerald-400 focus:outline-none"
                         />
                       </td>
@@ -3877,8 +3893,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.sale_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_cases', parseInt(e.target.value) || 0)}
+                          value={item.sale_cases ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_cases', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
                         />
                       </td>
@@ -3886,8 +3902,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.sale_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_loose', parseInt(e.target.value) || 0)}
+                          value={item.sale_loose ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'sale_loose', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-rose-500/30 rounded-lg py-1 text-center text-xs font-bold text-rose-400 focus:outline-none"
                         />
                       </td>
@@ -3897,8 +3913,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.cb_cases || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_cases', parseInt(e.target.value) || 0)}
+                          value={item.cb_cases ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_cases', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
                         />
                       </td>
@@ -3906,8 +3922,8 @@ export const Stock: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          value={item.cb_loose || ''}
-                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_loose', parseInt(e.target.value) || 0)}
+                          value={item.cb_loose ?? 0}
+                          onChange={(e) => handleUpdateBulkRow(item.id, 'cb_loose', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                           className="w-14 bg-[#161b22] border border-amber-500/30 rounded-lg py-1 text-center text-xs font-bold text-amber-400 focus:outline-none"
                         />
                       </td>
