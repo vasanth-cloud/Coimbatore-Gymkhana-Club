@@ -243,7 +243,7 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
     eff_opening = prior_stock
     pur_qty = item.purchase_bottles or 0
     sale_qty = item.sale_bottles or 0
-    if item.closing_bottles is not None:
+    if (sale_qty == 0 or sale_qty is None) and item.closing_bottles is not None:
         sale_qty = max(0, eff_opening + pur_qty - item.closing_bottles)
 
     # 4. Add Purchase (IN) transaction for target_date
