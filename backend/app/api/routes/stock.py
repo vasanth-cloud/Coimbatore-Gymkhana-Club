@@ -176,6 +176,7 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
             name=p_name,
             category=cat,
             volume_ml=vol,
+            unit="BOTTLE",
             pack_size=pack,
             mrp=item.mrp or 0.0,
             basic_rate=item.basic_rate or 0.0,
