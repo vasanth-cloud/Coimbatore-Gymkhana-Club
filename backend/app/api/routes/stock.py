@@ -286,7 +286,7 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
             loose_bottles=b_loose,
             total_bottles=pur_qty,
             rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
-            added_value_percent=220.0,
+            added_value_percent=0.0 if t_date < date(2026, 10, 1) else 220.0,
             total_line_cost=line_cost,
             calculated_basic_cost=float(prod.basic_rate or 0.0),
             mrp=float(prod.mrp or 0.0),
@@ -497,27 +497,29 @@ def import_tasmac_stock(
             total_cases += c_qty
             total_bottles += t_bottles
 
-            rate_case = max(0.0, item.rate_per_case or 0.0)
-            added_val_pct = float(item.added_value_percent) if (item.added_value_percent is not None and float(item.added_value_percent) > 0) else 220.0
+            if inv_date < date(2026, 10, 1):
+                added_val_pct = 0.0
+            elif item.added_value_percent is not None:
+                added_val_pct = float(item.added_value_percent)
+            else:
+                added_val_pct = 220.0
 
             # TASMAC Invoice Exact Calculations & Basic Rate Formula
             line_amount = (rate_case * c_qty) + ((rate_case / pack) * b_loose if pack > 0 else 0.0)
 
-            # User's Step-by-Step Formula:
-            # 1. output1 = added_value_rs * (added_value_percent / 100)
-            # 2. output2 = output1 + line_amount
-            # 3. output3 = output2 * 0.02
-            # 4. output4 = output2 + output3
-            # 5. basic_rate_per_bottle = output4 / total_bottles
-            added_val_rs = item.added_value_rs if (item.added_value_rs and item.added_value_rs > 0) else (line_amount * 0.3697)
-            out1 = added_val_rs * (added_val_pct / 100.0)
-            out2 = out1 + line_amount
-            out3 = out2 * 0.02
-            out4 = out2 + out3
-
-            calc_basic_cost = round(out4 / t_bottles, 2) if t_bottles > 0 else 0.0
-            tcs_amt = out3
-            total_line_cost = round(out4, 2)
+            if added_val_pct == 0.0:
+                calc_basic_cost = round(rate_case / pack if (pack > 0 and rate_case > 0) else (line_amount / t_bottles if t_bottles > 0 else 0.0), 2)
+                tcs_amt = 0.0
+                total_line_cost = round(line_amount, 2)
+            else:
+                added_val_rs = item.added_value_rs if (item.added_value_rs and item.added_value_rs > 0) else (line_amount * 0.3697)
+                out1 = added_val_rs * (added_val_pct / 100.0)
+                out2 = out1 + line_amount
+                out3 = out2 * 0.02
+                out4 = out2 + out3
+                calc_basic_cost = round(out4 / t_bottles, 2) if t_bottles > 0 else 0.0
+                tcs_amt = out3
+                total_line_cost = round(out4, 2)
 
             grand_total_amount += total_line_cost
 

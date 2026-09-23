@@ -319,6 +319,141 @@ export const Stock: React.FC = () => {
     e.target.value = '';
   };
 
+  const handleSeptemberMultiSheetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setDailyFileName(file.name);
+    setBulkDailySubmitting(true);
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+
+        let processedSheets = 0;
+        let totalItemsCount = 0;
+        const sheetSummaries: string[] = [];
+
+        for (const sname of wb.SheetNames) {
+          const trimmedName = sname.trim();
+          const match = trimmedName.match(/^(\d{1,2})[\.\/](\d{1,2})(?:[\.\/](\d{2,4}))?/);
+          if (!match) continue;
+
+          const day = parseInt(match[1], 10);
+          const month = parseInt(match[2], 10);
+          const year = match[3] ? (match[3].length === 2 ? 2000 + parseInt(match[3], 10) : parseInt(match[3], 10)) : 2026;
+          const targetDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const isBaseline = targetDate <= '2026-08-31';
+
+          const ws = wb.Sheets[sname];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+
+          if (!rows || rows.length === 0) continue;
+
+          const sheetItemsPayload: any[] = [];
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (!r || r.length === 0) continue;
+
+            const c0 = r[0] !== undefined && r[0] !== null ? r[0] : '';
+            const c1 = r[1] !== undefined && r[1] !== null ? r[1] : '';
+
+            let rawName = '';
+            let vol = 750;
+            let pack = 12;
+            let cat = 'SPIRITS';
+            let mrp = 0;
+            let rate = 0;
+            let purBot = 0;
+            let cbBot = 0;
+
+            if (typeof c0 === 'number' && [180, 200, 375, 650, 750, 1000].includes(c0) && c1 && String(c1).trim()) {
+              rawName = String(c1).trim();
+              vol = c0;
+              cat = String(r[2] || 'SPIRITS').trim().toUpperCase();
+              pack = parseInt(r[4]) || (vol <= 180 ? 48 : vol === 375 ? 24 : 12);
+              mrp = parseFloat(r[5]) || 0;
+              rate = parseFloat(r[6]) || mrp || 0;
+              cbBot = parseInt(r[9]) || parseInt(r[8]) || 0;
+              purBot = 0;
+            } else {
+              rawName = String(c0).trim();
+              if (!rawName || ['PRODUCT NAME', 'DESCRIPTION', '31.08.26', 'NONE', 'CAT', 'S.NO', 'ITEM'].includes(rawName.toUpperCase())) {
+                continue;
+              }
+              vol = parseInt(r[2]) || (typeof c1 === 'number' ? c1 : 750);
+              cat = String(r[1] || 'SPIRITS').trim().toUpperCase();
+              pack = parseInt(r[3]) || (vol <= 180 ? 48 : vol === 375 ? 24 : 12);
+              mrp = parseFloat(r[4]) || 0;
+              rate = parseFloat(r[5]) || mrp || 0;
+
+              if (r.length >= 13) {
+                purBot = parseInt(r[8]) || 0;
+                cbBot = parseInt(r[12]) || parseInt(r[11]) || 0;
+              } else if (r.length >= 10) {
+                purBot = sname.includes('03.09') ? 0 : (parseInt(r[6]) || 0);
+                cbBot = parseInt(r[9]) || parseInt(r[8]) || 0;
+              }
+            }
+
+            if (!rawName) continue;
+
+            const matched = products.find(
+              (p) => p.name.toLowerCase() === rawName.toLowerCase() || (p.volume_ml === vol && p.name.toLowerCase().includes(rawName.toLowerCase()))
+            );
+
+            sheetItemsPayload.push({
+              product_id: matched ? matched.id : 0,
+              product_name: matched ? matched.name : rawName,
+              category: matched ? matched.category : cat,
+              volume_ml: matched ? matched.volume_ml : vol,
+              pack_size: matched ? matched.pack_size || pack : pack,
+              mrp: matched ? matched.mrp || mrp : mrp,
+              basic_rate: matched ? matched.basic_rate || rate : rate,
+              selling_price: matched ? matched.selling_price || mrp || rate : (mrp || rate),
+              opening_bottles: isBaseline ? cbBot : null,
+              purchase_bottles: purBot,
+              sale_bottles: 0,
+              closing_bottles: cbBot,
+            });
+          }
+
+          if (sheetItemsPayload.length > 0) {
+            await stockApi.bulkRecordDailyLedger({
+              target_date: targetDate,
+              items: sheetItemsPayload,
+            });
+            processedSheets++;
+            totalItemsCount += sheetItemsPayload.length;
+            sheetSummaries.push(`• Sheet '${sname}' (${targetDate}): ${sheetItemsPayload.length} items`);
+          }
+        }
+
+        setBulkDailySubmitting(false);
+
+        if (processedSheets > 0) {
+          alert(`✅ September Multi-Sheet Import Complete!\n\nProcessed ${processedSheets} date sheets (${totalItemsCount} total stock items) without adding taxes:\n\n${sheetSummaries.join('\n')}`);
+          setShowBulkDailyModal(false);
+          await loadLedgerData();
+          await loadStockData();
+          await loadReceiptsData();
+        } else {
+          alert('No date-formatted sheets (e.g. 31.08, 01.09, 02.09, etc.) were found in the uploaded workbook.');
+        }
+      } catch (err) {
+        setBulkDailySubmitting(false);
+        console.error('September Multi-Sheet Upload Error:', err);
+        alert('Failed to process September multi-sheet Excel file. Please ensure it is a valid .xlsx file.');
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
   const handleParseDailyPasteText = () => {
     if (!dailyPasteText.trim()) return;
 
@@ -3743,8 +3878,19 @@ export const Stock: React.FC = () => {
                 />
               </div>
 
-              {/* Upload, Paste, Download Template & Add Row Buttons */}
+              {/* Upload, September Multi-Sheet, Paste, Download Template & Add Row Buttons */}
               <div className="flex items-center gap-2 flex-wrap">
+                <label className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 transition-all shadow-sm" title="Upload September multi-sheet workbook (e.g. 31.08, 01.09, 02.09...) with 0% tax addition">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>📅 Upload September Multi-Sheet (.XLSX)</span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleSeptemberMultiSheetUpload}
+                    className="hidden"
+                  />
+                </label>
+
                 <label className="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 transition-all">
                   <Upload className="w-3.5 h-3.5" />
                   <span>Upload File (.XLSX/.CSV)</span>
