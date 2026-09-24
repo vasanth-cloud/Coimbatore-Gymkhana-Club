@@ -2149,7 +2149,8 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-300 font-black">CB Total</th>
                       <th className="py-3 px-2 text-center bg-purple-500/10 text-purple-300 font-black border-r border-[#30363d]">CB Units</th>
                       
-                      <th className="py-3 px-3 text-right text-amber-400">Closing Value</th>
+                      <th className="py-3 px-3 text-right text-emerald-400 border-l border-[#30363d] bg-emerald-500/10">Closing Value (MRP)</th>
+                      <th className="py-3 px-3 text-right text-amber-400 bg-amber-500/10">Closing Value (Sales)</th>
                       <th className="py-3 px-2 text-center text-amber-400 border-l border-[#30363d]">Action</th>
                     </tr>
                   </thead>
@@ -2213,8 +2214,11 @@ export const Stock: React.FC = () => {
                             {cbUnits.toFixed(2)}
                           </td>
                           
-                          <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400">
-                            ₹{item.closing_sales_value.toLocaleString()}
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400 border-l border-[#30363d] bg-emerald-500/5">
+                            ₹{(item.closing_mrp_value ?? ((item.closing_stock || 0) * (item.mrp || 0))).toLocaleString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-amber-400 bg-amber-500/5">
+                            ₹{(item.closing_sales_value ?? ((item.closing_stock || 0) * (item.selling_price || 0))).toLocaleString()}
                           </td>
 
                           <td className="py-2.5 px-2 text-center border-l border-[#30363d]">
@@ -2266,7 +2270,10 @@ export const Stock: React.FC = () => {
                       <td className="py-3.5 px-2 text-center text-amber-300 font-black">{totalCbStock}</td>
                       <td className="py-3.5 px-2 text-center text-purple-300 font-black border-r border-[#30363d]">{totalCbUnits.toFixed(2)}</td>
                       
-                      <td className="py-3.5 px-3 text-right text-amber-400 font-black text-sm">
+                      <td className="py-3.5 px-3 text-right text-emerald-400 font-bold text-xs border-l border-[#30363d] bg-emerald-500/10">
+                        ₹{totalClosingMrpVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-amber-400 font-black text-sm bg-amber-500/10">
                         ₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
