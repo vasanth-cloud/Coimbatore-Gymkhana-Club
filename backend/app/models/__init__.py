@@ -10,6 +10,7 @@ from app.models.employee import Employee
 from app.models.attendance import Attendance
 from app.models.salary_advance import SalaryAdvance
 from app.models.stock_receipt import StockReceipt, StockReceiptItem
+from app.models.daily_stock_lock import DailyStockLock
 
 
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     "SalaryAdvance",
     "StockReceipt",
     "StockReceiptItem",
+    "DailyStockLock",
 ]

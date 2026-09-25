@@ -93,6 +93,7 @@ def on_startup():
         import app.models.entry
         import app.models.attendance
         import app.models.daily_tally
+        import app.models.daily_stock_lock
 
         # Ensure all database tables exist
         Base.metadata.create_all(bind=engine)

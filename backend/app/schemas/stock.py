@@ -35,6 +35,16 @@ class BulkDailyLedgerEntryRequest(BaseModel):
     items: list[DailyLedgerEntryRequest]
 
 
+class DailyLockStatusResponse(BaseModel):
+    lock_date: str
+    is_locked: bool
+
+
+class ToggleDailyLockRequest(BaseModel):
+    lock_date: str
+    is_locked: bool
+
+
 
 class StockBulkReceiveItem(BaseModel):
     product_id: int

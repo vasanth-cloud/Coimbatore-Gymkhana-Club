@@ -225,6 +225,16 @@ export const stockApi = {
     return response.data;
   },
 
+  getDailyLockStatus: async (dateStr: string): Promise<{ lock_date: string; is_locked: boolean }> => {
+    const response = await api.get<{ lock_date: string; is_locked: boolean }>(`/stock/lock-status?lock_date=${dateStr}`);
+    return response.data;
+  },
+
+  toggleDailyLock: async (data: { lock_date: string; is_locked: boolean }): Promise<{ lock_date: string; is_locked: boolean }> => {
+    const response = await api.post<{ lock_date: string; is_locked: boolean }>('/stock/toggle-lock', data);
+    return response.data;
+  },
+
   bulkReceiveStock: async (items: any[]): Promise<any> => {
 
     const response = await api.post('/stock/bulk-receive', items);

@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.product import Product
 from app.models.stock_receipt import StockReceipt, StockReceiptItem
 from app.models.stock_transaction import StockTransaction
+from app.models.daily_stock_lock import DailyStockLock
 from app.repositories.stock_repository import StockRepository
 
 from app.schemas.stock import (
@@ -20,6 +21,8 @@ from app.schemas.stock import (
     TASMACImportRequest,
     DailyLedgerEntryRequest,
     BulkDailyLedgerEntryRequest,
+    DailyLockStatusResponse,
+    ToggleDailyLockRequest,
 )
 
 from app.services.stock_service import StockService
@@ -145,6 +148,11 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
         raise ValueError("Invalid target date format. Must be YYYY-MM-DD.")
 
     t_date_str = t_date.strftime("%Y-%m-%d")
+
+    # Check if date is locked
+    lock_rec = db.query(DailyStockLock).filter(DailyStockLock.lock_date == t_date).first()
+    if lock_rec and lock_rec.is_locked:
+        raise ValueError(f"Date {t_date_str} has been finalized and locked. Please unlock it to make edits.")
 
     # Multi-tier product lookup & auto-creation
     prod = None
@@ -970,3 +978,69 @@ def delete_stock_receipt(
     db.delete(receipt)
     db.commit()
     return {"message": f"Stock arrival receipt #{receipt_id} and associated stock bottles deleted successfully"}
+
+
+@router.get(
+    "/lock-status",
+    response_model=DailyLockStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_daily_lock_status(
+    lock_date: str = Query(..., description="Target date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    try:
+        parsed_date = datetime.strptime(lock_date, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid lock_date format. Must be YYYY-MM-DD.",
+        )
+
+    lock_rec = db.query(DailyStockLock).filter(DailyStockLock.lock_date == parsed_date).first()
+    return DailyLockStatusResponse(
+        lock_date=lock_date,
+        is_locked=lock_rec.is_locked if lock_rec else False,
+    )
+
+
+@router.post(
+    "/toggle-lock",
+    response_model=DailyLockStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+def toggle_daily_lock(
+    request: ToggleDailyLockRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    try:
+        parsed_date = datetime.strptime(request.lock_date, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid lock_date format. Must be YYYY-MM-DD.",
+        )
+
+    lock_rec = db.query(DailyStockLock).filter(DailyStockLock.lock_date == parsed_date).first()
+    if not lock_rec:
+        lock_rec = DailyStockLock(
+            lock_date=parsed_date,
+            is_locked=request.is_locked,
+            locked_at=datetime.utcnow(),
+            locked_by=getattr(current_user, "full_name", "Staff"),
+        )
+        db.add(lock_rec)
+    else:
+        lock_rec.is_locked = request.is_locked
+        lock_rec.locked_at = datetime.utcnow()
+        lock_rec.locked_by = getattr(current_user, "full_name", "Staff")
+
+    db.commit()
+    db.refresh(lock_rec)
+
+    return DailyLockStatusResponse(
+        lock_date=request.lock_date,
+        is_locked=lock_rec.is_locked,
+    )
