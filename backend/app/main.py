@@ -120,6 +120,10 @@ def on_startup():
             'selling_price'
         ]
         with engine.begin() as conn:
+            try:
+                conn.execute(text('ALTER TABLE sales ADD COLUMN IF NOT EXISTS unit_price NUMERIC(12,2);'))
+            except Exception:
+                pass
             for col in cols:
                 try:
                     conn.execute(text(f'ALTER TABLE stock_receipts ADD COLUMN IF NOT EXISTS {col};'))

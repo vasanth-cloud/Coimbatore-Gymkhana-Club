@@ -35,6 +35,7 @@ class SaleRepository:
             product_id=product_id,
             customer_id=customer_id,
             quantity=quantity,
+            unit_price=unit_price,
             total_price=total_price,
             payment_mode=payment_mode,
             paytm_order_id=paytm_order_id,
@@ -68,6 +69,7 @@ class SaleRepository:
                 Sale.id,
                 Sale.sale_date,
                 Sale.quantity,
+                Sale.unit_price.label("sale_unit_price"),
                 Sale.total_price,
                 Sale.payment_mode,
                 Sale.paytm_order_id,
@@ -81,7 +83,7 @@ class SaleRepository:
                 Product.name.label("product_name"),
                 Product.category.label("category"),
                 Product.volume_ml.label("volume_ml"),
-                Product.selling_price.label("unit_price"),
+                Product.selling_price.label("curr_product_price"),
                 Brand.name.label("brand_name"),
                 Customer.id.label("customer_id"),
                 Customer.customer_code.label("customer_code"),
@@ -99,13 +101,20 @@ class SaleRepository:
 
         results = []
         for r in query:
-            unit_price = r.unit_price or 0
-            total_p = r.total_price if r.total_price is not None else (r.quantity * unit_price)
+            if r.sale_unit_price is not None and float(r.sale_unit_price) > 0:
+                unit_p = round(float(r.sale_unit_price), 2)
+            elif r.total_price is not None and r.quantity and r.quantity > 0:
+                unit_p = round(float(r.total_price) / float(r.quantity), 2)
+            else:
+                unit_p = float(r.curr_product_price or 0)
+
+            total_p = int(round(float(r.total_price))) if r.total_price is not None else int(round(r.quantity * unit_p))
+
             results.append({
                 "id": r.id,
                 "sale_date": r.sale_date,
                 "quantity": r.quantity,
-                "unit_price": unit_price,
+                "unit_price": int(round(unit_p)),
                 "total_price": total_p,
                 "payment_mode": r.payment_mode or "CASH",
                 "paytm_order_id": r.paytm_order_id,
@@ -133,13 +142,14 @@ class SaleRepository:
                 Sale.id,
                 Sale.sale_date,
                 Sale.quantity,
+                Sale.unit_price.label("sale_unit_price"),
                 Sale.total_price,
                 Sale.payment_mode,
                 Sale.paytm_order_id,
                 Product.name.label("product_name"),
                 Product.category.label("category"),
                 Product.volume_ml.label("volume_ml"),
-                Product.selling_price.label("unit_price"),
+                Product.selling_price.label("curr_product_price"),
                 Brand.name.label("brand_name"),
             )
             .join(Product, Sale.product_id == Product.id)
@@ -152,13 +162,20 @@ class SaleRepository:
 
         results = []
         for r in query:
-            unit_price = r.unit_price or 0
-            total_p = r.total_price if r.total_price is not None else (r.quantity * unit_price)
+            if getattr(r, "sale_unit_price", None) is not None and float(r.sale_unit_price) > 0:
+                unit_p = round(float(r.sale_unit_price), 2)
+            elif r.total_price is not None and r.quantity and r.quantity > 0:
+                unit_p = round(float(r.total_price) / float(r.quantity), 2)
+            else:
+                unit_p = float(r.curr_product_price or 0)
+
+            total_p = int(round(float(r.total_price))) if r.total_price is not None else int(round(r.quantity * unit_p))
+
             results.append({
                 "id": r.id,
                 "sale_date": r.sale_date,
                 "quantity": r.quantity,
-                "unit_price": unit_price,
+                "unit_price": int(round(unit_p)),
                 "total_price": total_p,
                 "payment_mode": r.payment_mode or "CASH",
                 "paytm_order_id": r.paytm_order_id,

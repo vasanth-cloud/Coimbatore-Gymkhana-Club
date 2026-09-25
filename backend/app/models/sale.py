@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -27,8 +27,13 @@ class Sale(BaseModel):
         nullable=False,
     )
 
+    unit_price = Column(
+        Numeric(12, 2),
+        nullable=True,
+    )
+
     total_price = Column(
-        Integer,
+        Numeric(12, 2),
         nullable=True,
     )
 
