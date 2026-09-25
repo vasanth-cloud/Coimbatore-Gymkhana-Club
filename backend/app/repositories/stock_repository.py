@@ -227,6 +227,7 @@ class StockRepository:
                 return round(total_ml / 750.0, 2)
 
         from app.models.stock_receipt import StockReceipt, StockReceiptItem
+        from app.models.sale import Sale
 
         # Build map of historical rates (mrp, basic_rate, selling_price) as of target_date
         rate_subquery = (
@@ -261,6 +262,29 @@ class StockRepository:
                     "selling_price": sp_val if sp_val > 0 else None,
                 }
 
+        # Query actual POS sales revenue per product on target_date to preserve past sale values
+        pos_sales_subquery = (
+            self.db.query(
+                Sale.product_id,
+                func.coalesce(func.sum(Sale.total_price), 0).label("pos_amount"),
+                func.coalesce(func.sum(Sale.quantity), 0).label("pos_qty"),
+            )
+            .filter(
+                func.date(Sale.sale_date) == target_date_str,
+                Sale.is_deleted == False,
+            )
+            .group_by(Sale.product_id)
+            .all()
+        )
+
+        pos_sales_map = {
+            r.product_id: {
+                "amount": float(r.pos_amount or 0.0),
+                "qty": int(r.pos_qty or 0),
+            }
+            for r in pos_sales_subquery
+        }
+
         for p, prior_in, prior_out, today_in, today_out in rows:
             pack_sz = p.pack_size or (48 if p.volume_ml <= 180 else 24 if p.volume_ml == 375 else 12)
 
@@ -288,6 +312,23 @@ class StockRepository:
             selling_rate = float(hist_rates.get("selling_price") or p.selling_price or 0.0)
             mrp_rate = float(hist_rates.get("mrp") or p.mrp or selling_rate)
             basic_rate = float(hist_rates.get("basic_rate") or p.basic_rate or (mrp_rate if mrp_rate > 0 else selling_rate))
+
+            pos_info = pos_sales_map.get(p.id)
+            if pos_info and pos_info["qty"] > 0:
+                pos_qty = pos_info["qty"]
+                pos_amt = pos_info["amount"]
+                if today_sale > pos_qty:
+                    rem_qty = today_sale - pos_qty
+                    calc_sale_sales_val = pos_amt + (rem_qty * selling_rate)
+                    calc_sale_mrp_val = (pos_qty * (pos_amt / pos_qty)) + (rem_qty * mrp_rate)
+                else:
+                    calc_sale_sales_val = pos_amt
+                    calc_sale_mrp_val = pos_qty * (pos_amt / pos_qty if pos_amt > 0 else mrp_rate)
+            else:
+                calc_sale_sales_val = today_sale * selling_rate
+                calc_sale_mrp_val = today_sale * mrp_rate
+
+            calc_sale_cost_val = today_sale * basic_rate
 
             result.append({
                 "product_id": p.id,
@@ -326,9 +367,9 @@ class StockRepository:
                 "closing_str": closing_cb["formatted"],
                 "closing_units": closing_u,
 
-                "sale_sales_value": today_sale * selling_rate,
-                "sale_cost_value": today_sale * basic_rate,
-                "sale_mrp_value": today_sale * mrp_rate,
+                "sale_sales_value": calc_sale_sales_val,
+                "sale_cost_value": calc_sale_cost_val,
+                "sale_mrp_value": calc_sale_mrp_val,
                 "closing_sales_value": closing_stock * selling_rate,
                 "closing_cost_value": closing_stock * basic_rate,
                 "closing_mrp_value": closing_stock * mrp_rate,
