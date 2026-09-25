@@ -226,6 +226,41 @@ class StockRepository:
                 total_ml = total_bottles * vol
                 return round(total_ml / 750.0, 2)
 
+        from app.models.stock_receipt import StockReceipt, StockReceiptItem
+
+        # Build map of historical rates (mrp, basic_rate, selling_price) as of target_date
+        rate_subquery = (
+            self.db.query(
+                StockReceiptItem.product_id,
+                func.max(StockReceiptItem.id).label("max_item_id")
+            )
+            .join(StockReceipt, StockReceiptItem.receipt_id == StockReceipt.id)
+            .filter(
+                StockReceipt.invoice_date <= target_date,
+                StockReceiptItem.product_id.isnot(None)
+            )
+            .group_by(StockReceiptItem.product_id)
+            .subquery()
+        )
+
+        latest_rates = (
+            self.db.query(StockReceiptItem)
+            .join(rate_subquery, StockReceiptItem.id == rate_subquery.c.max_item_id)
+            .all()
+        )
+
+        rates_map = {}
+        for r_item in latest_rates:
+            if r_item.product_id:
+                m_val = float(r_item.mrp or 0.0)
+                sp_val = float(r_item.selling_price or 0.0)
+                b_val = float(r_item.calculated_basic_cost or 0.0)
+                rates_map[r_item.product_id] = {
+                    "mrp": m_val if m_val > 0 else None,
+                    "basic_rate": b_val if b_val > 0 else None,
+                    "selling_price": sp_val if sp_val > 0 else None,
+                }
+
         for p, prior_in, prior_out, today_in, today_out in rows:
             pack_sz = p.pack_size or (48 if p.volume_ml <= 180 else 24 if p.volume_ml == 375 else 12)
 
@@ -249,9 +284,10 @@ class StockRepository:
             sale_u = calculate_units(p.category, p.volume_ml, pack_sz, today_sale)
             closing_u = calculate_units(p.category, p.volume_ml, pack_sz, closing_stock)
 
-            selling_rate = float(p.selling_price or 0.0)
-            mrp_rate = float(p.mrp or selling_rate)
-            basic_rate = float(p.basic_rate) if (p.basic_rate is not None and float(p.basic_rate) > 0) else (mrp_rate if mrp_rate > 0 else selling_rate)
+            hist_rates = rates_map.get(p.id, {})
+            selling_rate = float(hist_rates.get("selling_price") or p.selling_price or 0.0)
+            mrp_rate = float(hist_rates.get("mrp") or p.mrp or selling_rate)
+            basic_rate = float(hist_rates.get("basic_rate") or p.basic_rate or (mrp_rate if mrp_rate > 0 else selling_rate))
 
             result.append({
                 "product_id": p.id,

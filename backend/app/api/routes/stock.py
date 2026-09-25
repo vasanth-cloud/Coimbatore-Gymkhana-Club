@@ -262,42 +262,42 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
             transaction_date=pur_dt,
         ))
 
-        # Create StockReceipt arrival log for audit history
-        c_qty = pur_qty // pack
-        b_loose = pur_qty % pack
-        line_cost = round(float(prod.basic_rate or 0.0) * pur_qty, 2)
+    # Always Record StockReceipt audit log / rate snapshot for target_date
+    c_qty = pur_qty // pack
+    b_loose = pur_qty % pack
+    line_cost = round(float(prod.basic_rate or 0.0) * pur_qty, 2)
 
-        receipt = StockReceipt(
-            invoice_number=f"DAILY-PUR-{t_date_str.replace('-', '')}-{prod.id}",
-            invoice_date=t_date,
-            depot_name="DAILY RECORD",
-            supplier_name="TASMAC LTD",
-            file_name="Daily Ledger Recording",
-            received_by=getattr(current_user, "full_name", "Staff"),
-            total_cases=c_qty,
-            total_bottles=pur_qty,
-            total_amount=line_cost,
-            grand_total=line_cost,
-            net_amount=line_cost
-        )
-        db.add(receipt)
-        db.flush()
+    receipt = StockReceipt(
+        invoice_number=f"DAILY-REC-{t_date_str.replace('-', '')}-{prod.id}",
+        invoice_date=t_date,
+        depot_name="DAILY RECORD",
+        supplier_name="TASMAC LTD",
+        file_name="Daily Ledger Recording",
+        received_by=getattr(current_user, "full_name", "Staff"),
+        total_cases=c_qty,
+        total_bottles=pur_qty,
+        total_amount=line_cost,
+        grand_total=line_cost,
+        net_amount=line_cost
+    )
+    db.add(receipt)
+    db.flush()
 
-        db.add(StockReceiptItem(
-            receipt_id=receipt.id,
-            product_id=prod.id,
-            product_name=prod.name,
-            pack_size=pack,
-            cases=c_qty,
-            loose_bottles=b_loose,
-            total_bottles=pur_qty,
-            rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
-            added_value_percent=0.0 if t_date < date(2026, 10, 1) else 220.0,
-            total_line_cost=line_cost,
-            calculated_basic_cost=float(prod.basic_rate or 0.0),
-            mrp=float(prod.mrp or 0.0),
-            selling_price=float(prod.selling_price or 0.0)
-        ))
+    db.add(StockReceiptItem(
+        receipt_id=receipt.id,
+        product_id=prod.id,
+        product_name=prod.name,
+        pack_size=pack,
+        cases=c_qty,
+        loose_bottles=b_loose,
+        total_bottles=pur_qty,
+        rate_per_case=round(float(prod.basic_rate or 0.0) * pack, 2),
+        added_value_percent=0.0 if t_date < date(2026, 10, 1) else 220.0,
+        total_line_cost=line_cost,
+        calculated_basic_cost=float(prod.basic_rate or 0.0),
+        mrp=float(prod.mrp or 0.0),
+        selling_price=float(prod.selling_price or 0.0)
+    ))
 
     # 5. Add Sale (OUT) transaction for target_date
     if sale_qty > 0:
