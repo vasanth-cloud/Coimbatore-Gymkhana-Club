@@ -1746,6 +1746,8 @@ export const Stock: React.FC = () => {
       'SALE (Bottles)',
       'SALE Total Bottles',
       'SALE Units',
+      'SALE TOTAL MRP VALUE (INR)',
+      'SALE TOTAL SALES VALUE (INR)',
       'CB (Cases)',
       'CB (Bottles)',
       'CB Total Bottles',
@@ -1760,6 +1762,9 @@ export const Stock: React.FC = () => {
       const purU = item.purchase_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.purchase_qty);
       const saleU = item.sale_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.sale_qty);
       const cbU = item.closing_units ?? calculateItemUnits(item.category, item.volume_ml, item.pack_size, item.closing_stock);
+
+      const sMrpVal = item.sale_mrp_value ?? ((item.sale_qty || 0) * (item.mrp || 0));
+      const sSalesVal = item.sale_sales_value ?? ((item.sale_qty || 0) * (item.selling_price || 0));
 
       return [
         `"${item.product_name}"`,
@@ -1781,6 +1786,8 @@ export const Stock: React.FC = () => {
         item.sale_bottles,
         item.sale_qty,
         saleU.toFixed(2),
+        sMrpVal,
+        sSalesVal,
         item.closing_cases,
         item.closing_bottles,
         item.closing_stock,
@@ -1880,6 +1887,8 @@ export const Stock: React.FC = () => {
   const totalClosingSalesVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_sales_value || 0), 0);
   const totalClosingBasicVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_basic_value ?? item.closing_cost_value ?? ((item.closing_stock || 0) * (item.basic_rate || 0))), 0);
   const totalClosingMrpVal = filteredLedgerItems.reduce((sum, item) => sum + (item.closing_mrp_value || 0), 0);
+  const totalSaleSalesVal = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_sales_value ?? ((item.sale_qty || 0) * (item.selling_price || 0))), 0);
+  const totalSaleMrpVal = filteredLedgerItems.reduce((sum, item) => sum + (item.sale_mrp_value ?? ((item.sale_qty || 0) * (item.mrp || 0))), 0);
 
   const totalObCases = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_cases || 0), 0);
   const totalObBottles = filteredLedgerItems.reduce((sum, item) => sum + (item.opening_bottles || 0), 0);
@@ -2106,22 +2115,26 @@ export const Stock: React.FC = () => {
           </div>
 
           {/* Valuation Summary Banner Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div className="bg-[#161b22] border border-[#21262d] p-3.5 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">Total Basic Cost Value:</span>
-              <h3 className="text-xl font-black text-sky-400 font-mono mt-1">₹{totalClosingBasicVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <h3 className="text-lg font-black text-sky-400 font-mono mt-1">₹{totalClosingBasicVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
-            <div className="bg-[#161b22] border border-[#21262d] p-4 rounded-2xl">
+            <div className="bg-[#161b22] border border-rose-500/30 p-3.5 rounded-2xl bg-rose-500/5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">Total Sales Value (Today):</span>
+              <h3 className="text-lg font-black text-rose-400 font-mono mt-1">₹{totalSaleSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            </div>
+            <div className="bg-[#161b22] border border-[#21262d] p-3.5 rounded-2xl">
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Total MRP Value:</span>
-              <h3 className="text-xl font-black text-emerald-400 font-mono mt-1">₹{totalClosingMrpVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <h3 className="text-lg font-black text-emerald-400 font-mono mt-1">₹{totalClosingMrpVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
-            <div className="bg-[#161b22] border border-purple-500/40 p-4 rounded-2xl bg-purple-500/5">
+            <div className="bg-[#161b22] border border-purple-500/40 p-3.5 rounded-2xl bg-purple-500/5">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 block">Total Closing Units:</span>
-              <h3 className="text-xl font-black text-purple-400 font-mono mt-1">{totalCbUnits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Units</h3>
+              <h3 className="text-lg font-black text-purple-400 font-mono mt-1">{totalCbUnits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} U</h3>
             </div>
-            <div className="bg-[#161b22] border border-amber-500/40 p-4 rounded-2xl bg-amber-500/5">
+            <div className="bg-[#161b22] border border-amber-500/40 p-3.5 rounded-2xl bg-amber-500/5">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block">Total Closing Sales Value:</span>
-              <h3 className="text-xl font-black text-amber-400 font-mono mt-1">₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <h3 className="text-lg font-black text-amber-400 font-mono mt-1">₹{totalClosingSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
           </div>
 
@@ -2159,10 +2172,12 @@ export const Stock: React.FC = () => {
                       <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-400">PUR (B)</th>
                       <th className="py-3 px-2 text-center bg-emerald-500/10 text-emerald-300 font-black">PUR Total</th>
                       
-                      {/* Sales C, B & Total */}
+                      {/* Sales C, B, Total & Sale Values */}
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400 border-l border-[#30363d]">SALE (C)</th>
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-400">SALE (B)</th>
                       <th className="py-3 px-2 text-center bg-rose-500/10 text-rose-300 font-black">SALE Total</th>
+                      <th className="py-3 px-3 text-right text-rose-300 bg-rose-500/10 font-bold border-l border-[#30363d]">Sale Value (MRP)</th>
+                      <th className="py-3 px-3 text-right text-rose-300 bg-rose-500/15 font-black">Sale Value (Sales)</th>
                       
                       {/* Closing Stock C, B, Total & Units */}
                       <th className="py-3 px-2 text-center bg-amber-500/10 text-amber-400 border-l border-[#30363d]">CB (C)</th>
@@ -2210,7 +2225,7 @@ export const Stock: React.FC = () => {
                             {item.purchase_qty}
                           </td>
                           
-                          {/* Sales C, B & Total */}
+                          {/* Sales C, B, Total & Sale Values */}
                           <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-400 bg-rose-500/5 border-l border-[#30363d]">
                             {item.sale_cases}
                           </td>
@@ -2219,6 +2234,12 @@ export const Stock: React.FC = () => {
                           </td>
                           <td className="py-2.5 px-2 text-center font-mono font-black text-rose-300 bg-rose-500/10">
                             {item.sale_qty}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-300 bg-rose-500/5 border-l border-[#30363d]">
+                            ₹{(item.sale_mrp_value ?? ((item.sale_qty || 0) * (item.mrp || 0))).toLocaleString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-rose-300 bg-rose-500/10">
+                            ₹{(item.sale_sales_value ?? ((item.sale_qty || 0) * (item.selling_price || 0))).toLocaleString()}
                           </td>
                           
                           {/* Closing Stock C, B, Total & Units */}
@@ -2285,6 +2306,12 @@ export const Stock: React.FC = () => {
                       <td className="py-3.5 px-2 text-center text-rose-400 border-l border-[#30363d]">{totalSaleCases}</td>
                       <td className="py-3.5 px-2 text-center text-rose-400">{totalSaleBottles}</td>
                       <td className="py-3.5 px-2 text-center text-rose-300 font-black">{totalSaleQty}</td>
+                      <td className="py-3.5 px-3 text-right text-rose-300 font-bold text-xs border-l border-[#30363d] bg-rose-500/10">
+                        ₹{totalSaleMrpVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-rose-300 font-black text-xs bg-rose-500/15">
+                        ₹{totalSaleSalesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
                       
                       <td className="py-3.5 px-2 text-center text-amber-400 border-l border-[#30363d]">{totalCbCases}</td>
                       <td className="py-3.5 px-2 text-center text-amber-400">{totalCbBottles}</td>

@@ -290,6 +290,9 @@ class StockRepository:
                 "closing_str": closing_cb["formatted"],
                 "closing_units": closing_u,
 
+                "sale_sales_value": today_sale * selling_rate,
+                "sale_cost_value": today_sale * basic_rate,
+                "sale_mrp_value": today_sale * mrp_rate,
                 "closing_sales_value": closing_stock * selling_rate,
                 "closing_cost_value": closing_stock * basic_rate,
                 "closing_mrp_value": closing_stock * mrp_rate,
