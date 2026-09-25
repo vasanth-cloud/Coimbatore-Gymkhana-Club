@@ -209,8 +209,8 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
 
     prior_stock = max(0, prior_in - prior_out)
 
-    # 2. Handle Opening Stock adjustment for initial baseline date (<= 2026-09-01) if specified
-    if t_date_str <= "2026-09-01" and item.opening_bottles is not None and item.opening_bottles != prior_stock:
+    # 2. Handle Opening Stock adjustment if specified and different from prior_stock
+    if item.opening_bottles is not None and item.opening_bottles != prior_stock:
         diff = item.opening_bottles - prior_stock
         adj_dt = datetime.combine(t_date - timedelta(days=1), datetime.strptime("23:59:59", "%H:%M:%S").time())
         if diff > 0:
@@ -241,10 +241,16 @@ def process_single_daily_entry(db: Session, item: DailyLedgerEntryRequest, curre
 
     # Calculate actual purchase & sale bottles
     eff_opening = prior_stock
-    pur_qty = item.purchase_bottles or 0
-    sale_qty = item.sale_bottles or 0
-    if (sale_qty == 0 or sale_qty is None) and item.closing_bottles is not None:
-        sale_qty = max(0, eff_opening + pur_qty - item.closing_bottles)
+    pur_qty = item.purchase_bottles if item.purchase_bottles is not None else 0
+    sale_qty = item.sale_bottles if item.sale_bottles is not None else 0
+
+    if item.closing_bottles is not None:
+        needed_total = item.closing_bottles
+        if eff_opening + pur_qty >= needed_total:
+            sale_qty = (eff_opening + pur_qty) - needed_total
+        else:
+            pur_qty = max(0, needed_total - eff_opening)
+            sale_qty = 0
 
     # 4. Add Purchase (IN) transaction for target_date
     if pur_qty > 0:

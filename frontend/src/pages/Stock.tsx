@@ -851,18 +851,31 @@ export const Stock: React.FC = () => {
         selling_price: editSellingPrice,
       });
 
-      const newTotalBottles = editCases * editPackSize + editLoose;
+      const pack = editPackSize || 12;
+      const newCbBottles = editCases * pack + editLoose;
       const targetLedgerDate = ledgerDate || new Date().toISOString().split('T')[0];
+
+      const obBottles = editingItem.opening_stock !== undefined
+        ? editingItem.opening_stock
+        : (editingItem.opening_cases !== undefined ? (editingItem.opening_cases * pack + (editingItem.opening_bottles || 0)) : null);
+
+      const purBottles = editingItem.purchase_qty !== undefined
+        ? editingItem.purchase_qty
+        : (editingItem.purchase_cases !== undefined ? (editingItem.purchase_cases * pack + (editingItem.purchase_bottles || 0)) : null);
 
       await stockApi.recordDailyLedger({
         product_id: prodId,
+        product_name: editName,
+        category: editCategory,
+        volume_ml: editVolume,
+        pack_size: pack,
+        mrp: editMrp,
+        basic_rate: editBasicRate,
+        selling_price: editSellingPrice,
         target_date: targetLedgerDate,
-        closing_bottles: newTotalBottles,
-      });
-
-      await stockApi.adjustStock({
-        product_id: prodId,
-        target_bottles: newTotalBottles,
+        opening_bottles: obBottles,
+        purchase_bottles: purBottles,
+        closing_bottles: newCbBottles,
       });
 
       setEditMsg({ type: 'success', text: 'Product specs, rates & CB stock units updated successfully!' });
