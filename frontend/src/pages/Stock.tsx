@@ -852,6 +852,14 @@ export const Stock: React.FC = () => {
       });
 
       const newTotalBottles = editCases * editPackSize + editLoose;
+      const targetLedgerDate = ledgerDate || new Date().toISOString().split('T')[0];
+
+      await stockApi.recordDailyLedger({
+        product_id: prodId,
+        target_date: targetLedgerDate,
+        closing_bottles: newTotalBottles,
+      });
+
       await stockApi.adjustStock({
         product_id: prodId,
         target_bottles: newTotalBottles,
@@ -860,7 +868,7 @@ export const Stock: React.FC = () => {
       setEditMsg({ type: 'success', text: 'Product specs, rates & CB stock units updated successfully!' });
       await loadStockData();
       await loadReceiptsData();
-      if (activeTab === 'ledger') await loadLedgerData();
+      await loadLedgerData();
 
       setTimeout(() => {
         setEditingItem(null);
